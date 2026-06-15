@@ -1,0 +1,126 @@
+export type PlotKind =
+  | "line"
+  | "scatter"
+  | "bar"
+  | "barh"
+  | "hist"
+  | "boxplot"
+  | "violin"
+  | "errorbar"
+  | "heatmap"
+  | "contour"
+  | "step"
+  | "fill_between";
+
+export interface VariableSummary {
+  name: string;
+  kind: string;
+  type_name: string;
+  shape: Array<number | string>;
+  columns: string[];
+  dtypes: Record<string, string>;
+  sample: unknown;
+  truncated: boolean;
+}
+
+export interface DatasetRef {
+  variable: string;
+  x?: string | null;
+  y?: string | null;
+  z?: string | null;
+  yerr?: string | null;
+}
+
+export interface LayerStyle {
+  label?: string | null;
+  color?: string | null;
+  marker?: string | null;
+  linestyle?: string | null;
+  linewidth?: number | null;
+  alpha?: number | null;
+  cmap?: string | null;
+  bins?: number | null;
+  fill_alpha?: number | null;
+}
+
+export interface PlotLayer {
+  id: string;
+  kind: PlotKind;
+  axes_id: string;
+  dataset: DatasetRef;
+  style: LayerStyle;
+  readonly: boolean;
+  source: string;
+}
+
+export interface AxesSpec {
+  id: string;
+  row: number;
+  col: number;
+  title: string;
+  xlabel: string;
+  ylabel: string;
+  xscale: "linear" | "log" | "symlog" | "logit";
+  yscale: "linear" | "log" | "symlog" | "logit";
+  xlim?: [number | null, number | null] | null;
+  ylim?: [number | null, number | null] | null;
+  grid: boolean;
+  legend: boolean;
+  colorbar: boolean;
+}
+
+export interface AnnotationSpec {
+  id: string;
+  axes_id: string;
+  text: string;
+  x: number;
+  y: number;
+  xytext?: [number, number] | null;
+}
+
+export interface FigureStyle {
+  title: string;
+  font_family?: string | null;
+  font_size: number;
+  constrained_layout: boolean;
+}
+
+export interface FigureSpec {
+  version: number;
+  mode: "explore" | "publish";
+  width: number;
+  height: number;
+  dpi: number;
+  rows: number;
+  cols: number;
+  axes: AxesSpec[];
+  layers: PlotLayer[];
+  annotations: AnnotationSpec[];
+  style: FigureStyle;
+  show: boolean;
+}
+
+export interface SessionInfo {
+  id: string;
+  url: string;
+  block_id: string;
+  mode: string;
+  script_path?: string | null;
+  has_script_writeback: boolean;
+  has_figure: boolean;
+  figure_tree?: Record<string, unknown> | null;
+}
+
+export interface RenderResponse {
+  image: string;
+  format: string;
+  code: string;
+}
+
+export interface SaveCodeResponse {
+  code: string;
+  notebook_cell: string;
+  wrote_file: boolean;
+  script_path?: string | null;
+  message: string;
+}
