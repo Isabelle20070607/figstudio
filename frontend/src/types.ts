@@ -25,6 +25,10 @@ export interface VariableSummary {
 
 export interface DatasetRef {
   variable: string;
+  x_variable?: string | null;
+  y_variable?: string | null;
+  z_variable?: string | null;
+  yerr_variable?: string | null;
   x?: string | null;
   y?: string | null;
   z?: string | null;
@@ -118,9 +122,15 @@ export interface RenderResponse {
 }
 
 export interface SaveCodeResponse {
+  ok: boolean;
   code: string;
   notebook_cell: string;
   wrote_file: boolean;
   script_path?: string | null;
   message: string;
+  error?: {
+    code: string;
+    message: string;
+    details?: Record<string, unknown> | null;
+  } | null;
 }

@@ -34,6 +34,11 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 .app-shell {
   min-height: 100vh;
   display: grid;
@@ -213,6 +218,32 @@ button {
   font-size: 11px;
 }
 
+.layer-actions {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.mini-button {
+  height: 30px;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--text);
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.danger-button {
+  border-color: #efcaca;
+  color: var(--danger);
+}
+
 .builder,
 .control-group {
   margin-top: 18px;
@@ -228,6 +259,18 @@ button {
   color: var(--muted);
 }
 
+.source-grid,
+.split-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.source-grid label,
+.split-row label {
+  min-width: 0;
+}
+
 label {
   display: grid;
   gap: 6px;
@@ -235,6 +278,17 @@ label {
   color: #47505a;
   font-size: 12px;
   font-weight: 650;
+}
+
+.compatibility-note {
+  margin: 4px 0 12px;
+  padding: 8px 10px;
+  border: 1px solid #f1d29b;
+  border-radius: 7px;
+  background: #fff7e8;
+  color: #7a4b00;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 input,
@@ -248,6 +302,12 @@ select {
   background: white;
   color: var(--text);
   font-size: 13px;
+}
+
+.limit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
 }
 
 .canvas-column {
@@ -451,6 +511,12 @@ select {
 
   .canvas-column {
     grid-template-rows: 48px 360px 260px;
+  }
+
+  .source-grid,
+  .split-row,
+  .limit-row {
+    grid-template-columns: 1fr;
   }
 
   .side-panel,

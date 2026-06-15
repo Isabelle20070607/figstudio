@@ -16,6 +16,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!response.ok) {
     const text = await response.text();
+    let payload: { detail?: { error?: { code?: string; message?: string } } } | undefined;
+    try {
+      payload = JSON.parse(text) as typeof payload;
+    } catch {
+      payload = undefined;
+    }
+    const error = payload?.detail?.error;
+    if (error?.message) {
+      throw new Error(error.code ? `${error.code}: ${error.message}` : error.message);
+    }
     throw new Error(text || `${response.status} ${response.statusText}`);
   }
   return response.json() as Promise<T>;
