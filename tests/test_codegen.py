@@ -40,3 +40,44 @@ def test_heatmap_adds_colorbar():
 
     assert "imshow(matrix, cmap='magma')" in code
     assert "fig.colorbar(image_heat_1, ax=axes_flat[0])" in code
+
+
+def test_generates_code_for_independent_x_and_y_variables():
+    spec = FigureSpec(
+        layers=[
+            PlotLayer(
+                id="layer-1",
+                kind="line",
+                dataset=DatasetRef(
+                    variable="signal",
+                    x_variable="time",
+                    y_variable="signal",
+                ),
+                style=LayerStyle(label="Signal"),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "axes_flat[0].plot(time, signal" in code
+    assert code.count("axes_flat[0].legend()") == 1
+
+
+def test_axis_can_disable_legend_for_labeled_layers():
+    spec = FigureSpec(
+        axes=[{"id": "ax0", "legend": False}],
+        layers=[
+            PlotLayer(
+                id="layer-1",
+                kind="line",
+                dataset=DatasetRef(variable="values"),
+                style=LayerStyle(label="Values"),
+            )
+        ],
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "label='Values'" in code
+    assert ".legend()" not in code

@@ -36,6 +36,10 @@ class VariableSummary(BaseModel):
 
 class DatasetRef(BaseModel):
     variable: str
+    x_variable: str | None = None
+    y_variable: str | None = None
+    z_variable: str | None = None
+    yerr_variable: str | None = None
     x: str | None = None
     y: str | None = None
     z: str | None = None
@@ -133,17 +137,25 @@ class RenderResponse(BaseModel):
     code: str
 
 
+class ErrorDetail(BaseModel):
+    code: str
+    message: str
+    details: dict[str, Any] | None = None
+
+
 class SaveCodeRequest(BaseModel):
     spec: FigureSpec
     code: str | None = None
 
 
 class SaveCodeResponse(BaseModel):
+    ok: bool = True
     code: str
     notebook_cell: str
     wrote_file: bool
     script_path: str | None = None
     message: str
+    error: ErrorDetail | None = None
 
 
 class ExportRequest(BaseModel):

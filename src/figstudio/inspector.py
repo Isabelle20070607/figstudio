@@ -6,7 +6,18 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
+from matplotlib.colors import to_hex
+
 from figstudio.models import AxesSpec, DatasetRef, FigureSpec, LayerStyle, PlotLayer
+
+
+def _color_value(value: Any) -> str | None:
+    if value is None:
+        return None
+    try:
+        return to_hex(value)
+    except ValueError:
+        return str(value)
 
 
 @dataclass
@@ -34,7 +45,7 @@ class FigureInspector:
                     "lines": [
                         {
                             "label": line.get_label(),
-                            "color": line.get_color(),
+                            "color": _color_value(line.get_color()),
                             "linestyle": line.get_linestyle(),
                             "marker": line.get_marker(),
                             "readonly": False,
@@ -79,10 +90,14 @@ class FigureInspector:
                         id=f"line-{uuid4().hex[:8]}",
                         kind="line",
                         axes_id=axis_id,
-                        dataset=DatasetRef(variable=y_name),
+                        dataset=DatasetRef(
+                            variable=y_name,
+                            x_variable=x_name,
+                            y_variable=y_name,
+                        ),
                         style=LayerStyle(
                             label=line.get_label() if not line.get_label().startswith("_") else None,
-                            color=line.get_color(),
+                            color=_color_value(line.get_color()),
                             marker=line.get_marker(),
                             linestyle=line.get_linestyle(),
                             linewidth=float(line.get_linewidth()),

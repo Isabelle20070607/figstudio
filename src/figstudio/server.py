@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -13,6 +13,7 @@ from figstudio.codegen import MatplotlibCodegen
 from figstudio.models import (
     ExportRequest,
     ExportResponse,
+    ErrorDetail,
     FigureSpec,
     RenderRequest,
     RenderResponse,
@@ -24,6 +25,17 @@ from figstudio.sync import CodeSyncEngine, CodeSyncError
 
 if TYPE_CHECKING:
     from figstudio.session import FigStudioSession
+
+
+def _raise_api_error(
+    code: str,
+    message: str,
+    *,
+    status_code: int = 400,
+    details: dict[str, object] | None = None,
+) -> None:
+    error = ErrorDetail(code=code, message=message, details=details)
+    raise HTTPException(status_code=status_code, detail={"error": error.model_dump()})
 
 
 def create_app(session: "FigStudioSession") -> FastAPI:
@@ -65,16 +77,22 @@ def create_app(session: "FigStudioSession") -> FastAPI:
     @app.post("/api/spec")
     def update_spec(spec: FigureSpec) -> RenderResponse:
         session.spec = spec
-        image, code = RenderEngine(session.registry.namespace_dict(), codegen).render_base64(spec, "svg")
+        try:
+            image, code = RenderEngine(session.registry.namespace_dict(), codegen).render_base64(spec, "svg")
+        except Exception as exc:
+            _raise_api_error("render_failed", str(exc), details={"format": "svg"})
         return RenderResponse(image=image, format="svg", code=code)
 
     @app.post("/api/render")
     def render(request: RenderRequest) -> RenderResponse:
         session.spec = request.spec
-        image, code = RenderEngine(session.registry.namespace_dict(), codegen).render_base64(
-            request.spec,
-            request.format,
-        )
+        try:
+            image, code = RenderEngine(session.registry.namespace_dict(), codegen).render_base64(
+                request.spec,
+                request.format,
+            )
+        except Exception as exc:
+            _raise_api_error("render_failed", str(exc), details={"format": request.format})
         return RenderResponse(image=image, format=request.format, code=code)
 
     @app.post("/api/save-code")
@@ -86,11 +104,23 @@ def create_app(session: "FigStudioSession") -> FastAPI:
                 CodeSyncEngine(session.block_id).replace_file(session.script_path, code)
             except CodeSyncError as exc:
                 return SaveCodeResponse(
+                    ok=False,
                     code=code,
                     notebook_cell=notebook_cell,
                     wrote_file=False,
                     script_path=session.script_path,
                     message=str(exc),
+                    error=ErrorDetail(code="writeback_failed", message=str(exc)),
+                )
+            except OSError as exc:
+                return SaveCodeResponse(
+                    ok=False,
+                    code=code,
+                    notebook_cell=notebook_cell,
+                    wrote_file=False,
+                    script_path=session.script_path,
+                    message=str(exc),
+                    error=ErrorDetail(code="writeback_io_failed", message=str(exc)),
                 )
             return SaveCodeResponse(
                 code=code,
@@ -109,12 +139,19 @@ def create_app(session: "FigStudioSession") -> FastAPI:
 
     @app.post("/api/export")
     def export(request: ExportRequest) -> ExportResponse:
-        data = RenderEngine(session.registry.namespace_dict(), codegen).export(
-            request.spec,
-            request.output_path,
-            request.format,
-            dpi=request.dpi,
-        )
+        try:
+            data = RenderEngine(session.registry.namespace_dict(), codegen).export(
+                request.spec,
+                request.output_path,
+                request.format,
+                dpi=request.dpi,
+            )
+        except Exception as exc:
+            _raise_api_error(
+                "export_failed",
+                str(exc),
+                details={"format": request.format, "output_path": request.output_path},
+            )
         return ExportResponse(
             format=request.format,
             output_path=request.output_path,

@@ -49,6 +49,13 @@ class MatplotlibCodegen:
         if self.include_imports:
             lines.extend(["import matplotlib.pyplot as plt", ""])
 
+        if spec.style.font_family:
+            lines.append(f"plt.rcParams['font.family'] = {spec.style.font_family!r}")
+        if spec.style.font_size:
+            lines.append(f"plt.rcParams['font.size'] = {spec.style.font_size!r}")
+        if spec.style.font_family or spec.style.font_size:
+            lines.append("")
+
         layout = (
             f"fig, axes = plt.subplots({spec.rows}, {spec.cols}, "
             f"figsize=({spec.width!r}, {spec.height!r}), dpi={spec.dpi!r}, "
@@ -57,10 +64,6 @@ class MatplotlibCodegen:
         lines.append(layout)
         lines.append("axes_flat = axes.ravel()")
 
-        if spec.style.font_family:
-            lines.append(f"plt.rcParams['font.family'] = {spec.style.font_family!r}")
-        if spec.style.font_size:
-            lines.append(f"plt.rcParams['font.size'] = {spec.style.font_size!r}")
         if spec.style.title:
             lines.append(f"fig.suptitle({spec.style.title!r})")
 
@@ -70,9 +73,18 @@ class MatplotlibCodegen:
             lines.extend(self._axis_setup(axis, index))
             lines.append("")
 
+        legend_axes: set[int] = set()
         for layer in spec.layers:
             axis_index = axis_lookup.get(layer.axes_id, 0)
-            lines.extend(self._layer_code(layer, axis_index))
+            lines.extend(self._layer_code(layer, axis_index, spec.axes[axis_index]))
+            if layer.style.label and layer.kind not in {"heatmap", "contour"}:
+                legend_axes.add(axis_index)
+            lines.append("")
+
+        for axis_index in sorted(legend_axes):
+            if spec.axes[axis_index].legend:
+                lines.append(f"axes_flat[{axis_index}].legend()")
+        if legend_axes:
             lines.append("")
 
         for annotation in spec.annotations:
@@ -118,7 +130,7 @@ class MatplotlibCodegen:
             lines.append(f"{prefix}.grid(True, alpha=0.25)")
         return [line for line in lines if line]
 
-    def _layer_code(self, layer: PlotLayer, axis_index: int) -> list[str]:
+    def _layer_code(self, layer: PlotLayer, axis_index: int, axis: AxesSpec) -> list[str]:
         data = layer.dataset
         style = layer.style
         ax = f"axes_flat[{axis_index}]"
@@ -146,29 +158,29 @@ class MatplotlibCodegen:
             call = f"{ax}.barh({self._xy(data)}, {_kwargs(**common)})"
         elif layer.kind == "hist":
             call = (
-                f"{ax}.hist({_column_expr(data.variable, data.y or data.x)}, "
+                f"{ax}.hist({self._value(data)}, "
                 f"{_kwargs(bins=style.bins or 30, label=label, color=style.color, alpha=style.alpha)})"
             )
         elif layer.kind == "boxplot":
-            call = f"{ax}.boxplot({_column_expr(data.variable, data.y or data.x)})"
+            call = f"{ax}.boxplot({self._value(data)})"
         elif layer.kind == "violin":
-            call = f"{ax}.violinplot({_column_expr(data.variable, data.y or data.x)}, showmeans=True)"
+            call = f"{ax}.violinplot({self._value(data)}, showmeans=True)"
         elif layer.kind == "errorbar":
-            yerr = _column_expr(data.variable, data.yerr) if data.yerr else "None"
+            yerr = self._channel(data, "yerr") if data.yerr or data.yerr_variable else "None"
             call = f"{ax}.errorbar({self._xy(data)}, yerr={yerr}, {_kwargs(**line_common)})"
         elif layer.kind == "heatmap":
-            call = f"image_{layer.id.replace('-', '_')} = {ax}.imshow({_column_expr(data.variable, data.z or data.y or data.x)}, cmap={style.cmap or 'viridis'!r})"
+            call = f"image_{layer.id.replace('-', '_')} = {ax}.imshow({self._z(data)}, cmap={style.cmap or 'viridis'!r})"
         elif layer.kind == "contour":
-            if data.x and data.y and data.z:
+            if (data.x or data.x_variable) and (data.y or data.y_variable) and (data.z or data.z_variable):
                 call = (
                     f"contour_{layer.id.replace('-', '_')} = {ax}.contour("
-                    f"{_column_expr(data.variable, data.x)}, {_column_expr(data.variable, data.y)}, "
-                    f"{_column_expr(data.variable, data.z)}, cmap={style.cmap or 'viridis'!r})"
+                    f"{self._channel(data, 'x')}, {self._channel(data, 'y')}, "
+                    f"{self._channel(data, 'z')}, cmap={style.cmap or 'viridis'!r})"
                 )
             else:
                 call = (
                     f"contour_{layer.id.replace('-', '_')} = {ax}.contour("
-                    f"{_column_expr(data.variable, data.z or data.y or data.x)}, "
+                    f"{self._z(data)}, "
                     f"cmap={style.cmap or 'viridis'!r})"
                 )
         elif layer.kind == "step":
@@ -182,15 +194,32 @@ class MatplotlibCodegen:
             raise ValueError(f"Unsupported plot kind: {layer.kind}")
 
         lines = [call.replace(", )", ")").replace("(, ", "(")]
-        if label and layer.kind not in {"heatmap", "contour"}:
-            lines.append(f"{ax}.legend()")
         if layer.kind == "heatmap":
             lines.append(f"fig.colorbar(image_{layer.id.replace('-', '_')}, ax={ax})")
         if layer.kind == "contour":
-            lines.append(f"{ax}.clabel(contour_{layer.id.replace('-', '_')}, inline=True, fontsize=8)")
+            contour_name = f"contour_{layer.id.replace('-', '_')}"
+            if axis.colorbar:
+                lines.append(f"fig.colorbar({contour_name}, ax={ax})")
+            lines.append(f"{ax}.clabel({contour_name}, inline=True, fontsize=8)")
         return lines
 
     def _xy(self, data: DatasetRef) -> str:
-        x_expr = _column_expr(data.variable, data.x) if data.x else "range(len(" + _column_expr(data.variable, data.y) + "))"
-        y_expr = _column_expr(data.variable, data.y)
+        y_expr = self._value(data)
+        x_expr = self._channel(data, "x") if data.x or data.x_variable else f"range(len({y_expr}))"
         return f"{x_expr}, {y_expr}"
+
+    def _value(self, data: DatasetRef) -> str:
+        if data.y or data.y_variable:
+            return self._channel(data, "y")
+        return _column_expr(data.variable, None)
+
+    def _z(self, data: DatasetRef) -> str:
+        if data.z or data.z_variable:
+            return self._channel(data, "z")
+        return self._value(data)
+
+    def _channel(self, data: DatasetRef, channel: str) -> str:
+        channel_variable = getattr(data, f"{channel}_variable")
+        column = getattr(data, channel)
+        variable = channel_variable or data.variable
+        return _column_expr(variable, column)

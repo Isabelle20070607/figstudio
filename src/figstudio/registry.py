@@ -47,6 +47,8 @@ class VariableRegistry:
     def summaries(self) -> list[VariableSummary]:
         summaries: list[VariableSummary] = []
         for name, value in sorted(self._values.items()):
+            if name.startswith("_"):
+                continue
             summary = self._summarize(name, value)
             if summary is not None:
                 summaries.append(summary)
