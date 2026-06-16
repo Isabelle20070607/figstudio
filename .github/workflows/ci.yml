@@ -1,0 +1,64 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    name: tests-build-package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Python tests
+        run: uv run --extra dev pytest
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Check frontend bundle
+        working-directory: frontend
+        run: npm run check:bundle
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser smoke tests
+        working-directory: frontend
+        run: npm run test:e2e
+
+      - name: Build Python package
+        run: uv build
+
+      - name: Upload package distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: figstudio-dist
+          path: dist/*

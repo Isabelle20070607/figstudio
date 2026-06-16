@@ -1,0 +1,90 @@
+name: publish-pypi
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: build-distributions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Run Python tests
+        run: uv run --extra dev pytest
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm ci && npm run build && npm run check:bundle
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: figstudio-dist
+          path: dist/*
+
+  publish:
+    name: publish-to-pypi
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/figstudio/
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: figstudio-dist
+          path: dist
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Smoke install from PyPI
+        run: |
+          python -m venv .smoke-venv
+          . .smoke-venv/bin/activate
+          python -m pip install --upgrade pip
+          for attempt in 1 2 3; do
+            python -m pip install figstudio==0.1.0 && break
+            sleep 20
+          done
+          figstudio --version
+          timeout 20s figstudio demo --no-browser --port 8765 &
+          for attempt in 1 2 3 4 5; do
+            python - <<'PY' && exit 0
+          import json
+          import urllib.request
+          with urllib.request.urlopen("http://127.0.0.1:8765/api/session", timeout=3) as response:
+              print(json.loads(response.read().decode("utf-8"))["url"])
+          PY
+            sleep 2
+          done
+          exit 1

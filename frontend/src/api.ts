@@ -3,6 +3,7 @@ import type {
   RenderResponse,
   SaveCodeResponse,
   SessionInfo,
+  ValidationResponse,
   VariableSummary
 } from "./types";
 
@@ -39,6 +40,11 @@ export const api = {
     request<RenderResponse>("/api/render", {
       method: "POST",
       body: JSON.stringify({ spec, format })
+    }),
+  validate: (spec: FigureSpec) =>
+    request<ValidationResponse>("/api/validate", {
+      method: "POST",
+      body: JSON.stringify({ spec })
     }),
   updateSpec: (spec: FigureSpec) =>
     request<RenderResponse>("/api/spec", {

@@ -3,7 +3,20 @@ name = "figstudio"
 version = "0.1.0"
 description = "A local graphical Matplotlib code editor for scientific Python workflows."
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.11"
+keywords = ["matplotlib", "scientific-python", "figures", "plotting", "visualization"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Framework :: FastAPI",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Visualization",
+]
 dependencies = [
   "fastapi>=0.115",
   "matplotlib>=3.8",
@@ -22,13 +35,36 @@ dev = [
 [project.scripts]
 figstudio = "figstudio.__main__:main"
 
+[project.urls]
+Homepage = "https://github.com/Isabelle20070607/figstudio"
+Documentation = "https://github.com/Isabelle20070607/figstudio#readme"
+Source = "https://github.com/Isabelle20070607/figstudio"
+Issues = "https://github.com/Isabelle20070607/figstudio/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.hooks.custom]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/frontend",
+  "/src",
+  "/tests",
+  "/examples",
+  "/docs",
+  "/hatch_build.py",
+  "/LICENSE",
+  "/README.md",
+  "/pyproject.toml",
+]
+artifacts = ["src/figstudio/static/**"]
+
 [tool.hatch.build.targets.wheel]
 only-include = ["src/figstudio"]
 sources = ["src"]
+artifacts = ["src/figstudio/static/**"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

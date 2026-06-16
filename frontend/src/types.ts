@@ -12,6 +12,8 @@ export type PlotKind =
   | "step"
   | "fill_between";
 
+export type FigurePreset = "custom" | "journal_single" | "journal_double" | "poster" | "slide";
+
 export interface VariableSummary {
   name: string;
   kind: string;
@@ -83,6 +85,7 @@ export interface AnnotationSpec {
 }
 
 export interface FigureStyle {
+  preset: FigurePreset;
   title: string;
   font_family?: string | null;
   font_size: number;
@@ -133,4 +136,19 @@ export interface SaveCodeResponse {
     message: string;
     details?: Record<string, unknown> | null;
   } | null;
+}
+
+export interface ValidationIssue {
+  severity: "error" | "warning";
+  code: string;
+  message: string;
+  layer_id?: string | null;
+  axes_id?: string | null;
+  field?: string | null;
+  details?: Record<string, unknown> | null;
+}
+
+export interface ValidationResponse {
+  ok: boolean;
+  issues: ValidationIssue[];
 }

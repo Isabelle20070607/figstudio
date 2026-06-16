@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pandas as pd
 import uvicorn
@@ -12,6 +14,7 @@ from figstudio.session import FigStudioSession
 
 
 def main() -> None:
+    os.environ.setdefault("FIGSTUDIO_DEV_STATIC", "1")
     df = pd.DataFrame(
         {
             "time": np.linspace(0, 10, 80),

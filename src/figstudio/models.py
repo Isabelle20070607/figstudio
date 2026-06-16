@@ -22,6 +22,8 @@ PlotKind = Literal[
     "fill_between",
 ]
 
+FigurePreset = Literal["custom", "journal_single", "journal_double", "poster", "slide"]
+
 
 class VariableSummary(BaseModel):
     name: str
@@ -94,6 +96,7 @@ class AnnotationSpec(BaseModel):
 
 
 class FigureStyle(BaseModel):
+    preset: FigurePreset = "custom"
     title: str = ""
     font_family: str | None = None
     font_size: float = 10
@@ -135,6 +138,25 @@ class RenderResponse(BaseModel):
     image: str
     format: str
     code: str
+
+
+class ValidationIssue(BaseModel):
+    severity: Literal["error", "warning"] = "error"
+    code: str
+    message: str
+    layer_id: str | None = None
+    axes_id: str | None = None
+    field: str | None = None
+    details: dict[str, Any] | None = None
+
+
+class ValidationRequest(BaseModel):
+    spec: FigureSpec
+
+
+class ValidationResponse(BaseModel):
+    ok: bool = True
+    issues: list[ValidationIssue] = Field(default_factory=list)
 
 
 class ErrorDetail(BaseModel):

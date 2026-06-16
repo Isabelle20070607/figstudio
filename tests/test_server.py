@@ -54,9 +54,9 @@ def test_render_and_export_failures_return_structured_errors():
     export_response = client.post("/api/export", json={"spec": spec.model_dump(), "format": "svg"})
 
     assert render_response.status_code == 400
-    assert render_response.json()["detail"]["error"]["code"] == "render_failed"
+    assert render_response.json()["detail"]["error"]["code"] == "validation_failed"
     assert export_response.status_code == 400
-    assert export_response.json()["detail"]["error"]["code"] == "export_failed"
+    assert export_response.json()["detail"]["error"]["code"] == "validation_failed"
 
 
 def test_script_writeback_failure_returns_code_and_error(tmp_path):
@@ -86,3 +86,49 @@ def test_script_writeback_failure_returns_code_and_error(tmp_path):
     assert payload["wrote_file"] is False
     assert payload["error"]["code"] == "writeback_failed"
     assert "axes_flat[0].plot" in payload["code"]
+
+
+def test_validate_endpoint_reports_missing_variable_before_render():
+    session = FigStudioSession(registry=VariableRegistry({}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        layers=[
+            PlotLayer(
+                id="layer-1",
+                kind="line",
+                dataset=DatasetRef(variable="missing_values"),
+            )
+        ]
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    rendered = client.post("/api/render", json={"spec": spec.model_dump(), "format": "svg"})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is False
+    assert validation.json()["issues"][0]["code"] == "missing_variable"
+    assert rendered.status_code == 400
+    assert rendered.json()["detail"]["error"]["code"] == "validation_failed"
+
+
+def test_validate_endpoint_reports_dimension_mismatch():
+    session = FigStudioSession(
+        registry=VariableRegistry({"x": [1, 2, 3], "y": [1, 2]}),
+        port=8001,
+    )
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        layers=[
+            PlotLayer(
+                id="layer-1",
+                kind="line",
+                dataset=DatasetRef(variable="y", x_variable="x", y_variable="y"),
+            )
+        ]
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is False
+    assert validation.json()["issues"][0]["code"] == "dimension_mismatch"

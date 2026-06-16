@@ -1,24 +1,35 @@
-import CodeMirror from "@uiw/react-codemirror";
-import { python } from "@codemirror/lang-python";
 import {
   Braces,
   Check,
   Copy,
   Download,
-  FileCode2,
+  FileJson,
   FlaskConical,
   Image as ImageIcon,
   Layers3,
   Play,
   Save,
   Settings2,
-  Trash2
+  Trash2,
+  Upload
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { api } from "./api";
+import { CodePanel } from "./CodePanel";
 import { useAppStore } from "./store";
-import type { AxesSpec, DatasetRef, FigureSpec, LayerStyle, PlotKind, PlotLayer, VariableSummary } from "./types";
+import type {
+  AnnotationSpec,
+  AxesSpec,
+  DatasetRef,
+  FigurePreset,
+  FigureSpec,
+  LayerStyle,
+  PlotKind,
+  PlotLayer,
+  ValidationIssue,
+  VariableSummary
+} from "./types";
 
 const plotKinds: PlotKind[] = [
   "line",
@@ -42,6 +53,57 @@ const cmaps = ["viridis", "magma", "plasma", "cividis", "coolwarm", "Greys"];
 const scales: AxesSpec["xscale"][] = ["linear", "log", "symlog", "logit"];
 const indexSource = "__index__";
 const noneSource = "__none__";
+
+const stylePresets: Record<
+  FigurePreset,
+  {
+    label: string;
+    width?: number;
+    height?: number;
+    dpi?: number;
+    font_family?: string | null;
+    font_size?: number;
+    constrained_layout?: boolean;
+  }
+> = {
+  custom: { label: "Custom" },
+  journal_single: {
+    label: "Journal single column",
+    width: 3.35,
+    height: 2.45,
+    dpi: 300,
+    font_family: "Arial",
+    font_size: 8,
+    constrained_layout: true
+  },
+  journal_double: {
+    label: "Journal double column",
+    width: 7.0,
+    height: 3.8,
+    dpi: 300,
+    font_family: "Arial",
+    font_size: 9,
+    constrained_layout: true
+  },
+  poster: {
+    label: "Poster figure",
+    width: 11.0,
+    height: 7.0,
+    dpi: 200,
+    font_family: "DejaVu Sans",
+    font_size: 16,
+    constrained_layout: true
+  },
+  slide: {
+    label: "Slide figure",
+    width: 10.0,
+    height: 5.625,
+    dpi: 160,
+    font_family: "DejaVu Sans",
+    font_size: 13,
+    constrained_layout: true
+  }
+};
 
 function createId(prefix: string): string {
   if ("randomUUID" in crypto) {
@@ -99,6 +161,10 @@ function resizeAxes(spec: FigureSpec, rows: number, cols: number): FigureSpec {
     layers: spec.layers.map((layer) => ({
       ...layer,
       axes_id: validIds.has(layer.axes_id) ? layer.axes_id : axes[0].id
+    })),
+    annotations: spec.annotations.map((annotation) => ({
+      ...annotation,
+      axes_id: validIds.has(annotation.axes_id) ? annotation.axes_id : axes[0].id
     }))
   };
 }
@@ -219,6 +285,39 @@ function cloneLayer(layer: PlotLayer): PlotLayer {
   };
 }
 
+function applyPreset(spec: FigureSpec, preset: FigurePreset): FigureSpec {
+  const selected = stylePresets[preset];
+  return {
+    ...spec,
+    mode: preset === "custom" ? spec.mode : "publish",
+    width: selected.width ?? spec.width,
+    height: selected.height ?? spec.height,
+    dpi: selected.dpi ?? spec.dpi,
+    style: {
+      ...spec.style,
+      preset,
+      font_family: selected.font_family === undefined ? spec.style.font_family : selected.font_family,
+      font_size: selected.font_size ?? spec.style.font_size,
+      constrained_layout: selected.constrained_layout ?? spec.style.constrained_layout
+    }
+  };
+}
+
+function createAnnotation(axesId: string, withArrow: boolean): AnnotationSpec {
+  return {
+    id: createId("annotation"),
+    axes_id: axesId,
+    text: withArrow ? "Callout" : "Label",
+    x: 0,
+    y: 0,
+    xytext: withArrow ? [0.2, 0.2] : null
+  };
+}
+
+function escapeAttributeValue(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
 export function App() {
   const {
     session,
@@ -239,6 +338,12 @@ export function App() {
   } = useAppStore();
 
   const [saveMessage, setSaveMessage] = useState("");
+  const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
+  const [selectedAxisId, setSelectedAxisId] = useState("ax0");
+  const [layerFocusRequest, setLayerFocusRequest] = useState<{ layerId: string; nonce: number } | null>(null);
+  const manualStatusUntilRef = useRef(0);
+  const pendingIssueFocusRef = useRef<ValidationIssue | null>(null);
+  const specFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -272,9 +377,18 @@ export function App() {
     }
     const timeout = window.setTimeout(async () => {
       try {
+        const validation = await api.validate(spec);
+        setValidationIssues(validation.issues);
+        if (!validation.ok) {
+          const count = validation.issues.filter((issue) => issue.severity === "error").length;
+          setStatus(`${count} validation error${count === 1 ? "" : "s"}`);
+          return;
+        }
         const response = await api.render(spec, "svg");
         setRender(response);
-        setStatus("Preview synced");
+        if (Date.now() >= manualStatusUntilRef.current) {
+          setStatus("Preview synced");
+        }
       } catch (error) {
         setStatus(error instanceof Error ? error.message : "Render failed");
       }
@@ -291,12 +405,78 @@ export function App() {
     [selectedLayerId, spec?.layers]
   );
 
+  useEffect(() => {
+    if (!spec?.axes.length) {
+      return;
+    }
+    if (!spec.axes.some((axis) => axis.id === selectedAxisId)) {
+      setSelectedAxisId(spec.axes[0].id);
+    }
+  }, [selectedAxisId, spec?.axes]);
+
+  function setManualStatus(message: string) {
+    manualStatusUntilRef.current = Date.now() + 2000;
+    setStatus(message);
+  }
+
+  function findValidationFocusTarget(issue: ValidationIssue): HTMLElement | null {
+    const fieldSelector = issue.field
+      ? `[data-field="${escapeAttributeValue(issue.field)}"] input, [data-field="${escapeAttributeValue(issue.field)}"] select, [data-field="${escapeAttributeValue(issue.field)}"] button`
+      : "";
+    const layerSelector = issue.layer_id
+      ? `[data-testid="layer-row"][data-layer-id="${escapeAttributeValue(issue.layer_id)}"]`
+      : "";
+    const axesSelector = issue.axes_id ? `[data-axes-id="${escapeAttributeValue(issue.axes_id)}"]` : "";
+    return document.querySelector<HTMLElement>(
+      [fieldSelector, layerSelector, axesSelector].filter(Boolean).join(", ")
+    );
+  }
+
+  function focusValidationIssue(issue: ValidationIssue) {
+    pendingIssueFocusRef.current = issue;
+    if (issue.axes_id) {
+      setSelectedAxisId(issue.axes_id);
+    }
+    if (issue.layer_id) {
+      setSelectedLayerId(issue.layer_id);
+      setLayerFocusRequest({ layerId: issue.layer_id, nonce: Date.now() });
+    }
+  }
+
+  useEffect(() => {
+    const issue = pendingIssueFocusRef.current;
+    if (!issue) {
+      return;
+    }
+    if (issue.axes_id && selectedAxisId !== issue.axes_id) {
+      return;
+    }
+    if (issue.layer_id && selectedLayerId !== issue.layer_id) {
+      return;
+    }
+    const focusTarget = () => {
+      const target = findValidationFocusTarget(issue);
+      target?.scrollIntoView({ block: "center", behavior: "smooth" });
+      target?.focus({ preventScroll: true });
+    };
+    window.requestAnimationFrame(focusTarget);
+    const timeout = window.setTimeout(focusTarget, 80);
+    pendingIssueFocusRef.current = null;
+    return () => window.clearTimeout(timeout);
+  }, [selectedAxisId, selectedLayerId, spec?.axes, spec?.layers]);
+
   async function renderNow() {
     if (!spec) {
       return;
     }
     setStatus("Rendering");
     try {
+      const validation = await api.validate(spec);
+      setValidationIssues(validation.issues);
+      if (!validation.ok) {
+        setStatus("Fix validation errors");
+        return;
+      }
       const response = await api.render(spec, "svg");
       setRender(response);
       setStatus("Preview synced");
@@ -329,6 +509,12 @@ export function App() {
     }
     setStatus(`Exporting ${format.toUpperCase()}`);
     try {
+      const validation = await api.validate(spec);
+      setValidationIssues(validation.issues);
+      if (!validation.ok) {
+        setStatus("Fix validation errors before export");
+        return;
+      }
       const response = await api.exportFigure(spec, format);
       if (response.data) {
         const href =
@@ -340,9 +526,53 @@ export function App() {
         link.download = `figstudio-export.${format}`;
         link.click();
       }
-      setStatus(`${format.toUpperCase()} export ready`);
+      setManualStatus(`${format.toUpperCase()} export ready`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Export failed");
+    }
+  }
+
+  function exportSpec() {
+    if (!spec) {
+      return;
+    }
+    const blob = new Blob([JSON.stringify(spec, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "figure.figstudio.json";
+    link.click();
+    URL.revokeObjectURL(link.href);
+    setStatus("FigureSpec exported");
+  }
+
+  async function importSpec(file?: File) {
+    if (!file) {
+      return;
+    }
+    try {
+      const raw = JSON.parse(await file.text()) as Partial<FigureSpec>;
+      const imported = {
+        ...raw,
+        axes: raw.axes ?? [createAxis(0, 0, 0)],
+        layers: raw.layers ?? [],
+        annotations: raw.annotations ?? [],
+        style: {
+          preset: "custom",
+          title: "",
+          font_size: 10,
+          constrained_layout: true,
+          ...(raw.style ?? {})
+        }
+      } as FigureSpec;
+      setSpec(imported);
+      setSelectedLayerId(imported.layers[0]?.id ?? "");
+      setStatus("FigureSpec imported");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Spec import failed");
+    } finally {
+      if (specFileInputRef.current) {
+        specFileInputRef.current.value = "";
+      }
     }
   }
 
@@ -364,7 +594,7 @@ export function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-testid="app-shell">
       <header className="topbar">
         <div className="brand">
           <div className="brand-mark">
@@ -375,7 +605,7 @@ export function App() {
             <p>{session?.script_path ? `Writing ${session.block_id}` : "Notebook-safe code output"}</p>
           </div>
         </div>
-        <div className="mode-switch" role="group" aria-label="Mode">
+        <div className="mode-switch" role="group" aria-label="Mode" data-testid="mode-switch">
           <button
             className={spec?.mode === "explore" ? "active" : ""}
             onClick={() => updateSpec((draft) => ({ ...draft, mode: "explore" }))}
@@ -390,14 +620,51 @@ export function App() {
           </button>
         </div>
         <div className="toolbar">
-          <button className="icon-button" title="Render now" onClick={renderNow} disabled={!spec}>
+          <input
+            ref={specFileInputRef}
+            className="hidden-file-input"
+            data-testid="import-spec-input"
+            type="file"
+            accept=".json,.figstudio.json,application/json"
+            onChange={(event) => importSpec(event.target.files?.[0])}
+          />
+          <button
+            className="icon-button"
+            data-testid="import-spec-button"
+            title="Import FigureSpec"
+            onClick={() => specFileInputRef.current?.click()}
+          >
+            <Upload size={16} />
+          </button>
+          <button
+            className="icon-button"
+            data-testid="export-spec-button"
+            title="Export FigureSpec"
+            onClick={exportSpec}
+            disabled={!spec}
+          >
+            <FileJson size={16} />
+          </button>
+          <button
+            className="icon-button"
+            data-testid="render-button"
+            title="Render now"
+            onClick={renderNow}
+            disabled={!spec}
+          >
             <Play size={16} />
           </button>
-          <button className="action-button" onClick={saveCode} disabled={!spec}>
+          <button className="action-button" data-testid="save-code-button" onClick={saveCode} disabled={!spec}>
             <Save size={16} />
             Save code
           </button>
-          <button className="icon-button" title="Export SVG" onClick={() => exportFigure("svg")} disabled={!spec}>
+          <button
+            className="icon-button"
+            data-testid="export-svg-toolbar-button"
+            title="Export SVG"
+            onClick={() => exportFigure("svg")}
+            disabled={!spec}
+          >
             <Download size={16} />
           </button>
         </div>
@@ -419,30 +686,33 @@ export function App() {
 
         <section className="canvas-column">
           <div className="canvas-toolbar">
-            <div className="status-line">
+            <div className="status-line" data-testid="status-line">
               <Check size={15} />
               {status}
             </div>
             <div className="export-set">
-              <button onClick={() => exportFigure("png")} disabled={!spec}>
+              <button data-testid="export-png-button" onClick={() => exportFigure("png")} disabled={!spec}>
                 PNG
               </button>
-              <button onClick={() => exportFigure("svg")} disabled={!spec}>
+              <button data-testid="export-svg-button" onClick={() => exportFigure("svg")} disabled={!spec}>
                 SVG
               </button>
-              <button onClick={() => exportFigure("pdf")} disabled={!spec}>
+              <button data-testid="export-pdf-button" onClick={() => exportFigure("pdf")} disabled={!spec}>
                 PDF
               </button>
             </div>
           </div>
-          <Preview render={render} />
+          <Preview render={render} issues={validationIssues} onIssueSelect={focusValidationIssue} />
           <CodePanel code={render?.code ?? ""} saveMessage={saveMessage} />
         </section>
 
         <Inspector
           spec={spec}
           selectedLayer={selectedLayer}
+          selectedAxisId={selectedAxisId}
+          layerFocusRequest={layerFocusRequest}
           onSelectLayer={setSelectedLayerId}
+          onSelectAxis={setSelectedAxisId}
           onUpdateSpec={updateSpec}
           onDeleteLayer={deleteLayer}
           onDuplicateLayer={duplicateLayer}
@@ -487,13 +757,15 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
   }, [variable?.name, kind]);
 
   return (
-    <aside className="side-panel variables-panel">
+    <aside className="side-panel variables-panel" data-testid="variable-panel">
       <PanelTitle icon={<Braces size={16} />} title="Variables" />
       <div className="variable-list">
         {variables.map((item) => (
           <button
             key={item.name}
             className={`variable-row ${item.name === variable?.name ? "selected" : ""}`}
+            data-testid="variable-row"
+            data-variable-name={item.name}
             onClick={() => onSelect(item.name)}
           >
             <span>{item.name}</span>
@@ -508,7 +780,11 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
         <h2>Create layer</h2>
         <label>
           Plot type
-          <select value={kind} onChange={(event) => setKind(event.target.value as PlotKind)}>
+          <select
+            data-testid="plot-kind-select"
+            value={kind}
+            onChange={(event) => setKind(event.target.value as PlotKind)}
+          >
             {plotKinds.map((plotKind) => (
               <option key={plotKind} value={plotKind}>
                 {plotKind}
@@ -520,7 +796,11 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
         <div className="source-grid">
           <label>
             Y / value source
-            <select value={yVar?.name ?? ""} onChange={(event) => setYVariable(event.target.value)}>
+            <select
+              data-testid="y-source-select"
+              value={yVar?.name ?? ""}
+              onChange={(event) => setYVariable(event.target.value)}
+            >
               {variables.map((item) => (
                 <option key={item.name} value={item.name}>
                   {item.name}
@@ -531,7 +811,11 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
           {yVar?.columns.length ? (
             <label>
               Y / value column
-              <select value={yColumn} onChange={(event) => setYColumn(event.target.value)}>
+              <select
+                data-testid="y-column-select"
+                value={yColumn}
+                onChange={(event) => setYColumn(event.target.value)}
+              >
                 <option value="">variable</option>
                 {yVar.columns.map((column) => (
                   <option key={column} value={column}>
@@ -546,7 +830,11 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
         <div className="source-grid">
           <label>
             X source
-            <select value={xVariable} onChange={(event) => setXVariable(event.target.value)}>
+            <select
+              data-testid="x-source-select"
+              value={xVariable}
+              onChange={(event) => setXVariable(event.target.value)}
+            >
               <option value={indexSource}>index</option>
               {variables.map((item) => (
                 <option key={item.name} value={item.name}>
@@ -558,7 +846,11 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
           {xVar?.columns.length ? (
             <label>
               X column
-              <select value={xColumn} onChange={(event) => setXColumn(event.target.value)}>
+              <select
+                data-testid="x-column-select"
+                value={xColumn}
+                onChange={(event) => setXColumn(event.target.value)}
+              >
                 <option value="">variable</option>
                 {xVar.columns.map((column) => (
                   <option key={column} value={column}>
@@ -574,7 +866,11 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
           <div className="source-grid">
             <label>
               Error source
-              <select value={yerrVariable} onChange={(event) => setYerrVariable(event.target.value)}>
+              <select
+                data-testid="error-source-select"
+                value={yerrVariable}
+                onChange={(event) => setYerrVariable(event.target.value)}
+              >
                 <option value={noneSource}>none</option>
                 {variables.map((item) => (
                   <option key={item.name} value={item.name}>
@@ -586,7 +882,11 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
             {yerrVar?.columns.length ? (
               <label>
                 Error column
-                <select value={yerrColumn} onChange={(event) => setYerrColumn(event.target.value)}>
+                <select
+                  data-testid="error-column-select"
+                  value={yerrColumn}
+                  onChange={(event) => setYerrColumn(event.target.value)}
+                >
                   <option value="">variable</option>
                   {yerrVar.columns.map((column) => (
                     <option key={column} value={column}>
@@ -603,6 +903,7 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
 
         <button
           className="primary-button"
+          data-testid="add-layer-button"
           disabled={!variable || !yVar}
           onClick={() =>
             yVar &&
@@ -633,7 +934,15 @@ function compatibilityText(kind: PlotKind, yVar?: VariableSummary, xVar?: Variab
   return "";
 }
 
-function Preview({ render }: { render?: { image: string; format: string } }) {
+function Preview({
+  render,
+  issues,
+  onIssueSelect
+}: {
+  render?: { image: string; format: string };
+  issues: ValidationIssue[];
+  onIssueSelect: (issue: ValidationIssue) => void;
+}) {
   const src =
     render?.format === "svg"
       ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(render.image)}`
@@ -642,17 +951,18 @@ function Preview({ render }: { render?: { image: string; format: string } }) {
         : "";
 
   return (
-    <section className="preview-surface">
+    <section className="preview-surface" data-testid="preview-surface">
+      {issues.length ? <ValidationList issues={issues} onIssueSelect={onIssueSelect} /> : null}
       {src ? (
-        <div className="figure-frame">
-          <img src={src} alt="Matplotlib preview" />
+        <div className="figure-frame" data-testid="figure-frame">
+          <img data-testid="figure-preview" src={src} alt="Matplotlib preview" />
           <div className="overlay-handle top-left" />
           <div className="overlay-handle top-right" />
           <div className="overlay-handle bottom-left" />
           <div className="overlay-handle bottom-right" />
         </div>
       ) : (
-        <div className="empty-preview">
+        <div className="empty-preview" data-testid="empty-preview">
           <ImageIcon size={32} />
           <span>Add a layer to render a Matplotlib preview</span>
         </div>
@@ -661,35 +971,173 @@ function Preview({ render }: { render?: { image: string; format: string } }) {
   );
 }
 
+function ValidationList({
+  issues,
+  onIssueSelect
+}: {
+  issues: ValidationIssue[];
+  onIssueSelect: (issue: ValidationIssue) => void;
+}) {
+  return (
+    <div className="validation-list" data-testid="validation-list">
+      {issues.map((issue, index) => (
+        <button
+          type="button"
+          key={`${issue.code}-${issue.layer_id ?? "figure"}-${index}`}
+          className={`validation-item ${issue.severity}`}
+          data-testid="validation-issue"
+          data-layer-id={issue.layer_id ?? undefined}
+          data-axes-id={issue.axes_id ?? undefined}
+          onClick={() => onIssueSelect(issue)}
+        >
+          <strong>{issue.code}</strong>
+          <span>{issue.message}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function AnnotationControls({
+  annotations,
+  selectedAxisId,
+  onUpdateSpec
+}: {
+  annotations: AnnotationSpec[];
+  selectedAxisId: string;
+  onUpdateSpec: (updater: (spec: FigureSpec) => FigureSpec) => void;
+}) {
+  function addAnnotation(withArrow: boolean) {
+    const annotation = createAnnotation(selectedAxisId, withArrow);
+    onUpdateSpec((draft) => ({
+      ...draft,
+      annotations: [...draft.annotations, annotation]
+    }));
+  }
+
+  function updateAnnotation(id: string, patch: Partial<AnnotationSpec>) {
+    onUpdateSpec((draft) => ({
+      ...draft,
+      annotations: draft.annotations.map((annotation) =>
+        annotation.id === id ? { ...annotation, ...patch } : annotation
+      )
+    }));
+  }
+
+  function deleteAnnotation(id: string) {
+    onUpdateSpec((draft) => ({
+      ...draft,
+      annotations: draft.annotations.filter((annotation) => annotation.id !== id)
+    }));
+  }
+
+  return (
+    <section className="control-group" data-testid="annotation-controls">
+      <h2>Annotations</h2>
+      <div className="layer-actions">
+        <button className="mini-button" data-testid="add-text-annotation-button" onClick={() => addAnnotation(false)}>
+          Text
+        </button>
+        <button className="mini-button" data-testid="add-arrow-annotation-button" onClick={() => addAnnotation(true)}>
+          Arrow
+        </button>
+      </div>
+      {annotations.length ? (
+        <div className="annotation-list" data-testid="annotation-list">
+          {annotations.map((annotation) => {
+            const xytext = annotation.xytext ?? [annotation.x, annotation.y];
+            return (
+              <div key={annotation.id} className="annotation-card" data-testid="annotation-card">
+                <TextField
+                  label="Text"
+                  value={annotation.text}
+                  testId="annotation-text-field"
+                  onChange={(value) => updateAnnotation(annotation.id, { text: value })}
+                />
+                <div className="split-row">
+                  <NumberField
+                    label="X"
+                    value={annotation.x}
+                    testId="annotation-x-field"
+                    onChange={(value) => updateAnnotation(annotation.id, { x: value })}
+                  />
+                  <NumberField
+                    label="Y"
+                    value={annotation.y}
+                    testId="annotation-y-field"
+                    onChange={(value) => updateAnnotation(annotation.id, { y: value })}
+                  />
+                </div>
+                <ToggleField
+                  label="Arrow"
+                  value={annotation.xytext !== null && annotation.xytext !== undefined}
+                  testId="annotation-arrow-toggle"
+                  onChange={(value) =>
+                    updateAnnotation(annotation.id, {
+                      xytext: value ? [annotation.x + 0.2, annotation.y + 0.2] : null
+                    })
+                  }
+                />
+                {annotation.xytext ? (
+                  <div className="split-row">
+                    <NumberField
+                      label="Text X"
+                      value={xytext[0]}
+                      testId="annotation-text-x-field"
+                      onChange={(value) => updateAnnotation(annotation.id, { xytext: [value, xytext[1]] })}
+                    />
+                    <NumberField
+                      label="Text Y"
+                      value={xytext[1]}
+                      testId="annotation-text-y-field"
+                      onChange={(value) => updateAnnotation(annotation.id, { xytext: [xytext[0], value] })}
+                    />
+                  </div>
+                ) : null}
+                <button
+                  className="mini-button danger-button"
+                  data-testid="delete-annotation-button"
+                  onClick={() => deleteAnnotation(annotation.id)}
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="muted">No annotations on this axes.</p>
+      )}
+    </section>
+  );
+}
+
 function Inspector({
   spec,
   selectedLayer,
+  selectedAxisId,
+  layerFocusRequest,
   onSelectLayer,
+  onSelectAxis,
   onUpdateSpec,
   onDeleteLayer,
   onDuplicateLayer
 }: {
   spec?: FigureSpec;
   selectedLayer?: PlotLayer;
+  selectedAxisId: string;
+  layerFocusRequest: { layerId: string; nonce: number } | null;
   onSelectLayer: (id: string) => void;
+  onSelectAxis: (id: string) => void;
   onUpdateSpec: (updater: (spec: FigureSpec) => FigureSpec) => void;
   onDeleteLayer: (id: string) => void;
   onDuplicateLayer: (layer: PlotLayer) => void;
 }) {
-  const [selectedAxisId, setSelectedAxisId] = useState("ax0");
   const selectedAxis = spec?.axes.find((axis) => axis.id === selectedAxisId) ?? spec?.axes[0];
 
-  useEffect(() => {
-    if (!spec?.axes.length) {
-      return;
-    }
-    if (!spec.axes.some((axis) => axis.id === selectedAxisId)) {
-      setSelectedAxisId(spec.axes[0].id);
-    }
-  }, [selectedAxisId, spec?.axes]);
-
   return (
-    <aside className="side-panel inspector-panel">
+    <aside className="side-panel inspector-panel" data-testid="inspector-panel">
       <PanelTitle icon={<Settings2 size={16} />} title="Inspector" />
       {!spec || !selectedAxis ? (
         <p className="muted">Waiting for session</p>
@@ -697,15 +1145,46 @@ function Inspector({
         <>
           <section className="control-group">
             <h2>Figure</h2>
+            <SelectField
+              label="Style preset"
+              value={spec.style.preset ?? "custom"}
+              options={Object.keys(stylePresets)}
+              testId="style-preset-field"
+              field="style.preset"
+              optionLabel={(value) => stylePresets[value as FigurePreset].label}
+              onChange={(value) => onUpdateSpec((draft) => applyPreset(draft, value as FigurePreset))}
+            />
             <div className="split-row">
-              <NumberField label="Width" value={spec.width} onChange={(value) => onUpdateSpec((draft) => ({ ...draft, width: value }))} />
-              <NumberField label="Height" value={spec.height} onChange={(value) => onUpdateSpec((draft) => ({ ...draft, height: value }))} />
+              <NumberField
+                label="Width"
+                value={spec.width}
+                testId="figure-width-field"
+                field="width"
+                onChange={(value) => onUpdateSpec((draft) => ({ ...draft, width: value }))}
+              />
+              <NumberField
+                label="Height"
+                value={spec.height}
+                testId="figure-height-field"
+                field="height"
+                onChange={(value) => onUpdateSpec((draft) => ({ ...draft, height: value }))}
+              />
             </div>
             <div className="split-row">
-              <NumberField label="DPI" value={spec.dpi} step={1} min={24} onChange={(value) => onUpdateSpec((draft) => ({ ...draft, dpi: value }))} />
+              <NumberField
+                label="DPI"
+                value={spec.dpi}
+                step={1}
+                min={24}
+                testId="figure-dpi-field"
+                field="dpi"
+                onChange={(value) => onUpdateSpec((draft) => ({ ...draft, dpi: value }))}
+              />
               <NumberField
                 label="Font size"
                 value={spec.style.font_size}
+                testId="font-size-field"
+                field="style.font_size"
                 onChange={(value) =>
                   onUpdateSpec((draft) => ({
                     ...draft,
@@ -715,12 +1194,32 @@ function Inspector({
               />
             </div>
             <div className="split-row">
-              <NumberField label="Rows" value={spec.rows} step={1} min={1} max={6} onChange={(value) => onUpdateSpec((draft) => resizeAxes(draft, value, draft.cols))} />
-              <NumberField label="Cols" value={spec.cols} step={1} min={1} max={6} onChange={(value) => onUpdateSpec((draft) => resizeAxes(draft, draft.rows, value))} />
+              <NumberField
+                label="Rows"
+                value={spec.rows}
+                step={1}
+                min={1}
+                max={6}
+                testId="rows-field"
+                field="rows"
+                onChange={(value) => onUpdateSpec((draft) => resizeAxes(draft, value, draft.cols))}
+              />
+              <NumberField
+                label="Cols"
+                value={spec.cols}
+                step={1}
+                min={1}
+                max={6}
+                testId="cols-field"
+                field="cols"
+                onChange={(value) => onUpdateSpec((draft) => resizeAxes(draft, draft.rows, value))}
+              />
             </div>
             <TextField
               label="Suptitle"
               value={spec.style.title}
+              testId="suptitle-field"
+              field="style.title"
               onChange={(value) =>
                 onUpdateSpec((draft) => ({
                   ...draft,
@@ -733,6 +1232,8 @@ function Inspector({
                 <TextField
                   label="Font family"
                   value={spec.style.font_family ?? ""}
+                  testId="font-family-field"
+                  field="style.font_family"
                   onChange={(value) =>
                     onUpdateSpec((draft) => ({
                       ...draft,
@@ -743,6 +1244,8 @@ function Inspector({
                 <ToggleField
                   label="Constrained layout"
                   value={spec.style.constrained_layout}
+                  testId="constrained-layout-field"
+                  field="style.constrained_layout"
                   onChange={(value) =>
                     onUpdateSpec((draft) => ({
                       ...draft,
@@ -758,7 +1261,12 @@ function Inspector({
             <h2>Axes</h2>
             <label>
               Active axes
-              <select value={selectedAxis.id} onChange={(event) => setSelectedAxisId(event.target.value)}>
+              <select
+                data-testid="active-axes-select"
+                data-field="axes_id"
+                value={selectedAxis.id}
+                onChange={(event) => onSelectAxis(event.target.value)}
+              >
                 {spec.axes.map((axis, index) => (
                   <option key={axis.id} value={axis.id}>
                     {axis.id} ({axis.row + 1}, {axis.col + 1}) {index === 0 ? "primary" : ""}
@@ -766,19 +1274,87 @@ function Inspector({
                 ))}
               </select>
             </label>
-            <TextField label="Title" value={selectedAxis.title} onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { title: value })} />
-            <TextField label="X label" value={selectedAxis.xlabel} onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { xlabel: value })} />
-            <TextField label="Y label" value={selectedAxis.ylabel} onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { ylabel: value })} />
+            <TextField
+              label="Title"
+              value={selectedAxis.title}
+              testId="axis-title-field"
+              field="axes.title"
+              onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { title: value })}
+            />
+            <TextField
+              label="X label"
+              value={selectedAxis.xlabel}
+              testId="axis-xlabel-field"
+              field="axes.xlabel"
+              onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { xlabel: value })}
+            />
+            <TextField
+              label="Y label"
+              value={selectedAxis.ylabel}
+              testId="axis-ylabel-field"
+              field="axes.ylabel"
+              onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { ylabel: value })}
+            />
             <div className="split-row">
-              <SelectField label="X scale" value={selectedAxis.xscale} options={scales} onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { xscale: value as AxesSpec["xscale"] })} />
-              <SelectField label="Y scale" value={selectedAxis.yscale} options={scales} onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { yscale: value as AxesSpec["yscale"] })} />
+              <SelectField
+                label="X scale"
+                value={selectedAxis.xscale}
+                options={scales}
+                testId="axis-xscale-field"
+                field="axes.xscale"
+                onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { xscale: value as AxesSpec["xscale"] })}
+              />
+              <SelectField
+                label="Y scale"
+                value={selectedAxis.yscale}
+                options={scales}
+                testId="axis-yscale-field"
+                field="axes.yscale"
+                onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { yscale: value as AxesSpec["yscale"] })}
+              />
             </div>
-            <LimitField label="X limits" value={selectedAxis.xlim ?? null} onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { xlim: value })} />
-            <LimitField label="Y limits" value={selectedAxis.ylim ?? null} onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { ylim: value })} />
-            <ToggleField label="Grid" value={selectedAxis.grid} onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { grid: value })} />
-            <ToggleField label="Legend" value={selectedAxis.legend} onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { legend: value })} />
-            <ToggleField label="Contour colorbar" value={selectedAxis.colorbar} onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { colorbar: value })} />
+            <LimitField
+              label="X limits"
+              value={selectedAxis.xlim ?? null}
+              testId="axis-xlim-field"
+              field="axes.xlim"
+              onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { xlim: value })}
+            />
+            <LimitField
+              label="Y limits"
+              value={selectedAxis.ylim ?? null}
+              testId="axis-ylim-field"
+              field="axes.ylim"
+              onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { ylim: value })}
+            />
+            <ToggleField
+              label="Grid"
+              value={selectedAxis.grid}
+              testId="axis-grid-field"
+              field="axes.grid"
+              onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { grid: value })}
+            />
+            <ToggleField
+              label="Legend"
+              value={selectedAxis.legend}
+              testId="axis-legend-field"
+              field="axes.legend"
+              onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { legend: value })}
+            />
+            <ToggleField
+              label="Contour colorbar"
+              value={selectedAxis.colorbar}
+              testId="axis-colorbar-field"
+              field="axes.colorbar"
+              onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { colorbar: value })}
+            />
           </section>
+
+          <AnnotationControls
+            annotations={spec.annotations.filter((annotation) => annotation.axes_id === selectedAxis.id)}
+            selectedAxisId={selectedAxis.id}
+            onUpdateSpec={onUpdateSpec}
+          />
 
           <section className="control-group">
             <h2>Layers</h2>
@@ -787,6 +1363,14 @@ function Inspector({
                 <button
                   key={layer.id}
                   className={layer.id === selectedLayer?.id ? "selected" : ""}
+                  data-testid="layer-row"
+                  data-layer-id={layer.id}
+                  data-axes-id={layer.axes_id}
+                  ref={(node) => {
+                    if (node && layerFocusRequest?.layerId === layer.id) {
+                      window.setTimeout(() => node.focus({ preventScroll: true }), 0);
+                    }
+                  }}
                   onClick={() => onSelectLayer(layer.id)}
                 >
                   <span>{layer.style.label || layer.dataset.variable}</span>
@@ -799,11 +1383,15 @@ function Inspector({
             {selectedLayer ? (
               <>
                 <div className="layer-actions">
-                  <button className="mini-button" onClick={() => onDuplicateLayer(selectedLayer)}>
+                  <button className="mini-button" data-testid="duplicate-layer-button" onClick={() => onDuplicateLayer(selectedLayer)}>
                     <Copy size={14} />
                     Duplicate
                   </button>
-                  <button className="mini-button danger-button" onClick={() => onDeleteLayer(selectedLayer.id)}>
+                  <button
+                    className="mini-button danger-button"
+                    data-testid="delete-layer-button"
+                    onClick={() => onDeleteLayer(selectedLayer.id)}
+                  >
                     <Trash2 size={14} />
                     Delete
                   </button>
@@ -856,17 +1444,23 @@ function LayerControls({
         label="Axes"
         value={layer.axes_id}
         options={axes.map((axis) => axis.id)}
+        testId="layer-axes-field"
+        field="axes_id"
         onChange={(value) => onChange({ ...layer, axes_id: value })}
       />
       <SelectField
         label="Plot type"
         value={layer.kind}
         options={plotKinds}
+        testId="layer-kind-field"
+        field="kind"
         onChange={(value) => onChange({ ...layer, kind: value as PlotKind })}
       />
       <TextField
         label="Label"
         value={layer.style.label ?? ""}
+        testId="layer-label-field"
+        field="style.label"
         onChange={(value) => onChange({ ...layer, style: { ...layer.style, label: value || null } })}
       />
       {isFieldLayer ? (
@@ -874,10 +1468,12 @@ function LayerControls({
           label="Colormap"
           value={layer.style.cmap ?? "viridis"}
           options={cmaps}
+          testId="layer-cmap-field"
+          field="style.cmap"
           onChange={(value) => onChange({ ...layer, style: { ...layer.style, cmap: value } })}
         />
       ) : (
-        <label>
+        <label data-testid="layer-color-field" data-field="style.color">
           Color
           <div className="swatches">
             {colors.map((color) => (
@@ -886,6 +1482,7 @@ function LayerControls({
                 className={layer.style.color === color ? "selected" : ""}
                 style={{ background: color }}
                 aria-label={color}
+                data-testid="color-swatch"
                 onClick={() => onChange({ ...layer, style: { ...layer.style, color } })}
               />
             ))}
@@ -897,6 +1494,8 @@ function LayerControls({
           label="Marker"
           value={layer.style.marker ?? ""}
           options={markers}
+          testId="layer-marker-field"
+          field="style.marker"
           optionLabel={(value) => value || "none"}
           onChange={(value) => onChange({ ...layer, style: { ...layer.style, marker: value || null } })}
         />
@@ -904,6 +1503,8 @@ function LayerControls({
           label="Line style"
           value={layer.style.linestyle ?? ""}
           options={linestyles}
+          testId="layer-linestyle-field"
+          field="style.linestyle"
           onChange={(value) => onChange({ ...layer, style: { ...layer.style, linestyle: value || null } })}
         />
       </div>
@@ -913,6 +1514,8 @@ function LayerControls({
           value={layer.style.linewidth ?? 1.8}
           step={0.1}
           min={0}
+          testId="layer-linewidth-field"
+          field="style.linewidth"
           onChange={(value) => onChange({ ...layer, style: { ...layer.style, linewidth: value } })}
         />
         <NumberField
@@ -921,6 +1524,8 @@ function LayerControls({
           step={0.05}
           min={0}
           max={1}
+          testId="layer-alpha-field"
+          field="style.alpha"
           onChange={(value) => onChange({ ...layer, style: { ...layer.style, alpha: value } })}
         />
       </div>
@@ -930,6 +1535,8 @@ function LayerControls({
           value={layer.style.bins ?? 30}
           step={1}
           min={1}
+          testId="layer-bins-field"
+          field="style.bins"
           onChange={(value) => onChange({ ...layer, style: { ...layer.style, bins: Math.max(1, Math.round(value)) } })}
         />
       ) : null}
@@ -940,25 +1547,12 @@ function LayerControls({
           step={0.05}
           min={0}
           max={1}
+          testId="layer-fill-alpha-field"
+          field="style.fill_alpha"
           onChange={(value) => onChange({ ...layer, style: { ...layer.style, fill_alpha: value } })}
         />
       ) : null}
     </div>
-  );
-}
-
-function CodePanel({ code, saveMessage }: { code: string; saveMessage: string }) {
-  return (
-    <section className="code-panel">
-      <div className="panel-heading">
-        <span>
-          <FileCode2 size={16} />
-          Generated code
-        </span>
-        {saveMessage && <small>{saveMessage}</small>}
-      </div>
-      <CodeMirror value={code} height="220px" extensions={[python()]} basicSetup={{ lineNumbers: true }} editable={false} />
-    </section>
   );
 }
 
@@ -974,16 +1568,24 @@ function PanelTitle({ icon, title }: { icon: ReactNode; title: string }) {
 function TextField({
   label,
   value,
+  testId,
+  field,
   onChange
 }: {
   label: string;
   value: string;
+  testId?: string;
+  field?: string;
   onChange: (value: string) => void;
 }) {
   return (
-    <label>
+    <label data-testid={testId} data-field={field}>
       {label}
-      <input value={value} onChange={(event) => onChange(event.target.value)} />
+      <input
+        data-testid={testId ? `${testId}-input` : undefined}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </label>
   );
 }
@@ -993,18 +1595,26 @@ function SelectField({
   value,
   options,
   optionLabel,
+  testId,
+  field,
   onChange
 }: {
   label: string;
   value: string;
   options: string[];
   optionLabel?: (value: string) => string;
+  testId?: string;
+  field?: string;
   onChange: (value: string) => void;
 }) {
   return (
-    <label>
+    <label data-testid={testId} data-field={field}>
       {label}
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
+      <select
+        data-testid={testId ? `${testId}-select` : undefined}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
         {options.map((option) => (
           <option key={option || "none"} value={option}>
             {optionLabel ? optionLabel(option) : option}
@@ -1021,7 +1631,9 @@ function NumberField({
   onChange,
   step = 0.1,
   min,
-  max
+  max,
+  testId,
+  field
 }: {
   label: string;
   value: number;
@@ -1029,12 +1641,15 @@ function NumberField({
   step?: number;
   min?: number;
   max?: number;
+  testId?: string;
+  field?: string;
 }) {
   return (
-    <label>
+    <label data-testid={testId} data-field={field}>
       {label}
       <input
         type="number"
+        data-testid={testId ? `${testId}-input` : undefined}
         value={value}
         min={min}
         max={max}
@@ -1048,10 +1663,14 @@ function NumberField({
 function LimitField({
   label,
   value,
+  testId,
+  field,
   onChange
 }: {
   label: string;
   value: [number | null, number | null] | null;
+  testId?: string;
+  field?: string;
   onChange: (value: [number | null, number | null] | null) => void;
 }) {
   const current: [number | null, number | null] = value ?? [null, null];
@@ -1061,17 +1680,19 @@ function LimitField({
     onChange(next[0] === null && next[1] === null ? null : next);
   }
   return (
-    <label>
+    <label data-testid={testId} data-field={field}>
       {label}
       <div className="limit-row">
         <input
           type="number"
+          data-testid={testId ? `${testId}-min-input` : undefined}
           placeholder="auto"
           value={current[0] ?? ""}
           onChange={(event) => update(0, event.target.value)}
         />
         <input
           type="number"
+          data-testid={testId ? `${testId}-max-input` : undefined}
           placeholder="auto"
           value={current[1] ?? ""}
           onChange={(event) => update(1, event.target.value)}
@@ -1084,16 +1705,25 @@ function LimitField({
 function ToggleField({
   label,
   value,
+  testId,
+  field,
   onChange
 }: {
   label: string;
   value: boolean;
+  testId?: string;
+  field?: string;
   onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="toggle-row">
+    <label className="toggle-row" data-testid={testId} data-field={field}>
       <span>{label}</span>
-      <input type="checkbox" checked={value} onChange={(event) => onChange(event.target.checked)} />
+      <input
+        type="checkbox"
+        data-testid={testId ? `${testId}-input` : undefined}
+        checked={value}
+        onChange={(event) => onChange(event.target.checked)}
+      />
     </label>
   );
 }

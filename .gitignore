@@ -3,6 +3,9 @@
 .npm-cache/
 .pytest_cache/
 .test-temp/
+.test-temp-run/
+.tmp-build/
+.smoke-venv*/
 .mplconfig/
 .server-*.log
 dist/
@@ -13,3 +16,6 @@ __pycache__/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+frontend/test-results/
+frontend/playwright-report/
+src/figstudio/static/
