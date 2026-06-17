@@ -85,6 +85,8 @@ export interface AxesSpec {
   id: string;
   row: number;
   col: number;
+  rowspan: number;
+  colspan: number;
   title: string;
   xlabel: string;
   ylabel: string;
@@ -108,10 +110,36 @@ export interface AnnotationSpec {
 
 export interface FigureStyle {
   preset: FigurePreset;
+  profile_id?: string | null;
+  profile_overrides: string[];
   title: string;
   font_family?: string | null;
   font_size: number;
   constrained_layout: boolean;
+}
+
+export interface StyleProfileFigureDefaults {
+  width?: number | null;
+  height?: number | null;
+  dpi?: number | null;
+  font_family?: string | null;
+  font_size?: number | null;
+  constrained_layout?: boolean | null;
+}
+
+export interface StyleProfile {
+  id: string;
+  label: string;
+  description?: string | null;
+  figure: StyleProfileFigureDefaults;
+  layers: Record<string, LayerStyle>;
+  recipes: Record<string, LayerStyle>;
+}
+
+export interface StyleProfilesResponse {
+  profiles: StyleProfile[];
+  source_path?: string | null;
+  warnings: string[];
 }
 
 export interface FigureSpec {
@@ -136,6 +164,7 @@ export interface SessionInfo {
   block_id: string;
   mode: string;
   script_path?: string | null;
+  project_path: string;
   has_script_writeback: boolean;
   has_figure: boolean;
   figure_tree?: Record<string, unknown> | null;

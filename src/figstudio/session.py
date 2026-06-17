@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 import socket
 import threading
 from typing import Any, Mapping
@@ -14,6 +15,7 @@ import uvicorn
 from figstudio.inspector import FigureInspector
 from figstudio.models import FigureSpec, SessionInfo
 from figstudio.registry import VariableRegistry
+from figstudio.style_profiles import resolve_project_path
 
 
 def _free_port() -> int:
@@ -27,6 +29,7 @@ class FigStudioSession:
     registry: VariableRegistry
     figure: Any | None = None
     script_path: str | None = None
+    project_path: str | Path | None = None
     block_id: str = "main"
     mode: str = "auto"
     host: str = "127.0.0.1"
@@ -36,6 +39,11 @@ class FigStudioSession:
     _server: uvicorn.Server | None = None
     _thread: threading.Thread | None = None
     _figure_tree: dict[str, Any] | None = None
+
+    def __post_init__(self) -> None:
+        self.project_path = str(
+            resolve_project_path(script_path=self.script_path, project_path=self.project_path)
+        )
 
     @property
     def url(self) -> str:
@@ -78,6 +86,7 @@ class FigStudioSession:
             block_id=self.block_id,
             mode=self.mode,
             script_path=self.script_path,
+            project_path=str(self.project_path),
             has_script_writeback=self.script_path is not None,
             has_figure=self.figure is not None,
             figure_tree=self._figure_tree,
@@ -89,6 +98,7 @@ def open(
     *,
     figure: Any | None = None,
     script_path: str | None = None,
+    project_path: str | Path | None = None,
     block_id: str = "main",
     mode: str = "auto",
     open_browser: bool = True,
@@ -100,6 +110,7 @@ def open(
         registry=registry,
         figure=figure,
         script_path=script_path,
+        project_path=project_path,
         block_id=block_id,
         mode=mode,
     ).start(open_browser=open_browser)

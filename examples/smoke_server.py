@@ -12,9 +12,12 @@ from figstudio.registry import VariableRegistry
 from figstudio.server import create_app
 from figstudio.session import FigStudioSession
 
+DEFAULT_SMOKE_PORT = 8767
+
 
 def main() -> None:
     os.environ.setdefault("FIGSTUDIO_DEV_STATIC", "1")
+    port = int(os.environ.get("FIGSTUDIO_SMOKE_PORT", DEFAULT_SMOKE_PORT))
     time = np.tile(np.arange(5), 8)
     subject = np.repeat([f"s{index}" for index in range(1, 9)], 5)
     condition = np.repeat(["baseline", "drug"], 20)
@@ -26,11 +29,11 @@ def main() -> None:
             "subject": subject,
         }
     )
-    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8765)
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=port)
     uvicorn.run(
         create_app(session),
         host="127.0.0.1",
-        port=8765,
+        port=port,
         log_level="warning",
         access_log=False,
     )

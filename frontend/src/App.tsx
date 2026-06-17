@@ -29,6 +29,8 @@ import type {
   PlotLayer,
   RecipeKind,
   RecipeLayer,
+  StyleProfile,
+  StyleProfilesResponse,
   ValidationIssue,
   VariableSummary
 } from "./types";
@@ -115,11 +117,194 @@ const stylePresets: Record<
   }
 };
 
+type LayoutPreset = "single" | "two_columns" | "two_rows" | "two_by_two" | "large_left" | "large_top";
+type LayoutPresetValue = LayoutPreset | "custom";
+type AxesGeometry = Pick<AxesSpec, "id" | "row" | "col" | "rowspan" | "colspan">;
+
+const layoutPresets: Record<
+  LayoutPreset,
+  {
+    label: string;
+    rows: number;
+    cols: number;
+    axes: AxesGeometry[];
+  }
+> = {
+  single: {
+    label: "Single panel",
+    rows: 1,
+    cols: 1,
+    axes: [{ id: "ax0", row: 0, col: 0, rowspan: 1, colspan: 1 }]
+  },
+  two_columns: {
+    label: "Two columns",
+    rows: 1,
+    cols: 2,
+    axes: [
+      { id: "ax0", row: 0, col: 0, rowspan: 1, colspan: 1 },
+      { id: "ax1", row: 0, col: 1, rowspan: 1, colspan: 1 }
+    ]
+  },
+  two_rows: {
+    label: "Two rows",
+    rows: 2,
+    cols: 1,
+    axes: [
+      { id: "ax0", row: 0, col: 0, rowspan: 1, colspan: 1 },
+      { id: "ax1", row: 1, col: 0, rowspan: 1, colspan: 1 }
+    ]
+  },
+  two_by_two: {
+    label: "Two by two",
+    rows: 2,
+    cols: 2,
+    axes: [
+      { id: "ax0", row: 0, col: 0, rowspan: 1, colspan: 1 },
+      { id: "ax1", row: 0, col: 1, rowspan: 1, colspan: 1 },
+      { id: "ax2", row: 1, col: 0, rowspan: 1, colspan: 1 },
+      { id: "ax3", row: 1, col: 1, rowspan: 1, colspan: 1 }
+    ]
+  },
+  large_left: {
+    label: "Large left",
+    rows: 2,
+    cols: 2,
+    axes: [
+      { id: "ax0", row: 0, col: 0, rowspan: 2, colspan: 1 },
+      { id: "ax1", row: 0, col: 1, rowspan: 1, colspan: 1 },
+      { id: "ax2", row: 1, col: 1, rowspan: 1, colspan: 1 }
+    ]
+  },
+  large_top: {
+    label: "Large top",
+    rows: 2,
+    cols: 2,
+    axes: [
+      { id: "ax0", row: 0, col: 0, rowspan: 1, colspan: 2 },
+      { id: "ax1", row: 1, col: 0, rowspan: 1, colspan: 1 },
+      { id: "ax2", row: 1, col: 1, rowspan: 1, colspan: 1 }
+    ]
+  }
+};
+
+const layoutPresetOrder: LayoutPreset[] = [
+  "single",
+  "two_columns",
+  "two_rows",
+  "two_by_two",
+  "large_left",
+  "large_top"
+];
+
+type FigureOverrideField =
+  | "width"
+  | "height"
+  | "dpi"
+  | "font_family"
+  | "font_size"
+  | "constrained_layout";
+
 function createId(prefix: string): string {
   if ("randomUUID" in crypto) {
     return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
   }
   return `${prefix}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+function profileById(styleProfiles: StyleProfilesResponse, profileId?: string | null): StyleProfile | undefined {
+  if (!profileId) {
+    return undefined;
+  }
+  return styleProfiles.profiles.find((profile) => profile.id === profileId);
+}
+
+function hasFigureOverride(spec: FigureSpec, field: FigureOverrideField): boolean {
+  return spec.style.profile_overrides?.includes(field) ?? false;
+}
+
+function effectiveFigureValue(
+  spec: FigureSpec,
+  styleProfiles: StyleProfilesResponse,
+  field: FigureOverrideField
+): number | string | boolean | null {
+  const profile = profileById(styleProfiles, spec.style.profile_id);
+  if (profile && !hasFigureOverride(spec, field)) {
+    const value = profile.figure[field];
+    if (value !== undefined && value !== null) {
+      return value;
+    }
+  }
+  if (field === "font_family" || field === "font_size" || field === "constrained_layout") {
+    return spec.style[field] ?? null;
+  }
+  return spec[field];
+}
+
+function addFigureOverride(spec: FigureSpec, field: FigureOverrideField): string[] {
+  const overrides = spec.style.profile_overrides ?? [];
+  return overrides.includes(field) ? overrides : [...overrides, field];
+}
+
+function updateFigureField(
+  spec: FigureSpec,
+  field: FigureOverrideField,
+  value: number | string | boolean | null
+): FigureSpec {
+  const style = {
+    ...spec.style,
+    profile_overrides: spec.style.profile_id ? addFigureOverride(spec, field) : (spec.style.profile_overrides ?? [])
+  };
+  if (field === "font_family" || field === "font_size" || field === "constrained_layout") {
+    return {
+      ...spec,
+      style: {
+        ...style,
+        [field]: value
+      }
+    };
+  }
+  return {
+    ...spec,
+    [field]: value,
+    style
+  };
+}
+
+function applyStyleProfile(spec: FigureSpec, profileId: string): FigureSpec {
+  return {
+    ...spec,
+    mode: profileId ? "publish" : spec.mode,
+    style: {
+      ...spec.style,
+      preset: profileId ? "custom" : spec.style.preset,
+      profile_id: profileId || null,
+      profile_overrides: []
+    }
+  };
+}
+
+function profileLayerDefaults(
+  spec: FigureSpec,
+  styleProfiles: StyleProfilesResponse,
+  layer: PlotLayer
+): LayerStyle | undefined {
+  return profileById(styleProfiles, spec.style.profile_id)?.layers[layer.kind];
+}
+
+function profileRecipeDefaults(
+  spec: FigureSpec,
+  styleProfiles: StyleProfilesResponse,
+  recipe: RecipeLayer
+): LayerStyle | undefined {
+  return profileById(styleProfiles, spec.style.profile_id)?.recipes[recipe.kind];
+}
+
+function inheritedStyleValue<T extends keyof LayerStyle>(
+  style: LayerStyle,
+  defaults: LayerStyle | undefined,
+  field: T
+): LayerStyle[T] {
+  return style[field] ?? defaults?.[field] ?? null;
 }
 
 function findVariable(variables: VariableSummary[], name?: string): VariableSummary | undefined {
@@ -134,11 +319,19 @@ function secondColumn(variable?: VariableSummary): string {
   return variable?.columns[1] ?? variable?.columns[0] ?? "";
 }
 
-function createAxis(index: number, row: number, col: number, existing?: AxesSpec): AxesSpec {
+function createAxis(
+  index: number,
+  row: number,
+  col: number,
+  existing?: AxesSpec,
+  geometry?: Partial<Pick<AxesSpec, "id" | "rowspan" | "colspan">>
+): AxesSpec {
   return {
-    id: `ax${index}`,
+    id: geometry?.id ?? `ax${index}`,
     row,
     col,
+    rowspan: geometry?.rowspan ?? existing?.rowspan ?? 1,
+    colspan: geometry?.colspan ?? existing?.colspan ?? 1,
     title: existing?.title ?? "",
     xlabel: existing?.xlabel ?? "",
     ylabel: existing?.ylabel ?? "",
@@ -152,6 +345,14 @@ function createAxis(index: number, row: number, col: number, existing?: AxesSpec
   };
 }
 
+function normalizeAxis(axis: AxesSpec, index: number): AxesSpec {
+  return createAxis(index, axis.row ?? 0, axis.col ?? 0, axis, {
+    id: axis.id ?? `ax${index}`,
+    rowspan: axis.rowspan ?? 1,
+    colspan: axis.colspan ?? 1
+  });
+}
+
 function resizeAxes(spec: FigureSpec, rows: number, cols: number): FigureSpec {
   const nextRows = Math.max(1, Math.min(6, Math.round(rows || 1)));
   const nextCols = Math.max(1, Math.min(6, Math.round(cols || 1)));
@@ -159,28 +360,71 @@ function resizeAxes(spec: FigureSpec, rows: number, cols: number): FigureSpec {
   for (let row = 0; row < nextRows; row += 1) {
     for (let col = 0; col < nextCols; col += 1) {
       const index = axes.length;
-      axes.push(createAxis(index, row, col, spec.axes[index]));
+      axes.push(createAxis(index, row, col, spec.axes[index], { rowspan: 1, colspan: 1 }));
     }
   }
+  return withValidAxesTargets({ ...spec, rows: nextRows, cols: nextCols, axes }, axes);
+}
+
+function applyLayoutPreset(spec: FigureSpec, preset: LayoutPreset): FigureSpec {
+  const definition = layoutPresets[preset];
+  const existingById = new Map(spec.axes.map((axis) => [axis.id, axis]));
+  const axes = definition.axes.map((geometry, index) =>
+    createAxis(index, geometry.row, geometry.col, existingById.get(geometry.id) ?? spec.axes[index], geometry)
+  );
+  return withValidAxesTargets(
+    {
+      ...spec,
+      rows: definition.rows,
+      cols: definition.cols,
+      axes
+    },
+    axes
+  );
+}
+
+function withValidAxesTargets(spec: FigureSpec, axes: AxesSpec[]): FigureSpec {
   const validIds = new Set(axes.map((axis) => axis.id));
+  const fallbackId = axes[0]?.id ?? "ax0";
   return {
     ...spec,
-    rows: nextRows,
-    cols: nextCols,
     axes,
     layers: spec.layers.map((layer) => ({
       ...layer,
-      axes_id: validIds.has(layer.axes_id) ? layer.axes_id : axes[0].id
+      axes_id: validIds.has(layer.axes_id) ? layer.axes_id : fallbackId
     })),
     recipes: (spec.recipes ?? []).map((recipe) => ({
       ...recipe,
-      axes_id: validIds.has(recipe.axes_id) ? recipe.axes_id : axes[0].id
+      axes_id: validIds.has(recipe.axes_id) ? recipe.axes_id : fallbackId
     })),
     annotations: spec.annotations.map((annotation) => ({
       ...annotation,
-      axes_id: validIds.has(annotation.axes_id) ? annotation.axes_id : axes[0].id
+      axes_id: validIds.has(annotation.axes_id) ? annotation.axes_id : fallbackId
     }))
   };
+}
+
+function inferLayoutPreset(spec: FigureSpec): LayoutPresetValue {
+  const axes = spec.axes.map(axisGeometryKey).join("|");
+  for (const preset of layoutPresetOrder) {
+    const definition = layoutPresets[preset];
+    if (spec.rows !== definition.rows || spec.cols !== definition.cols) {
+      continue;
+    }
+    if (definition.axes.map(axisGeometryKey).join("|") === axes) {
+      return preset;
+    }
+  }
+  return "custom";
+}
+
+function axisGeometryKey(axis: AxesGeometry): string {
+  return `${axis.id}:${axis.row}:${axis.col}:${axis.rowspan ?? 1}:${axis.colspan ?? 1}`;
+}
+
+function axisLabel(axis: AxesSpec, index: number): string {
+  const span = axis.rowspan > 1 || axis.colspan > 1 ? `, ${axis.rowspan}x${axis.colspan}` : "";
+  return `${axis.id} (${axis.row + 1}, ${axis.col + 1}${span}) ${index === 0 ? "primary" : ""}`.trim();
 }
 
 function buildDatasetRef({
@@ -365,6 +609,8 @@ function applyPreset(spec: FigureSpec, preset: FigurePreset): FigureSpec {
     style: {
       ...spec.style,
       preset,
+      profile_id: null,
+      profile_overrides: [],
       font_family: selected.font_family === undefined ? spec.style.font_family : selected.font_family,
       font_size: selected.font_size ?? spec.style.font_size,
       constrained_layout: selected.constrained_layout ?? spec.style.constrained_layout
@@ -387,10 +633,54 @@ function escapeAttributeValue(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
+function hasFigureContent(spec: FigureSpec): boolean {
+  return spec.layers.length > 0 || (spec.recipes?.length ?? 0) > 0;
+}
+
+function nextStepStatus(spec: FigureSpec): string {
+  if (!hasFigureContent(spec)) {
+    return "Select data, add a layer or recipe, then preview.";
+  }
+  return "Preview synced. Polish the figure, then save or export.";
+}
+
+function validationRepairText(issue: ValidationIssue): string {
+  switch (issue.code) {
+    case "missing_variable":
+      return "Choose an available source variable, or restart FigStudio from a scope that contains this name.";
+    case "missing_column":
+      return "Open the affected layer or recipe and choose a column that exists on the selected DataFrame.";
+    case "unsupported_recipe_source":
+      return "Stats recipes need a pandas DataFrame source. Switch the source or create a normal plot layer.";
+    case "missing_axes":
+      return "Select a valid target axes for the layer, recipe, or annotation.";
+    case "dimension_mismatch":
+      return "Use X, Y, and error sources with matching lengths, or use index for X.";
+    case "requires_2d_data":
+      return "Use a 2D ndarray or gridded value column for heatmap and contour layers.";
+    case "log_scale_non_positive":
+      return "Remove non-positive data or switch the affected axis back to a linear scale.";
+    case "invalid_grid_size":
+      return "Set figure rows and columns to positive values in the Figure controls.";
+    case "duplicate_axes_id":
+    case "invalid_axes_span":
+    case "axes_out_of_bounds":
+    case "axes_overlap":
+      return "Choose a built-in panel layout or reduce rows, columns, and spans until axes no longer overlap.";
+    case "missing_style_profile":
+      return "Pick an existing project profile or choose No project profile.";
+    default:
+      return issue.field
+        ? "Click this issue to focus the affected field, then adjust the value."
+        : "Click this issue to focus the affected editor context.";
+  }
+}
+
 export function App() {
   const {
     session,
     variables,
+    styleProfiles,
     spec,
     render,
     selectedVariable,
@@ -398,6 +688,7 @@ export function App() {
     status,
     setSession,
     setVariables,
+    setStyleProfiles,
     setSpec,
     setRender,
     setSelectedVariable,
@@ -418,9 +709,10 @@ export function App() {
     let cancelled = false;
     async function load() {
       try {
-        const [sessionInfo, variableList, initialSpec] = await Promise.all([
+        const [sessionInfo, variableList, profiles, initialSpec] = await Promise.all([
           api.session(),
           api.variables(),
+          api.styleProfiles(),
           api.spec()
         ]);
         if (cancelled) {
@@ -428,8 +720,9 @@ export function App() {
         }
         setSession(sessionInfo);
         setVariables(variableList);
+        setStyleProfiles(profiles);
         setSpec(initialSpec);
-        setStatus("Ready");
+        setStatus(nextStepStatus(initialSpec));
       } catch (error) {
         setStatus(error instanceof Error ? error.message : "Failed to load session");
       }
@@ -438,7 +731,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [setSession, setSpec, setStatus, setVariables]);
+  }, [setSession, setSpec, setStatus, setStyleProfiles, setVariables]);
 
   useEffect(() => {
     if (!spec) {
@@ -450,13 +743,20 @@ export function App() {
         setValidationIssues(validation.issues);
         if (!validation.ok) {
           const count = validation.issues.filter((issue) => issue.severity === "error").length;
-          setStatus(`${count} validation error${count === 1 ? "" : "s"}`);
+          setStatus(`${count} validation error${count === 1 ? "" : "s"}: click a card to repair.`);
+          return;
+        }
+        if (!hasFigureContent(spec)) {
+          setRender(undefined);
+          if (Date.now() >= manualStatusUntilRef.current) {
+            setStatus(nextStepStatus(spec));
+          }
           return;
         }
         const response = await api.render(spec, "svg");
         setRender(response);
         if (Date.now() >= manualStatusUntilRef.current) {
-          setStatus("Preview synced");
+          setStatus(nextStepStatus(spec));
         }
       } catch (error) {
         setStatus(error instanceof Error ? error.message : "Render failed");
@@ -507,6 +807,7 @@ export function App() {
 
   function focusValidationIssue(issue: ValidationIssue) {
     pendingIssueFocusRef.current = issue;
+    setManualStatus(`Repair ${issue.code}: ${validationRepairText(issue)}`);
     if (issue.axes_id) {
       setSelectedAxisId(issue.axes_id);
     }
@@ -547,12 +848,17 @@ export function App() {
       const validation = await api.validate(spec);
       setValidationIssues(validation.issues);
       if (!validation.ok) {
-        setStatus("Fix validation errors");
+        setStatus("Fix validation errors: click a card to repair.");
+        return;
+      }
+      if (!hasFigureContent(spec)) {
+        setRender(undefined);
+        setStatus(nextStepStatus(spec));
         return;
       }
       const response = await api.render(spec, "svg");
       setRender(response);
-      setStatus("Preview synced");
+      setStatus(nextStepStatus(spec));
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Render failed");
     }
@@ -565,11 +871,14 @@ export function App() {
     setStatus("Saving code");
     try {
       const response = await api.saveCode(spec, render?.code);
-      setSaveMessage(response.message);
+      const saveHelp = response.wrote_file
+        ? "Script marker block updated."
+        : `${response.message} Copy the replacement cell code from this panel.`;
+      setSaveMessage(response.ok ? saveHelp : `${response.message} Generated code remains available below.`);
       if (!response.ok) {
-        setStatus("Save blocked");
+        setStatus("Save blocked: copy generated code from the panel.");
       } else {
-        setStatus(response.wrote_file ? "Script updated" : "Notebook cell ready");
+        setStatus(response.wrote_file ? "Script updated." : "Notebook replacement code ready.");
       }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Save failed");
@@ -585,7 +894,7 @@ export function App() {
       const validation = await api.validate(spec);
       setValidationIssues(validation.issues);
       if (!validation.ok) {
-        setStatus("Fix validation errors before export");
+        setStatus("Export blocked: click a validation card to repair.");
         return;
       }
       const response = await api.exportFigure(spec, format);
@@ -624,14 +933,19 @@ export function App() {
     }
     try {
       const raw = JSON.parse(await file.text()) as Partial<FigureSpec>;
+      const axes = raw.axes?.map((axis, index) => normalizeAxis(axis as AxesSpec, index)) ?? [
+        createAxis(0, 0, 0)
+      ];
       const imported = {
         ...raw,
-        axes: raw.axes ?? [createAxis(0, 0, 0)],
+        axes,
         layers: raw.layers ?? [],
         recipes: raw.recipes ?? [],
         annotations: raw.annotations ?? [],
         style: {
           preset: "custom",
+          profile_id: null,
+          profile_overrides: [],
           title: "",
           font_size: 10,
           constrained_layout: true,
@@ -761,6 +1075,12 @@ export function App() {
         </div>
       </header>
 
+      <nav className="panel-jump-nav" aria-label="Editor panels">
+        <a href="#variables-panel">Explore</a>
+        <a href="#preview-panel">Preview</a>
+        <a href="#polish-panel">Polish</a>
+      </nav>
+
       <section className="workspace">
         <VariablePanel
           variables={variables}
@@ -782,7 +1102,7 @@ export function App() {
           }}
         />
 
-        <section className="canvas-column">
+        <section className="canvas-column" id="preview-panel">
           <div className="canvas-toolbar">
             <div className="status-line" data-testid="status-line">
               <Check size={15} />
@@ -806,6 +1126,7 @@ export function App() {
 
         <Inspector
           spec={spec}
+          styleProfiles={styleProfiles}
           selectedLayer={selectedLayer}
           selectedRecipe={selectedRecipe}
           selectedAxisId={selectedAxisId}
@@ -885,8 +1206,9 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer, onAddRecipe 
   }, [recipeVariable?.name, recipeKind]);
 
   return (
-    <aside className="side-panel variables-panel" data-testid="variable-panel">
-      <PanelTitle icon={<Braces size={16} />} title="Variables" />
+    <aside className="side-panel variables-panel" id="variables-panel" data-testid="variable-panel">
+      <PanelTitle icon={<Braces size={16} />} title="Explore" />
+      <p className="panel-help">Choose source data, then create the first plot layer or statistics recipe.</p>
       <div className="variable-list">
         {variables.map((item) => (
           <button
@@ -905,9 +1227,9 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer, onAddRecipe 
       </div>
 
       <div className="builder">
-        <h2>{builderMode === "layer" ? "Create layer" : "Create recipe"}</h2>
+        <h2>{builderMode === "layer" ? "Create plot layer" : "Create statistics recipe"}</h2>
         <label>
-          Build
+          Build from selected data
           <select
             data-testid="builder-mode-select"
             value={builderMode}
@@ -1241,7 +1563,15 @@ function Preview({
       ) : (
         <div className="empty-preview" data-testid="empty-preview">
           <ImageIcon size={32} />
-          <span>Add a layer to render a Matplotlib preview</span>
+          <div>
+            <strong>Add data to the canvas</strong>
+            <span>Select a variable, add a plot layer or stats recipe, then polish it on the right.</span>
+          </div>
+          <ol data-testid="empty-preview-steps">
+            <li>Choose a variable in Explore.</li>
+            <li>Map X and Y, then add a layer.</li>
+            <li>Use Polish for labels, layout, and styles.</li>
+          </ol>
         </div>
       )}
     </section>
@@ -1268,7 +1598,10 @@ function ValidationList({
           onClick={() => onIssueSelect(issue)}
         >
           <strong>{issue.code}</strong>
-          <span>{issue.message}</span>
+          <span>
+            {issue.message}
+            <small>{validationRepairText(issue)}</small>
+          </span>
         </button>
       ))}
     </div>
@@ -1392,6 +1725,7 @@ function AnnotationControls({
 
 function Inspector({
   spec,
+  styleProfiles,
   selectedLayer,
   selectedRecipe,
   selectedAxisId,
@@ -1405,6 +1739,7 @@ function Inspector({
   onDuplicateRecipe
 }: {
   spec?: FigureSpec;
+  styleProfiles: StyleProfilesResponse;
   selectedLayer?: PlotLayer;
   selectedRecipe?: RecipeLayer;
   selectedAxisId: string;
@@ -1419,16 +1754,25 @@ function Inspector({
 }) {
   const selectedAxis = spec?.axes.find((axis) => axis.id === selectedAxisId) ?? spec?.axes[0];
   const recipes = spec?.recipes ?? [];
+  const layoutPreset = spec ? inferLayoutPreset(spec) : "custom";
+  const activeProfile = spec ? profileById(styleProfiles, spec.style.profile_id) : undefined;
+  const profileOverrides = spec?.style.profile_overrides ?? [];
+  const profileOverrideSummary = spec?.style.profile_id
+    ? profileOverrides.length
+      ? `Overrides: ${profileOverrides.join(", ")}`
+      : "Using project profile defaults"
+    : "";
 
   return (
-    <aside className="side-panel inspector-panel" data-testid="inspector-panel">
-      <PanelTitle icon={<Settings2 size={16} />} title="Inspector" />
+    <aside className="side-panel inspector-panel" id="polish-panel" data-testid="inspector-panel">
+      <PanelTitle icon={<Settings2 size={16} />} title="Polish" />
+      <p className="panel-help">Tune figure setup, axes, annotations, layers, and recipes without leaving the preview.</p>
       {!spec || !selectedAxis ? (
         <p className="muted">Waiting for session</p>
       ) : (
         <>
           <section className="control-group">
-            <h2>Figure</h2>
+            <h2>Figure setup</h2>
             <SelectField
               label="Style preset"
               value={spec.style.preset ?? "custom"}
@@ -1438,43 +1782,74 @@ function Inspector({
               optionLabel={(value) => stylePresets[value as FigurePreset].label}
               onChange={(value) => onUpdateSpec((draft) => applyPreset(draft, value as FigurePreset))}
             />
+            <SelectField
+              label="Project profile"
+              value={spec.style.profile_id ?? ""}
+              options={["", ...styleProfiles.profiles.map((profile) => profile.id)]}
+              testId="style-profile-field"
+              field="style.profile_id"
+              optionLabel={(value) =>
+                value ? (profileById(styleProfiles, value)?.label ?? value) : "No project profile"
+              }
+              onChange={(value) => onUpdateSpec((draft) => applyStyleProfile(draft, value))}
+            />
+            {profileOverrideSummary ? (
+              <p className="profile-note" data-testid="style-profile-note">
+                {activeProfile?.label ?? spec.style.profile_id}: {profileOverrideSummary}
+              </p>
+            ) : null}
+            {styleProfiles.warnings.length ? (
+              <p className="compatibility-note" data-testid="style-profile-warning">
+                {styleProfiles.warnings.join(" ")}
+              </p>
+            ) : null}
+            <SelectField
+              label="Panel layout"
+              value={layoutPreset}
+              options={["custom", ...layoutPresetOrder]}
+              testId="layout-preset-field"
+              field="axes.layout"
+              optionLabel={(value) =>
+                value === "custom" ? "Custom layout" : layoutPresets[value as LayoutPreset].label
+              }
+              onChange={(value) => {
+                if (value !== "custom") {
+                  onUpdateSpec((draft) => applyLayoutPreset(draft, value as LayoutPreset));
+                }
+              }}
+            />
             <div className="split-row">
               <NumberField
                 label="Width"
-                value={spec.width}
+                value={Number(effectiveFigureValue(spec, styleProfiles, "width"))}
                 testId="figure-width-field"
                 field="width"
-                onChange={(value) => onUpdateSpec((draft) => ({ ...draft, width: value }))}
+                onChange={(value) => onUpdateSpec((draft) => updateFigureField(draft, "width", value))}
               />
               <NumberField
                 label="Height"
-                value={spec.height}
+                value={Number(effectiveFigureValue(spec, styleProfiles, "height"))}
                 testId="figure-height-field"
                 field="height"
-                onChange={(value) => onUpdateSpec((draft) => ({ ...draft, height: value }))}
+                onChange={(value) => onUpdateSpec((draft) => updateFigureField(draft, "height", value))}
               />
             </div>
             <div className="split-row">
               <NumberField
                 label="DPI"
-                value={spec.dpi}
+                value={Number(effectiveFigureValue(spec, styleProfiles, "dpi"))}
                 step={1}
                 min={24}
                 testId="figure-dpi-field"
                 field="dpi"
-                onChange={(value) => onUpdateSpec((draft) => ({ ...draft, dpi: value }))}
+                onChange={(value) => onUpdateSpec((draft) => updateFigureField(draft, "dpi", value))}
               />
               <NumberField
                 label="Font size"
-                value={spec.style.font_size}
+                value={Number(effectiveFigureValue(spec, styleProfiles, "font_size"))}
                 testId="font-size-field"
                 field="style.font_size"
-                onChange={(value) =>
-                  onUpdateSpec((draft) => ({
-                    ...draft,
-                    style: { ...draft.style, font_size: value }
-                  }))
-                }
+                onChange={(value) => onUpdateSpec((draft) => updateFigureField(draft, "font_size", value))}
               />
             </div>
             <div className="split-row">
@@ -1515,26 +1890,20 @@ function Inspector({
               <>
                 <TextField
                   label="Font family"
-                  value={spec.style.font_family ?? ""}
+                  value={String(effectiveFigureValue(spec, styleProfiles, "font_family") ?? "")}
                   testId="font-family-field"
                   field="style.font_family"
                   onChange={(value) =>
-                    onUpdateSpec((draft) => ({
-                      ...draft,
-                      style: { ...draft.style, font_family: value || null }
-                    }))
+                    onUpdateSpec((draft) => updateFigureField(draft, "font_family", value || null))
                   }
                 />
                 <ToggleField
                   label="Constrained layout"
-                  value={spec.style.constrained_layout}
+                  value={Boolean(effectiveFigureValue(spec, styleProfiles, "constrained_layout"))}
                   testId="constrained-layout-field"
                   field="style.constrained_layout"
                   onChange={(value) =>
-                    onUpdateSpec((draft) => ({
-                      ...draft,
-                      style: { ...draft.style, constrained_layout: value }
-                    }))
+                    onUpdateSpec((draft) => updateFigureField(draft, "constrained_layout", value))
                   }
                 />
               </>
@@ -1542,7 +1911,7 @@ function Inspector({
           </section>
 
           <section className="control-group">
-            <h2>Axes</h2>
+            <h2>Axes labels and scale</h2>
             <label>
               Active axes
               <select
@@ -1553,7 +1922,7 @@ function Inspector({
               >
                 {spec.axes.map((axis, index) => (
                   <option key={axis.id} value={axis.id}>
-                    {axis.id} ({axis.row + 1}, {axis.col + 1}) {index === 0 ? "primary" : ""}
+                    {axisLabel(axis, index)}
                   </option>
                 ))}
               </select>
@@ -1641,48 +2010,57 @@ function Inspector({
           />
 
           <section className="control-group">
-            <h2>Layers</h2>
+            <h2>Layers and recipes</h2>
             <div className="layer-list">
-              {spec.layers.map((layer) => (
-                <button
-                  key={layer.id}
-                  className={layer.id === selectedLayer?.id ? "selected" : ""}
-                  data-testid="layer-row"
-                  data-layer-id={layer.id}
-                  data-axes-id={layer.axes_id}
-                  ref={(node) => {
-                    if (node && layerFocusRequest?.layerId === layer.id) {
-                      window.setTimeout(() => node.focus({ preventScroll: true }), 0);
-                    }
-                  }}
-                  onClick={() => onSelectLayer(layer.id)}
-                >
-                  <span>{layer.style.label || layer.dataset.variable}</span>
-                  <small>
-                    {layer.kind} · {layer.axes_id}
-                  </small>
-                </button>
-              ))}
-              {recipes.map((recipe) => (
-                <button
-                  key={recipe.id}
-                  className={recipe.id === selectedRecipe?.id ? "selected" : ""}
-                  data-testid="layer-row"
-                  data-layer-id={recipe.id}
-                  data-axes-id={recipe.axes_id}
-                  ref={(node) => {
-                    if (node && layerFocusRequest?.layerId === recipe.id) {
-                      window.setTimeout(() => node.focus({ preventScroll: true }), 0);
-                    }
-                  }}
-                  onClick={() => onSelectLayer(recipe.id)}
-                >
-                  <span>{recipe.style.label || recipe.dataset.y || recipe.dataset.variable}</span>
-                  <small>
-                    recipe · {recipe.kind} · {recipe.axes_id}
-                  </small>
-                </button>
-              ))}
+              {spec.layers.map((layer) => {
+                const defaults = profileLayerDefaults(spec, styleProfiles, layer);
+                const label = inheritedStyleValue(layer.style, defaults, "label") || layer.dataset.variable;
+                return (
+                  <button
+                    key={layer.id}
+                    className={layer.id === selectedLayer?.id ? "selected" : ""}
+                    data-testid="layer-row"
+                    data-layer-id={layer.id}
+                    data-axes-id={layer.axes_id}
+                    ref={(node) => {
+                      if (node && layerFocusRequest?.layerId === layer.id) {
+                        window.setTimeout(() => node.focus({ preventScroll: true }), 0);
+                      }
+                    }}
+                    onClick={() => onSelectLayer(layer.id)}
+                  >
+                    <span>{label}</span>
+                    <small>
+                      {layer.kind} · {layer.axes_id}
+                    </small>
+                  </button>
+                );
+              })}
+              {recipes.map((recipe) => {
+                const defaults = profileRecipeDefaults(spec, styleProfiles, recipe);
+                const label =
+                  inheritedStyleValue(recipe.style, defaults, "label") || recipe.dataset.y || recipe.dataset.variable;
+                return (
+                  <button
+                    key={recipe.id}
+                    className={recipe.id === selectedRecipe?.id ? "selected" : ""}
+                    data-testid="layer-row"
+                    data-layer-id={recipe.id}
+                    data-axes-id={recipe.axes_id}
+                    ref={(node) => {
+                      if (node && layerFocusRequest?.layerId === recipe.id) {
+                        window.setTimeout(() => node.focus({ preventScroll: true }), 0);
+                      }
+                    }}
+                    onClick={() => onSelectLayer(recipe.id)}
+                  >
+                    <span>{label}</span>
+                    <small>
+                      recipe · {recipe.kind} · {recipe.axes_id}
+                    </small>
+                  </button>
+                );
+              })}
             </div>
             {selectedLayer ? (
               <>
@@ -1702,6 +2080,7 @@ function Inspector({
                 </div>
                 <LayerControls
                   layer={selectedLayer}
+                  defaults={profileLayerDefaults(spec, styleProfiles, selectedLayer)}
                   axes={spec.axes}
                   onChange={(next) =>
                     onUpdateSpec((draft) => ({
@@ -1733,6 +2112,7 @@ function Inspector({
                 </div>
                 <RecipeControls
                   recipe={selectedRecipe}
+                  defaults={profileRecipeDefaults(spec, styleProfiles, selectedRecipe)}
                   axes={spec.axes}
                   onChange={(next) =>
                     onUpdateSpec((draft) => ({
@@ -1745,7 +2125,7 @@ function Inspector({
                 />
               </>
             ) : (
-              <p className="muted">Select or add a layer or recipe to edit style.</p>
+              <p className="muted">Add or select a layer or recipe to edit its target axes and style.</p>
             )}
           </section>
         </>
@@ -1767,15 +2147,24 @@ function updateAxis(
 
 function RecipeControls({
   recipe,
+  defaults,
   axes,
   onChange
 }: {
   recipe: RecipeLayer;
+  defaults?: LayerStyle;
   axes: AxesSpec[];
   onChange: (recipe: RecipeLayer) => void;
 }) {
+  const label = inheritedStyleValue(recipe.style, defaults, "label") ?? "";
+  const effectiveColor = inheritedStyleValue(recipe.style, defaults, "color") ?? "";
+  const marker = inheritedStyleValue(recipe.style, defaults, "marker") ?? "";
+  const linestyle = inheritedStyleValue(recipe.style, defaults, "linestyle") ?? "";
+  const linewidth = inheritedStyleValue(recipe.style, defaults, "linewidth") ?? 1.8;
+  const alpha = inheritedStyleValue(recipe.style, defaults, "alpha") ?? 1;
   return (
     <div className="layer-controls">
+      {defaults ? <p className="profile-note">Layer defaults inherited from project profile.</p> : null}
       <SelectField
         label="Axes"
         value={recipe.axes_id}
@@ -1844,7 +2233,7 @@ function RecipeControls({
       />
       <TextField
         label="Label"
-        value={recipe.style.label ?? ""}
+        value={String(label)}
         testId="recipe-label-field"
         field="style.label"
         onChange={(value) => onChange({ ...recipe, style: { ...recipe.style, label: value || null } })}
@@ -1852,14 +2241,14 @@ function RecipeControls({
       <label data-testid="recipe-color-field" data-field="style.color">
         Color
         <div className="swatches">
-          {colors.map((color) => (
+          {colors.map((swatch) => (
             <button
-              key={color}
-              className={recipe.style.color === color ? "selected" : ""}
-              style={{ background: color }}
-              aria-label={color}
+              key={swatch}
+              className={swatch === effectiveColor ? "selected" : ""}
+              style={{ background: swatch }}
+              aria-label={swatch}
               data-testid="recipe-color-swatch"
-              onClick={() => onChange({ ...recipe, style: { ...recipe.style, color } })}
+              onClick={() => onChange({ ...recipe, style: { ...recipe.style, color: swatch } })}
             />
           ))}
         </div>
@@ -1867,7 +2256,7 @@ function RecipeControls({
       <div className="split-row">
         <SelectField
           label="Marker"
-          value={recipe.style.marker ?? ""}
+          value={String(marker)}
           options={markers}
           testId="recipe-marker-field"
           field="style.marker"
@@ -1876,7 +2265,7 @@ function RecipeControls({
         />
         <SelectField
           label="Line style"
-          value={recipe.style.linestyle ?? ""}
+          value={String(linestyle)}
           options={linestyles}
           testId="recipe-linestyle-field"
           field="style.linestyle"
@@ -1886,7 +2275,7 @@ function RecipeControls({
       <div className="split-row">
         <NumberField
           label="Line width"
-          value={recipe.style.linewidth ?? 1.8}
+          value={Number(linewidth)}
           step={0.1}
           min={0}
           testId="recipe-linewidth-field"
@@ -1895,7 +2284,7 @@ function RecipeControls({
         />
         <NumberField
           label="Alpha"
-          value={recipe.style.alpha ?? 1}
+          value={Number(alpha)}
           step={0.05}
           min={0}
           max={1}
@@ -1910,16 +2299,29 @@ function RecipeControls({
 
 function LayerControls({
   layer,
+  defaults,
   axes,
   onChange
 }: {
   layer: PlotLayer;
+  defaults?: LayerStyle;
   axes: AxesSpec[];
   onChange: (layer: PlotLayer) => void;
 }) {
   const isFieldLayer = layer.kind === "heatmap" || layer.kind === "contour";
+  const label = inheritedStyleValue(layer.style, defaults, "label") ?? "";
+  const effectiveColor = inheritedStyleValue(layer.style, defaults, "color") ?? "";
+  const marker = inheritedStyleValue(layer.style, defaults, "marker") ?? "";
+  const linestyle = inheritedStyleValue(layer.style, defaults, "linestyle") ?? "";
+  const linewidth = inheritedStyleValue(layer.style, defaults, "linewidth") ?? 1.8;
+  const alpha = inheritedStyleValue(layer.style, defaults, "alpha") ?? 1;
+  const cmap = inheritedStyleValue(layer.style, defaults, "cmap") ?? "viridis";
+  const bins = inheritedStyleValue(layer.style, defaults, "bins") ?? 30;
+  const fillAlpha = inheritedStyleValue(layer.style, defaults, "fill_alpha") ?? 0.3;
+  const colorbarDefault = inheritedStyleValue(layer.style, defaults, "colorbar");
   return (
     <div className="layer-controls">
+      {defaults ? <p className="profile-note">Layer defaults inherited from project profile.</p> : null}
       <SelectField
         label="Axes"
         value={layer.axes_id}
@@ -1938,7 +2340,7 @@ function LayerControls({
       />
       <TextField
         label="Label"
-        value={layer.style.label ?? ""}
+        value={String(label)}
         testId="layer-label-field"
         field="style.label"
         onChange={(value) => onChange({ ...layer, style: { ...layer.style, label: value || null } })}
@@ -1947,7 +2349,7 @@ function LayerControls({
         <>
           <SelectField
             label="Colormap"
-            value={layer.style.cmap ?? "viridis"}
+            value={String(cmap)}
             options={cmaps}
             testId="layer-cmap-field"
             field="style.cmap"
@@ -1955,7 +2357,7 @@ function LayerControls({
           />
           <ToggleField
             label="Colorbar"
-            value={layer.style.colorbar ?? layer.kind === "heatmap"}
+            value={Boolean(colorbarDefault ?? layer.kind === "heatmap")}
             testId="layer-colorbar-field"
             field="style.colorbar"
             onChange={(value) => onChange({ ...layer, style: { ...layer.style, colorbar: value } })}
@@ -1965,14 +2367,14 @@ function LayerControls({
         <label data-testid="layer-color-field" data-field="style.color">
           Color
           <div className="swatches">
-            {colors.map((color) => (
+            {colors.map((swatch) => (
               <button
-                key={color}
-                className={layer.style.color === color ? "selected" : ""}
-                style={{ background: color }}
-                aria-label={color}
+                key={swatch}
+                className={swatch === effectiveColor ? "selected" : ""}
+                style={{ background: swatch }}
+                aria-label={swatch}
                 data-testid="color-swatch"
-                onClick={() => onChange({ ...layer, style: { ...layer.style, color } })}
+                onClick={() => onChange({ ...layer, style: { ...layer.style, color: swatch } })}
               />
             ))}
           </div>
@@ -1981,7 +2383,7 @@ function LayerControls({
       <div className="split-row">
         <SelectField
           label="Marker"
-          value={layer.style.marker ?? ""}
+          value={String(marker)}
           options={markers}
           testId="layer-marker-field"
           field="style.marker"
@@ -1990,7 +2392,7 @@ function LayerControls({
         />
         <SelectField
           label="Line style"
-          value={layer.style.linestyle ?? ""}
+          value={String(linestyle)}
           options={linestyles}
           testId="layer-linestyle-field"
           field="style.linestyle"
@@ -2000,7 +2402,7 @@ function LayerControls({
       <div className="split-row">
         <NumberField
           label="Line width"
-          value={layer.style.linewidth ?? 1.8}
+          value={Number(linewidth)}
           step={0.1}
           min={0}
           testId="layer-linewidth-field"
@@ -2009,7 +2411,7 @@ function LayerControls({
         />
         <NumberField
           label="Alpha"
-          value={layer.style.alpha ?? 1}
+          value={Number(alpha)}
           step={0.05}
           min={0}
           max={1}
@@ -2021,7 +2423,7 @@ function LayerControls({
       {layer.kind === "hist" ? (
         <NumberField
           label="Bins"
-          value={layer.style.bins ?? 30}
+          value={Number(bins)}
           step={1}
           min={1}
           testId="layer-bins-field"
@@ -2032,7 +2434,7 @@ function LayerControls({
       {layer.kind === "fill_between" ? (
         <NumberField
           label="Fill alpha"
-          value={layer.style.fill_alpha ?? 0.3}
+          value={Number(fillAlpha)}
           step={0.05}
           min={0}
           max={1}

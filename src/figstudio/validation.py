@@ -8,13 +8,16 @@ from typing import Any
 import numpy as np
 
 from figstudio.models import (
+    AxesSpec,
     DatasetRef,
     FigureSpec,
     PlotLayer,
     RecipeLayer,
+    StyleProfile,
     ValidationIssue,
     ValidationResponse,
 )
+from figstudio.style_profiles import missing_profile_issue_details
 
 
 @dataclass
@@ -23,8 +26,24 @@ class _ResolvedValue:
     label: str
 
 
-def validate_figure_spec(namespace: dict[str, Any], spec: FigureSpec) -> ValidationResponse:
+def validate_figure_spec(
+    namespace: dict[str, Any],
+    spec: FigureSpec,
+    style_profiles: dict[str, StyleProfile] | None = None,
+) -> ValidationResponse:
     issues: list[ValidationIssue] = []
+    profile_details = missing_profile_issue_details(spec, style_profiles)
+    if profile_details is not None:
+        issues.append(
+            ValidationIssue(
+                severity="warning",
+                code="missing_style_profile",
+                message=f"Style profile {spec.style.profile_id!r} is not available in this project.",
+                field="style.profile_id",
+                details=profile_details,
+            )
+        )
+    _validate_axes_layout(spec, issues)
     axes_by_id = {axis.id: axis for axis in spec.axes}
 
     for layer in spec.layers:
@@ -73,6 +92,133 @@ def validate_figure_spec(namespace: dict[str, Any], spec: FigureSpec) -> Validat
         _validate_recipe(namespace, recipe, issues)
 
     return ValidationResponse(ok=not any(issue.severity == "error" for issue in issues), issues=issues)
+
+
+def _validate_axes_layout(spec: FigureSpec, issues: list[ValidationIssue]) -> None:
+    if spec.rows < 1:
+        issues.append(
+            ValidationIssue(
+                code="invalid_grid_size",
+                message=f"FigureSpec rows must be positive; got {spec.rows}.",
+                field="rows",
+                details={"rows": spec.rows, "cols": spec.cols},
+            )
+        )
+    if spec.cols < 1:
+        issues.append(
+            ValidationIssue(
+                code="invalid_grid_size",
+                message=f"FigureSpec cols must be positive; got {spec.cols}.",
+                field="cols",
+                details={"rows": spec.rows, "cols": spec.cols},
+            )
+        )
+    if spec.rows < 1 or spec.cols < 1:
+        return
+
+    seen_ids: set[str] = set()
+    duplicate_ids: set[str] = set()
+    occupied: dict[tuple[int, int], str] = {}
+    overlaps: list[dict[str, Any]] = []
+
+    for axis in spec.axes:
+        if axis.id in seen_ids:
+            duplicate_ids.add(axis.id)
+        seen_ids.add(axis.id)
+
+        if axis.rowspan < 1 or axis.colspan < 1:
+            _append_invalid_span(axis, issues)
+            continue
+
+        row_end = axis.row + axis.rowspan
+        col_end = axis.col + axis.colspan
+        if axis.row < 0 or axis.col < 0 or row_end > spec.rows or col_end > spec.cols:
+            issues.append(
+                ValidationIssue(
+                    code="axes_out_of_bounds",
+                    message=(
+                        f"Axes {axis.id!r} spans rows {axis.row}:{row_end} and "
+                        f"cols {axis.col}:{col_end}, outside a {spec.rows}x{spec.cols} grid."
+                    ),
+                    axes_id=axis.id,
+                    field="axes",
+                    details=_axis_layout_details(axis) | {"rows": spec.rows, "cols": spec.cols},
+                )
+            )
+            continue
+
+        for row in range(axis.row, row_end):
+            for col in range(axis.col, col_end):
+                cell = (row, col)
+                owner = occupied.get(cell)
+                if owner is not None:
+                    overlaps.append(
+                        {
+                            "row": row,
+                            "col": col,
+                            "axes": [owner, axis.id],
+                        }
+                    )
+                else:
+                    occupied[cell] = axis.id
+
+    for axis_id in sorted(duplicate_ids):
+        issues.append(
+            ValidationIssue(
+                code="duplicate_axes_id",
+                message=f"Axes id {axis_id!r} is used more than once.",
+                axes_id=axis_id,
+                field="axes.id",
+                details={"axes_id": axis_id},
+            )
+        )
+
+    for overlap in overlaps:
+        issues.append(
+            ValidationIssue(
+                code="axes_overlap",
+                message=(
+                    f"Axes {overlap['axes'][0]!r} and {overlap['axes'][1]!r} "
+                    f"both occupy cell ({overlap['row'] + 1}, {overlap['col'] + 1})."
+                ),
+                axes_id=overlap["axes"][1],
+                field="axes",
+                details=overlap,
+            )
+        )
+
+
+def _append_invalid_span(axis: AxesSpec, issues: list[ValidationIssue]) -> None:
+    if axis.rowspan < 1:
+        issues.append(
+            ValidationIssue(
+                code="invalid_axes_span",
+                message=f"Axes {axis.id!r} rowspan must be positive; got {axis.rowspan}.",
+                axes_id=axis.id,
+                field="axes.rowspan",
+                details=_axis_layout_details(axis),
+            )
+        )
+    if axis.colspan < 1:
+        issues.append(
+            ValidationIssue(
+                code="invalid_axes_span",
+                message=f"Axes {axis.id!r} colspan must be positive; got {axis.colspan}.",
+                axes_id=axis.id,
+                field="axes.colspan",
+                details=_axis_layout_details(axis),
+            )
+        )
+
+
+def _axis_layout_details(axis: AxesSpec) -> dict[str, Any]:
+    return {
+        "axes_id": axis.id,
+        "row": axis.row,
+        "col": axis.col,
+        "rowspan": axis.rowspan,
+        "colspan": axis.colspan,
+    }
 
 
 def _validate_recipe(

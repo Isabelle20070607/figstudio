@@ -11,7 +11,11 @@ export function CodePanel({ code, saveMessage }: { code: string; saveMessage: st
           <FileCode2 size={16} />
           Generated code
         </span>
-        {saveMessage && <small data-testid="save-message">{saveMessage}</small>}
+        {saveMessage ? (
+          <small data-testid="save-message">{saveMessage}</small>
+        ) : (
+          <small data-testid="code-panel-help">Generated Matplotlib code appears here after preview sync.</small>
+        )}
       </div>
       <Suspense fallback={<div className="code-loading">Loading code editor</div>}>
         <GeneratedCodeEditor code={code} />

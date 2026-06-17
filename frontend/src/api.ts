@@ -3,6 +3,7 @@ import type {
   RenderResponse,
   SaveCodeResponse,
   SessionInfo,
+  StyleProfilesResponse,
   ValidationResponse,
   VariableSummary
 } from "./types";
@@ -35,6 +36,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   session: () => request<SessionInfo>("/api/session"),
   variables: () => request<VariableSummary[]>("/api/variables"),
+  styleProfiles: () => request<StyleProfilesResponse>("/api/style-profiles"),
   spec: () => request<FigureSpec>("/api/spec"),
   render: (spec: FigureSpec, format: "svg" | "png" = "svg") =>
     request<RenderResponse>("/api/render", {

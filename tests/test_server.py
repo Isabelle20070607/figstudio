@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 import pandas as pd
 
-from figstudio.models import DatasetRef, FigureSpec, PlotLayer, RecipeDatasetRef, RecipeLayer
+from figstudio.models import AxesSpec, DatasetRef, FigureSpec, PlotLayer, RecipeDatasetRef, RecipeLayer
 from figstudio.registry import VariableRegistry
 from figstudio.server import create_app
 from figstudio.session import FigStudioSession
@@ -133,6 +133,52 @@ def test_validate_endpoint_reports_dimension_mismatch():
     assert validation.status_code == 200
     assert validation.json()["ok"] is False
     assert validation.json()["issues"][0]["code"] == "dimension_mismatch"
+
+
+def test_validate_endpoint_reports_layout_geometry_errors():
+    session = FigStudioSession(registry=VariableRegistry({}), port=8001)
+    client = TestClient(create_app(session))
+
+    cases = [
+        (
+            FigureSpec(
+                rows=1,
+                cols=2,
+                axes=[
+                    AxesSpec(id="ax0", row=0, col=0),
+                    AxesSpec(id="ax0", row=0, col=1),
+                ],
+            ),
+            "duplicate_axes_id",
+        ),
+        (
+            FigureSpec(rows=1, cols=1, axes=[AxesSpec(id="ax0", row=0, col=0, rowspan=0)]),
+            "invalid_axes_span",
+        ),
+        (
+            FigureSpec(rows=1, cols=1, axes=[AxesSpec(id="ax0", row=0, col=0, colspan=2)]),
+            "axes_out_of_bounds",
+        ),
+        (
+            FigureSpec(
+                rows=1,
+                cols=2,
+                axes=[
+                    AxesSpec(id="ax0", row=0, col=0, colspan=2),
+                    AxesSpec(id="ax1", row=0, col=1),
+                ],
+            ),
+            "axes_overlap",
+        ),
+    ]
+
+    for spec, expected_code in cases:
+        validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+        issues = validation.json()["issues"]
+
+        assert validation.status_code == 200
+        assert validation.json()["ok"] is False
+        assert any(issue["code"] == expected_code for issue in issues)
 
 
 def test_recipe_api_smoke_workflow():

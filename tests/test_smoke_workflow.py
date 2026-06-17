@@ -14,7 +14,7 @@ def test_local_app_smoke_workflow_without_real_port():
                 "signal": [0.0, 0.8, 0.9, 0.1],
             }
         ),
-        port=8765,
+        port=8767,
     )
     client = TestClient(create_app(session))
 

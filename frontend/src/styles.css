@@ -42,7 +42,7 @@ button:disabled {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-rows: 68px 1fr;
+  grid-template-rows: 68px auto 1fr;
 }
 
 .topbar {
@@ -149,9 +149,13 @@ button:disabled {
   color: white;
 }
 
+.panel-jump-nav {
+  display: none;
+}
+
 .workspace {
   display: grid;
-  grid-template-columns: 292px minmax(0, 1fr) 332px;
+  grid-template-columns: minmax(230px, 260px) minmax(0, 1fr) minmax(280px, 310px);
   min-height: 0;
 }
 
@@ -178,6 +182,13 @@ button:disabled {
   font-size: 13px;
   font-weight: 750;
   margin-bottom: 14px;
+}
+
+.panel-help {
+  margin: -6px 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .variable-list,
@@ -308,6 +319,13 @@ label {
   line-height: 1.35;
 }
 
+.profile-note {
+  margin: 4px 0 12px;
+  color: var(--accent-2);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 input,
 select {
   min-width: 0;
@@ -410,6 +428,16 @@ select {
   cursor: pointer;
 }
 
+.validation-item span {
+  display: grid;
+  gap: 3px;
+}
+
+.validation-item small {
+  color: inherit;
+  opacity: 0.78;
+}
+
 .validation-item:hover,
 .validation-item:focus-visible {
   outline: 2px solid rgba(37, 99, 235, 0.35);
@@ -477,9 +505,29 @@ select {
 .empty-preview {
   color: var(--muted);
   display: grid;
-  gap: 10px;
+  gap: 12px;
   place-items: center;
   font-size: 13px;
+  text-align: center;
+  max-width: 440px;
+}
+
+.empty-preview div {
+  display: grid;
+  gap: 5px;
+}
+
+.empty-preview strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.empty-preview ol {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 5px;
+  text-align: left;
 }
 
 .code-panel {
@@ -552,13 +600,41 @@ select {
   font-size: 13px;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1040px) {
+  .app-shell {
+    grid-template-rows: 68px auto 1fr;
+  }
+
+  .panel-jump-nav {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.96);
+  }
+
+  .panel-jump-nav a {
+    height: 30px;
+    padding: 0 11px;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    background: white;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
   .workspace {
-    grid-template-columns: 250px minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .inspector-panel {
-    grid-column: 1 / -1;
     border-top: 1px solid var(--border);
     border-left: 0;
   }

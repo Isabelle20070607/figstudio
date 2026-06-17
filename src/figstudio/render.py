@@ -14,17 +14,23 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from figstudio.codegen import MatplotlibCodegen
-from figstudio.models import FigureSpec
+from figstudio.models import FigureSpec, StyleProfile
+from figstudio.style_profiles import resolved_figure_value
 
 
 @dataclass
 class RenderEngine:
     namespace: dict[str, Any]
     codegen: MatplotlibCodegen | None = None
+    style_profiles: dict[str, StyleProfile] | None = None
 
     def __post_init__(self) -> None:
         if self.codegen is None:
-            self.codegen = MatplotlibCodegen()
+            self.codegen = MatplotlibCodegen(style_profiles=self.style_profiles)
+        elif self.codegen.style_profiles is None and self.style_profiles is not None:
+            self.codegen.style_profiles = self.style_profiles
+        elif self.style_profiles is None:
+            self.style_profiles = self.codegen.style_profiles
 
     def render_base64(self, spec: FigureSpec, format: str = "svg") -> tuple[str, str]:
         raw = self.render_bytes(spec, format=format)
@@ -35,7 +41,8 @@ class RenderEngine:
     def render_bytes(self, spec: FigureSpec, format: str = "svg", dpi: int | None = None) -> bytes:
         fig = self._execute(spec)
         output = BytesIO()
-        fig.savefig(output, format=format, dpi=dpi or spec.dpi)
+        effective_dpi = dpi or resolved_figure_value(spec, self.style_profiles, "dpi")
+        fig.savefig(output, format=format, dpi=effective_dpi)
         plt.close(fig)
         return output.getvalue()
 

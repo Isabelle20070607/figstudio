@@ -68,16 +68,16 @@ jobs:
           python -m pip install --upgrade pip
           for attempt in 1 2 3; do
             python -m pip install --index-url https://pypi.org/simple/ "fastapi>=0.115" "matplotlib>=3.8" "numpy>=1.26" "pandas>=2.1" "pydantic>=2.7" "uvicorn[standard]>=0.30" &&
-            python -m pip install --no-deps --index-url https://test.pypi.org/simple/ figstudio==0.2.0 && break
+            python -m pip install --no-deps --index-url https://test.pypi.org/simple/ figstudio==0.3.0 && break
             sleep 20
           done
           figstudio --version
-          timeout 20s figstudio demo --no-browser --port 8765 &
+          timeout 20s figstudio demo --no-browser --port 8767 &
           for attempt in 1 2 3 4 5; do
             python - <<'PY' && exit 0
           import json
           import urllib.request
-          with urllib.request.urlopen("http://127.0.0.1:8765/api/session", timeout=3) as response:
+          with urllib.request.urlopen("http://127.0.0.1:8767/api/session", timeout=3) as response:
               print(json.loads(response.read().decode("utf-8"))["url"])
           PY
             sleep 2

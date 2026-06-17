@@ -1,9 +1,17 @@
 import { create } from "zustand";
-import type { FigureSpec, PlotLayer, RenderResponse, SessionInfo, VariableSummary } from "./types";
+import type {
+  FigureSpec,
+  PlotLayer,
+  RenderResponse,
+  SessionInfo,
+  StyleProfilesResponse,
+  VariableSummary
+} from "./types";
 
 interface AppState {
   session?: SessionInfo;
   variables: VariableSummary[];
+  styleProfiles: StyleProfilesResponse;
   spec?: FigureSpec;
   render?: RenderResponse;
   selectedVariable?: string;
@@ -11,8 +19,9 @@ interface AppState {
   status: string;
   setSession: (session: SessionInfo) => void;
   setVariables: (variables: VariableSummary[]) => void;
+  setStyleProfiles: (styleProfiles: StyleProfilesResponse) => void;
   setSpec: (spec: FigureSpec) => void;
-  setRender: (render: RenderResponse) => void;
+  setRender: (render?: RenderResponse) => void;
   setSelectedVariable: (name: string) => void;
   setSelectedLayerId: (id: string) => void;
   setStatus: (status: string) => void;
@@ -22,6 +31,7 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set, get) => ({
   variables: [],
+  styleProfiles: { profiles: [], source_path: null, warnings: [] },
   status: "Loading session",
   setSession: (session) => set({ session }),
   setVariables: (variables) =>
@@ -29,6 +39,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       variables,
       selectedVariable: state.selectedVariable ?? variables[0]?.name
     })),
+  setStyleProfiles: (styleProfiles) => set({ styleProfiles }),
   setSpec: (spec) =>
     set((state) => ({
       spec,

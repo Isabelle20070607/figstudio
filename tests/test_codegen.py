@@ -1,5 +1,13 @@
 from figstudio.codegen import MatplotlibCodegen
-from figstudio.models import DatasetRef, FigureSpec, LayerStyle, PlotLayer, RecipeDatasetRef, RecipeLayer
+from figstudio.models import (
+    AxesSpec,
+    DatasetRef,
+    FigureSpec,
+    LayerStyle,
+    PlotLayer,
+    RecipeDatasetRef,
+    RecipeLayer,
+)
 
 
 def test_generates_plain_oo_matplotlib_code_for_dataframe_line():
@@ -24,6 +32,53 @@ def test_generates_plain_oo_matplotlib_code_for_dataframe_line():
     assert "label='Signal'" in code
     assert "axes_flat[0].legend()" in code
     assert "figstudio" not in code.lower()
+
+
+def test_dense_grid_keeps_subplots_codegen():
+    spec = FigureSpec(
+        rows=2,
+        cols=2,
+        axes=[
+            AxesSpec(id="ax0", row=0, col=0),
+            AxesSpec(id="ax1", row=0, col=1),
+            AxesSpec(id="ax2", row=1, col=0),
+            AxesSpec(id="ax3", row=1, col=1),
+        ],
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "fig, axes = plt.subplots(2, 2" in code
+    assert "fig.add_gridspec" not in code
+    assert "axes_flat = axes.ravel()" in code
+
+
+def test_spanned_layout_uses_gridspec_codegen():
+    spec = FigureSpec(
+        rows=2,
+        cols=2,
+        axes=[
+            AxesSpec(id="ax0", row=0, col=0, rowspan=2, colspan=1),
+            AxesSpec(id="ax1", row=0, col=1),
+            AxesSpec(id="ax2", row=1, col=1),
+        ],
+        layers=[
+            PlotLayer(
+                id="layer-1",
+                kind="line",
+                axes_id="ax0",
+                dataset=DatasetRef(variable="values"),
+            )
+        ],
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "fig = plt.figure" in code
+    assert "grid = fig.add_gridspec(2, 2)" in code
+    assert "fig.add_subplot(grid[0:2, 0])" in code
+    assert "fig.add_subplot(grid[0, 1])" in code
+    assert "axes_flat[0].plot" in code
 
 
 def test_heatmap_adds_colorbar():

@@ -96,6 +96,8 @@ class AxesSpec(BaseModel):
     id: str = "ax0"
     row: int = 0
     col: int = 0
+    rowspan: int = 1
+    colspan: int = 1
     title: str = ""
     xlabel: str = ""
     ylabel: str = ""
@@ -119,10 +121,36 @@ class AnnotationSpec(BaseModel):
 
 class FigureStyle(BaseModel):
     preset: FigurePreset = "custom"
+    profile_id: str | None = None
+    profile_overrides: list[str] = Field(default_factory=list)
     title: str = ""
     font_family: str | None = None
     font_size: float = 10
     constrained_layout: bool = True
+
+
+class StyleProfileFigureDefaults(BaseModel):
+    width: float | None = None
+    height: float | None = None
+    dpi: int | None = None
+    font_family: str | None = None
+    font_size: float | None = None
+    constrained_layout: bool | None = None
+
+
+class StyleProfile(BaseModel):
+    id: str
+    label: str
+    description: str | None = None
+    figure: StyleProfileFigureDefaults = Field(default_factory=StyleProfileFigureDefaults)
+    layers: dict[str, LayerStyle] = Field(default_factory=dict)
+    recipes: dict[str, LayerStyle] = Field(default_factory=dict)
+
+
+class StyleProfilesResponse(BaseModel):
+    profiles: list[StyleProfile] = Field(default_factory=list)
+    source_path: str | None = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class FigureSpec(BaseModel):
@@ -147,6 +175,7 @@ class SessionInfo(BaseModel):
     block_id: str
     mode: str
     script_path: str | None
+    project_path: str
     has_script_writeback: bool
     has_figure: bool
     figure_tree: dict[str, Any] | None = None

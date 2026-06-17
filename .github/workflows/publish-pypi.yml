@@ -73,16 +73,16 @@ jobs:
           . .smoke-venv/bin/activate
           python -m pip install --upgrade pip
           for attempt in 1 2 3; do
-            python -m pip install figstudio==0.2.0 && break
+            python -m pip install figstudio==0.3.0 && break
             sleep 20
           done
           figstudio --version
-          timeout 20s figstudio demo --no-browser --port 8765 &
+          timeout 20s figstudio demo --no-browser --port 8767 &
           for attempt in 1 2 3 4 5; do
             python - <<'PY' && exit 0
           import json
           import urllib.request
-          with urllib.request.urlopen("http://127.0.0.1:8765/api/session", timeout=3) as response:
+          with urllib.request.urlopen("http://127.0.0.1:8767/api/session", timeout=3) as response:
               print(json.loads(response.read().decode("utf-8"))["url"])
           PY
             sleep 2

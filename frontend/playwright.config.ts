@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 const configDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(configDir, "..");
+const smokePort = Number(process.env.FIGSTUDIO_SMOKE_PORT ?? "8767");
+const smokeBaseURL = `http://127.0.0.1:${smokePort}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -12,7 +14,7 @@ export default defineConfig({
     timeout: 10_000
   },
   use: {
-    baseURL: "http://127.0.0.1:8765",
+    baseURL: smokeBaseURL,
     trace: "retain-on-failure"
   },
   projects: [
@@ -24,7 +26,7 @@ export default defineConfig({
   webServer: {
     command: "uv run python examples/smoke_server.py",
     cwd: repoRoot,
-    url: "http://127.0.0.1:8765/api/session",
+    url: `${smokeBaseURL}/api/session`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000
   }

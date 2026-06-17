@@ -6,7 +6,12 @@ import keyword
 import re
 from dataclasses import dataclass
 
-from figstudio.models import AxesSpec, DatasetRef, FigureSpec, PlotLayer, RecipeLayer
+from figstudio.models import AxesSpec, DatasetRef, FigureSpec, LayerStyle, PlotLayer, RecipeLayer, StyleProfile
+from figstudio.style_profiles import (
+    resolved_figure_value,
+    resolved_layer_style,
+    resolved_recipe_style,
+)
 
 
 _IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -43,6 +48,7 @@ class MatplotlibCodegen:
     """Converts a declarative FigureSpec into plain Matplotlib OO code."""
 
     include_imports: bool = True
+    style_profiles: dict[str, StyleProfile] | None = None
 
     def generate(self, spec: FigureSpec) -> str:
         lines: list[str] = []
@@ -50,10 +56,12 @@ class MatplotlibCodegen:
             lines.extend(["import matplotlib.pyplot as plt", ""])
 
         rc_params: dict[str, object] = {}
-        if spec.style.font_family:
-            rc_params["font.family"] = spec.style.font_family
-        if spec.style.font_size:
-            rc_params["font.size"] = spec.style.font_size
+        font_family = resolved_figure_value(spec, self.style_profiles, "font_family")
+        font_size = resolved_figure_value(spec, self.style_profiles, "font_size")
+        if font_family:
+            rc_params["font.family"] = font_family
+        if font_size:
+            rc_params["font.size"] = font_size
 
         body = self._figure_body(spec)
         if rc_params:
@@ -66,14 +74,29 @@ class MatplotlibCodegen:
 
     def _figure_body(self, spec: FigureSpec) -> list[str]:
         lines: list[str] = []
+        width = resolved_figure_value(spec, self.style_profiles, "width")
+        height = resolved_figure_value(spec, self.style_profiles, "height")
+        dpi = resolved_figure_value(spec, self.style_profiles, "dpi")
+        constrained_layout = resolved_figure_value(spec, self.style_profiles, "constrained_layout")
 
-        layout = (
-            f"fig, axes = plt.subplots({spec.rows}, {spec.cols}, "
-            f"figsize=({spec.width!r}, {spec.height!r}), dpi={spec.dpi!r}, "
-            f"squeeze=False, constrained_layout={spec.style.constrained_layout!r})"
-        )
-        lines.append(layout)
-        lines.append("axes_flat = axes.ravel()")
+        if _uses_dense_subplots(spec):
+            layout = (
+                f"fig, axes = plt.subplots({spec.rows}, {spec.cols}, "
+                f"figsize=({width!r}, {height!r}), dpi={dpi!r}, "
+                f"squeeze=False, constrained_layout={constrained_layout!r})"
+            )
+            lines.append(layout)
+            lines.append("axes_flat = axes.ravel()")
+        else:
+            lines.append(
+                f"fig = plt.figure(figsize=({width!r}, {height!r}), "
+                f"dpi={dpi!r}, constrained_layout={constrained_layout!r})"
+            )
+            lines.append(f"grid = fig.add_gridspec({spec.rows}, {spec.cols})")
+            lines.append("axes_flat = [")
+            for axis in spec.axes:
+                lines.append(f"    fig.add_subplot({_grid_slice(axis)}),")
+            lines.append("]")
 
         if spec.style.title:
             lines.append(f"fig.suptitle({spec.style.title!r})")
@@ -87,15 +110,17 @@ class MatplotlibCodegen:
         legend_axes: set[int] = set()
         for layer in spec.layers:
             axis_index = axis_lookup.get(layer.axes_id, 0)
-            lines.extend(self._layer_code(layer, axis_index, spec.axes[axis_index]))
-            if layer.style.label and layer.kind not in {"heatmap", "contour"}:
+            style = resolved_layer_style(spec, layer, self.style_profiles)
+            lines.extend(self._layer_code(layer, style, axis_index, spec.axes[axis_index]))
+            if style.label and layer.kind not in {"heatmap", "contour"}:
                 legend_axes.add(axis_index)
             lines.append("")
 
         for recipe in spec.recipes:
             axis_index = axis_lookup.get(recipe.axes_id, 0)
-            lines.extend(self._recipe_code(recipe, axis_index))
-            if recipe.style.label:
+            style = resolved_recipe_style(spec, recipe, self.style_profiles)
+            lines.extend(self._recipe_code(recipe, style, axis_index))
+            if style.label:
                 legend_axes.add(axis_index)
             lines.append("")
 
@@ -148,9 +173,8 @@ class MatplotlibCodegen:
             lines.append(f"{prefix}.grid(True, alpha=0.25)")
         return [line for line in lines if line]
 
-    def _layer_code(self, layer: PlotLayer, axis_index: int, axis: AxesSpec) -> list[str]:
+    def _layer_code(self, layer: PlotLayer, style: LayerStyle, axis_index: int, axis: AxesSpec) -> list[str]:
         data = layer.dataset
-        style = layer.style
         ax = f"axes_flat[{axis_index}]"
         label = style.label
         common = {
@@ -223,16 +247,16 @@ class MatplotlibCodegen:
             lines.append(f"{ax}.clabel({contour_name}, inline=True, fontsize=8)")
         return lines
 
-    def _recipe_code(self, recipe: RecipeLayer, axis_index: int) -> list[str]:
+    def _recipe_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:
         if recipe.kind == "mean_sem_line":
-            return self._mean_sem_line_code(recipe, axis_index)
+            return self._mean_sem_line_code(recipe, style, axis_index)
         if recipe.kind == "grouped_points":
-            return self._grouped_points_code(recipe, axis_index)
+            return self._grouped_points_code(recipe, style, axis_index)
         if recipe.kind == "paired_before_after":
-            return self._paired_before_after_code(recipe, axis_index)
+            return self._paired_before_after_code(recipe, style, axis_index)
         raise ValueError(f"Unsupported recipe kind: {recipe.kind}")
 
-    def _mean_sem_line_code(self, recipe: RecipeLayer, axis_index: int) -> list[str]:
+    def _mean_sem_line_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:
         data = recipe.dataset
         var = _safe_var(data.variable)
         prefix = self._recipe_prefix(recipe)
@@ -240,7 +264,7 @@ class MatplotlibCodegen:
         stat = self._recipe_error_stat(recipe)
         yerr = f"{prefix}_summary[{stat!r}]" if stat else "None"
         agg = "['mean', " + repr(stat) + "]" if stat else "['mean']"
-        kwargs = self._recipe_line_kwargs(recipe)
+        kwargs = self._recipe_line_kwargs(style)
 
         lines = [
             f"{prefix}_df = {var}",
@@ -258,7 +282,7 @@ class MatplotlibCodegen:
                     ),
                     (
                         f"    {ax}.errorbar({prefix}_x_order, {prefix}_summary['mean'], "
-                        f"yerr={yerr}, label=f'{recipe.style.label or data.y} {{{prefix}_group}}', "
+                        f"yerr={yerr}, label=f'{style.label or data.y} {{{prefix}_group}}', "
                         f"{kwargs})"
                     ),
                 ]
@@ -272,20 +296,20 @@ class MatplotlibCodegen:
                     ),
                     (
                         f"{ax}.errorbar({prefix}_x_order, {prefix}_summary['mean'], "
-                        f"yerr={yerr}, {_kwargs(label=recipe.style.label, **self._line_style(recipe))})"
+                        f"yerr={yerr}, {_kwargs(label=style.label, **self._line_style(style))})"
                     ),
                 ]
             )
         return [line.replace(", )", ")").replace("(, ", "(") for line in lines]
 
-    def _grouped_points_code(self, recipe: RecipeLayer, axis_index: int) -> list[str]:
+    def _grouped_points_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:
         data = recipe.dataset
         var = _safe_var(data.variable)
         prefix = self._recipe_prefix(recipe)
         ax = f"axes_flat[{axis_index}]"
         stat = self._recipe_error_stat(recipe)
-        point_kwargs = _kwargs(color=recipe.style.color, marker=recipe.style.marker, alpha=recipe.style.alpha)
-        mean_kwargs = _kwargs(color=recipe.style.color, linewidth=recipe.style.linewidth or 1.8)
+        point_kwargs = _kwargs(color=style.color, marker=style.marker, alpha=style.alpha)
+        mean_kwargs = _kwargs(color=style.color, linewidth=style.linewidth or 1.8)
 
         lines = [
             f"{prefix}_df = {var}",
@@ -316,7 +340,7 @@ class MatplotlibCodegen:
                     (
                         f"        {ax}.errorbar([{prefix}_positions[{prefix}_category]], "
                         f"[{prefix}_mean], yerr=[{prefix}_error], fmt='none', "
-                        f"ecolor={recipe.style.color!r}, capsize=4)"
+                        f"ecolor={style.color!r}, capsize=4)"
                     ),
                 ]
             )
@@ -326,11 +350,11 @@ class MatplotlibCodegen:
                 f"{ax}.set_xticklabels([str(value) for value in {prefix}_order])",
             ]
         )
-        if recipe.style.label:
-            lines.append(f"{ax}.scatter([], [], label={recipe.style.label!r}, {point_kwargs})")
+        if style.label:
+            lines.append(f"{ax}.scatter([], [], label={style.label!r}, {point_kwargs})")
         return [line.replace(", )", ")").replace("(, ", "(") for line in lines]
 
-    def _paired_before_after_code(self, recipe: RecipeLayer, axis_index: int) -> list[str]:
+    def _paired_before_after_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:
         data = recipe.dataset
         var = _safe_var(data.variable)
         prefix = self._recipe_prefix(recipe)
@@ -339,16 +363,16 @@ class MatplotlibCodegen:
         yerr = f"{prefix}_summary[{stat!r}]" if stat else "None"
         agg = "['mean', " + repr(stat) + "]" if stat else "['mean']"
         subject_kwargs = _kwargs(
-            color=recipe.style.color,
-            marker=recipe.style.marker,
-            linewidth=recipe.style.linewidth or 1.0,
-            alpha=recipe.style.alpha if recipe.style.alpha is not None else 0.35,
+            color=style.color,
+            marker=style.marker,
+            linewidth=style.linewidth or 1.0,
+            alpha=style.alpha if style.alpha is not None else 0.35,
         )
         summary_kwargs = _kwargs(
-            label=recipe.style.label,
-            color=recipe.style.color,
-            marker=recipe.style.marker or "o",
-            linewidth=(recipe.style.linewidth or 1.8) + 0.4,
+            label=style.label,
+            color=style.color,
+            marker=style.marker or "o",
+            linewidth=(style.linewidth or 1.8) + 0.4,
             alpha=1.0,
         )
 
@@ -387,17 +411,17 @@ class MatplotlibCodegen:
             return "std"
         return None
 
-    def _line_style(self, recipe: RecipeLayer) -> dict[str, object]:
+    def _line_style(self, style: LayerStyle) -> dict[str, object]:
         return {
-            "color": recipe.style.color,
-            "marker": recipe.style.marker,
-            "linestyle": recipe.style.linestyle,
-            "linewidth": recipe.style.linewidth,
-            "alpha": recipe.style.alpha,
+            "color": style.color,
+            "marker": style.marker,
+            "linestyle": style.linestyle,
+            "linewidth": style.linewidth,
+            "alpha": style.alpha,
         }
 
-    def _recipe_line_kwargs(self, recipe: RecipeLayer) -> str:
-        return _kwargs(**self._line_style(recipe))
+    def _recipe_line_kwargs(self, style: LayerStyle) -> str:
+        return _kwargs(**self._line_style(style))
 
     def _xy(self, data: DatasetRef) -> str:
         y_expr = self._value(data)
@@ -419,3 +443,29 @@ class MatplotlibCodegen:
         column = getattr(data, channel)
         variable = channel_variable or data.variable
         return _column_expr(variable, column)
+
+
+def _uses_dense_subplots(spec: FigureSpec) -> bool:
+    if spec.rows < 1 or spec.cols < 1:
+        return False
+    if len(spec.axes) != spec.rows * spec.cols:
+        return False
+    expected_positions = [(row, col) for row in range(spec.rows) for col in range(spec.cols)]
+    for axis, (row, col) in zip(spec.axes, expected_positions):
+        if axis.row != row or axis.col != col:
+            return False
+        if axis.rowspan != 1 or axis.colspan != 1:
+            return False
+    return True
+
+
+def _grid_slice(axis: AxesSpec) -> str:
+    row = _slice_part(axis.row, axis.rowspan)
+    col = _slice_part(axis.col, axis.colspan)
+    return f"grid[{row}, {col}]"
+
+
+def _slice_part(start: int, span: int) -> str:
+    if span == 1:
+        return repr(start)
+    return f"{start}:{start + span}"

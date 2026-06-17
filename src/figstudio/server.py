@@ -21,10 +21,12 @@ from figstudio.models import (
     RenderResponse,
     SaveCodeRequest,
     SaveCodeResponse,
+    StyleProfilesResponse,
     ValidationRequest,
     ValidationResponse,
 )
 from figstudio.render import RenderEngine
+from figstudio.style_profiles import load_style_profiles, profile_map
 from figstudio.sync import CodeSyncEngine, CodeSyncError
 from figstudio.validation import validate_figure_spec
 
@@ -54,8 +56,7 @@ def _frontend_dist_path() -> Path:
 
 
 def create_app(session: "FigStudioSession") -> FastAPI:
-    app = FastAPI(title="FigStudio", version="0.2.0")
-    codegen = MatplotlibCodegen()
+    app = FastAPI(title="FigStudio", version="0.3.0")
 
     frontend_dist = _frontend_dist_path()
     if frontend_dist.exists():
@@ -89,20 +90,24 @@ def create_app(session: "FigStudioSession") -> FastAPI:
     def get_variables():
         return session.registry.summaries()
 
+    @app.get("/api/style-profiles")
+    def get_style_profiles() -> StyleProfilesResponse:
+        return _style_profiles(session)
+
     @app.get("/api/spec")
     def get_spec() -> FigureSpec:
         return session.spec
 
     @app.post("/api/validate")
     def validate(request: ValidationRequest) -> ValidationResponse:
-        return validate_figure_spec(session.registry.namespace_dict(), request.spec)
+        return _validate_spec(session, request.spec)
 
     @app.post("/api/spec")
     def update_spec(spec: FigureSpec) -> RenderResponse:
         session.spec = spec
-        _raise_if_validation_failed(validate_figure_spec(session.registry.namespace_dict(), spec))
+        _raise_if_validation_failed(_validate_spec(session, spec))
         try:
-            image, code = RenderEngine(session.registry.namespace_dict(), codegen).render_base64(spec, "svg")
+            image, code = _render_engine(session).render_base64(spec, "svg")
         except Exception as exc:
             _raise_api_error("render_failed", str(exc), details={"format": "svg"})
         return RenderResponse(image=image, format="svg", code=code)
@@ -110,9 +115,9 @@ def create_app(session: "FigStudioSession") -> FastAPI:
     @app.post("/api/render")
     def render(request: RenderRequest) -> RenderResponse:
         session.spec = request.spec
-        _raise_if_validation_failed(validate_figure_spec(session.registry.namespace_dict(), request.spec))
+        _raise_if_validation_failed(_validate_spec(session, request.spec))
         try:
-            image, code = RenderEngine(session.registry.namespace_dict(), codegen).render_base64(
+            image, code = _render_engine(session).render_base64(
                 request.spec,
                 request.format,
             )
@@ -122,6 +127,7 @@ def create_app(session: "FigStudioSession") -> FastAPI:
 
     @app.post("/api/save-code")
     def save_code(request: SaveCodeRequest) -> SaveCodeResponse:
+        codegen = _codegen(session)
         code = request.code or codegen.generate(request.spec)
         notebook_cell = codegen.notebook_cell(request.spec)
         if session.script_path:
@@ -164,9 +170,10 @@ def create_app(session: "FigStudioSession") -> FastAPI:
 
     @app.post("/api/export")
     def export(request: ExportRequest) -> ExportResponse:
-        _raise_if_validation_failed(validate_figure_spec(session.registry.namespace_dict(), request.spec))
+        _raise_if_validation_failed(_validate_spec(session, request.spec))
         try:
-            data = RenderEngine(session.registry.namespace_dict(), codegen).export(
+            engine = _render_engine(session)
+            data = engine.export(
                 request.spec,
                 request.output_path,
                 request.format,
@@ -182,7 +189,7 @@ def create_app(session: "FigStudioSession") -> FastAPI:
             format=request.format,
             output_path=request.output_path,
             data=data,
-            code=codegen.generate(request.spec),
+            code=engine.codegen.generate(request.spec),
         )
 
     @app.websocket("/api/events")
@@ -194,6 +201,31 @@ def create_app(session: "FigStudioSession") -> FastAPI:
             await websocket.send_json({"type": "ack", "message": message})
 
     return app
+
+
+def _style_profiles(session: "FigStudioSession") -> StyleProfilesResponse:
+    return load_style_profiles(session.project_path)
+
+
+def _codegen(session: "FigStudioSession") -> MatplotlibCodegen:
+    return MatplotlibCodegen(style_profiles=profile_map(_style_profiles(session)))
+
+
+def _render_engine(session: "FigStudioSession") -> RenderEngine:
+    profiles = profile_map(_style_profiles(session))
+    return RenderEngine(
+        session.registry.namespace_dict(),
+        MatplotlibCodegen(style_profiles=profiles),
+        style_profiles=profiles,
+    )
+
+
+def _validate_spec(session: "FigStudioSession", spec: FigureSpec) -> ValidationResponse:
+    return validate_figure_spec(
+        session.registry.namespace_dict(),
+        spec,
+        style_profiles=profile_map(_style_profiles(session)),
+    )
 
 
 def _raise_if_validation_failed(response: ValidationResponse) -> None:

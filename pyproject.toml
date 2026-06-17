@@ -1,6 +1,6 @@
 [project]
 name = "figstudio"
-version = "0.2.0"
+version = "0.3.0"
 description = "A local figure-workflow tool for reproducible, publication-ready Matplotlib panels."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -28,7 +28,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "httpx>=0.27",
+  "httpx2>=2.4.0",
   "pytest>=8.0",
 ]
 
