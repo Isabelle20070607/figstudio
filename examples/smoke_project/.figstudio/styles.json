@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "id": "manuscript",
+      "label": "Manuscript",
+      "description": "Deterministic profile used by the browser smoke workflow.",
+      "figure": {
+        "width": 3.35,
+        "height": 2.45,
+        "dpi": 300,
+        "font_family": "DejaVu Sans",
+        "font_size": 8,
+        "constrained_layout": true
+      },
+      "layers": {
+        "line": {
+          "color": "#2563eb",
+          "marker": "o",
+          "linestyle": "-",
+          "linewidth": 1.6,
+          "alpha": 0.95
+        },
+        "scatter": {
+          "color": "#0f766e",
+          "marker": "o",
+          "alpha": 0.82
+        },
+        "heatmap": {
+          "cmap": "viridis",
+          "colorbar": true
+        }
+      },
+      "recipes": {
+        "mean_sem_line": {
+          "color": "#2563eb",
+          "marker": "o",
+          "linestyle": "-",
+          "linewidth": 1.6
+        },
+        "grouped_points": {
+          "color": "#0f766e",
+          "marker": "o",
+          "alpha": 0.78
+        },
+        "paired_before_after": {
+          "color": "#9333ea",
+          "marker": "o",
+          "linewidth": 1.4,
+          "alpha": 0.65
+        }
+      }
+    }
+  ]
+}

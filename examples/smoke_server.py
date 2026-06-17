@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -13,6 +14,7 @@ from figstudio.server import create_app
 from figstudio.session import FigStudioSession
 
 DEFAULT_SMOKE_PORT = 8767
+SMOKE_PROJECT_PATH = Path(__file__).resolve().with_name("smoke_project")
 
 
 def main() -> None:
@@ -29,7 +31,11 @@ def main() -> None:
             "subject": subject,
         }
     )
-    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=port)
+    session = FigStudioSession(
+        registry=VariableRegistry({"df": df}),
+        port=port,
+        project_path=SMOKE_PROJECT_PATH,
+    )
     uvicorn.run(
         create_app(session),
         host="127.0.0.1",
