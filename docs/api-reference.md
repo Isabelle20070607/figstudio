@@ -51,12 +51,12 @@ figstudio demo
 figstudio demo --port 8765 --no-browser
 ```
 
-- `--version`: print the installed package version, falling back to `0.1.0` in editable/source contexts.
+- `--version`: print the installed package version, falling back to `0.2.0` in editable/source contexts.
 - `--no-browser`: start the local server without opening a browser.
 - `--port`: bind a specific localhost port.
 - `demo`: start a sample session with a DataFrame and 2D heatmap array.
 
-- `--version`：打印已安装 package version；editable/source 场景下 fallback 到 `0.1.0`。
+- `--version`：打印已安装 package version；editable/source 场景下 fallback 到 `0.2.0`。
 - `--no-browser`：启动本地 server，但不打开浏览器。
 - `--port`：绑定指定 localhost 端口。
 - `demo`：启动包含 DataFrame 和二维 heatmap array 的样例会话。
@@ -80,6 +80,7 @@ CLI 会打印 session URL，并持续运行直到被中断。
 | `rows`, `cols` | integer | Subplot grid size. / subplot 网格大小。 |
 | `axes` | list of `AxesSpec` | Axes configuration. / 坐标轴配置。 |
 | `layers` | list of `PlotLayer` | Plot layer definitions. / 图层定义。 |
+| `recipes` | list of `RecipeLayer` | Statistics recipe definitions. / 统计 recipe 定义。 |
 | `annotations` | list of `AnnotationSpec` | Text and arrow annotations. / 文本和箭头注释。 |
 | `style` | `FigureStyle` | Figure title, font, layout, and preset. / 总标题、字体、布局和预设。 |
 | `show` | boolean | Whether generated code calls `plt.show()`. / 生成代码是否调用 `plt.show()`。 |
@@ -125,6 +126,66 @@ Each layer has:
 When a channel variable is omitted, the channel uses `DatasetRef.variable`.
 
 当 channel variable 省略时，该 channel 使用 `DatasetRef.variable`。
+
+### RecipeLayer / RecipeLayer
+
+Supported `kind` values:
+
+支持的 `kind` 值：
+
+`mean_sem_line`, `grouped_points`, and `paired_before_after`.
+
+Each recipe has:
+
+每个 recipe 包含：
+
+- `id`: stable editor id.
+- `kind`: recipe kind.
+- `axes_id`: target axes id such as `ax0`.
+- `dataset`: `RecipeDatasetRef`.
+- `style`: `LayerStyle`.
+- `error`: `sem`, `sd`, or `none` when applicable.
+- `readonly`: whether the recipe should be treated as read-only context.
+- `source`: origin marker such as `generated`.
+
+- `id`：稳定 editor id。
+- `kind`：recipe 类型。
+- `axes_id`：目标 axes id，例如 `ax0`。
+- `dataset`：`RecipeDatasetRef`。
+- `style`：`LayerStyle`。
+- `error`：适用时为 `sem`、`sd` 或 `none`。
+- `readonly`：该 recipe 是否应视为只读上下文。
+- `source`：来源标记，例如 `generated`。
+
+### RecipeDatasetRef / RecipeDatasetRef
+
+`RecipeDatasetRef.variable` must name a pandas DataFrame in the live Python namespace. Recipe channel fields name DataFrame columns:
+
+`RecipeDatasetRef.variable` 必须指向 live Python namespace 中的 pandas DataFrame。Recipe channel 字段指向 DataFrame 列名：
+
+- `x`: category, time, or before/after column.
+- `y`: numeric value column.
+- `group`: optional grouping column for grouped recipes.
+- `subject`: paired subject id column required by `paired_before_after`.
+
+- `x`：category、time 或 before/after 列。
+- `y`：数值列。
+- `group`：grouped recipe 的可选分组列。
+- `subject`：`paired_before_after` 必需的配对 subject id 列。
+
+Recipe specs store variable and column names only. They do not serialize raw DataFrame values.
+
+Recipe spec 只保存变量名和列名，不序列化原始 DataFrame 值。
+
+### LayerStyle / LayerStyle
+
+`LayerStyle` stores shared visual options such as label, color, marker, line style, line width, alpha, colormap, histogram bins, fill alpha, and optional `colorbar`.
+
+`LayerStyle` 保存共享视觉选项，例如 label、color、marker、line style、line width、alpha、colormap、histogram bins、fill alpha 和可选 `colorbar`。
+
+For heatmap layers, `colorbar: false` suppresses generated colorbar code. For contour layers, `colorbar` overrides the axes colorbar setting when explicitly set; otherwise contour preserves the axes-level fallback.
+
+对 heatmap layer，`colorbar: false` 会阻止生成 colorbar 代码。对 contour layer，显式设置的 `colorbar` 会覆盖 axes colorbar 设置；未设置时保留 axes-level fallback。
 
 ### FigureStyle / FigureStyle
 
@@ -203,9 +264,9 @@ Response:
 }
 ```
 
-Issue codes currently include `missing_axes`, `missing_variable`, `missing_column`, `dimension_mismatch`, `requires_2d_data`, and `log_scale_non_positive`. `layer_id`, `axes_id`, and `field` are stable enough for the editor to select or focus the affected control when possible.
+Issue codes currently include `missing_axes`, `missing_variable`, `missing_column`, `unsupported_recipe_source`, `dimension_mismatch`, `requires_2d_data`, and `log_scale_non_positive`. `layer_id`, `axes_id`, and `field` are stable enough for the editor to select or focus the affected control when possible.
 
-当前 issue code 包括 `missing_axes`、`missing_variable`、`missing_column`、`dimension_mismatch`、`requires_2d_data` 和 `log_scale_non_positive`。`layer_id`、`axes_id` 和 `field` 足够稳定，editor 可在可行时选中或聚焦受影响控件。
+当前 issue code 包括 `missing_axes`、`missing_variable`、`missing_column`、`unsupported_recipe_source`、`dimension_mismatch`、`requires_2d_data` 和 `log_scale_non_positive`。`layer_id`、`axes_id` 和 `field` 足够稳定，editor 可在可行时选中或聚焦受影响控件。
 
 ### `POST /api/spec`
 
@@ -335,13 +396,17 @@ Error codes currently include:
 ## Compatibility Notes / 兼容性说明
 
 - Generated plotting code must run without importing FigStudio.
-- Saved FigureSpec files depend on compatible variable names and data shapes in the next session.
+- Generated recipe code may call methods on existing pandas DataFrame variables, but imports remain limited to Matplotlib.
+- Saved FigureSpec files depend on compatible variable names, DataFrame columns, and data shapes in the next session.
+- Saved recipe specs store column mappings and recipe intent, not raw data.
 - Runtime wheel installs should not require Node/npm.
 - Notebook workflows return code and do not directly edit notebook files.
 - Existing Figure inspection is best-effort and should not be treated as source-code recovery. Line, scatter, image, and bar artists may become editable layers when data can be extracted. Histograms, boxplots, violins, legends, and colorbars are exposed as metadata unless the current model can reproduce them honestly.
 
 - 生成绘图代码必须能在不 import FigStudio 的情况下运行。
-- 保存的 FigureSpec 文件依赖下一次 session 中兼容的变量名和数据形状。
+- 生成的 recipe 代码可以调用现有 pandas DataFrame 变量的方法，但 import 仍限于 Matplotlib。
+- 保存的 FigureSpec 文件依赖下一次 session 中兼容的变量名、DataFrame 列和数据形状。
+- 保存的 recipe spec 只存列映射和 recipe 意图，不保存原始数据。
 - 运行时 wheel 安装不应要求 Node/npm。
 - Notebook 工作流返回代码，不直接编辑 notebook 文件。
 - Existing Figure inspection 是 best-effort，不应视为源码恢复。line、scatter、image 和 bar artist 在数据可提取时可变成可编辑 layer。histogram、boxplot、violin、legend 和 colorbar 会作为 metadata 暴露，除非当前模型能诚实复现它们。

@@ -12,6 +12,8 @@ export type PlotKind =
   | "step"
   | "fill_between";
 
+export type RecipeKind = "mean_sem_line" | "grouped_points" | "paired_before_after";
+
 export type FigurePreset = "custom" | "journal_single" | "journal_double" | "poster" | "slide";
 
 export interface VariableSummary {
@@ -37,6 +39,14 @@ export interface DatasetRef {
   yerr?: string | null;
 }
 
+export interface RecipeDatasetRef {
+  variable: string;
+  x?: string | null;
+  y?: string | null;
+  group?: string | null;
+  subject?: string | null;
+}
+
 export interface LayerStyle {
   label?: string | null;
   color?: string | null;
@@ -47,6 +57,7 @@ export interface LayerStyle {
   cmap?: string | null;
   bins?: number | null;
   fill_alpha?: number | null;
+  colorbar?: boolean | null;
 }
 
 export interface PlotLayer {
@@ -55,6 +66,17 @@ export interface PlotLayer {
   axes_id: string;
   dataset: DatasetRef;
   style: LayerStyle;
+  readonly: boolean;
+  source: string;
+}
+
+export interface RecipeLayer {
+  id: string;
+  kind: RecipeKind;
+  axes_id: string;
+  dataset: RecipeDatasetRef;
+  style: LayerStyle;
+  error: "sem" | "sd" | "none";
   readonly: boolean;
   source: string;
 }
@@ -102,6 +124,7 @@ export interface FigureSpec {
   cols: number;
   axes: AxesSpec[];
   layers: PlotLayer[];
+  recipes: RecipeLayer[];
   annotations: AnnotationSpec[];
   style: FigureStyle;
   show: boolean;

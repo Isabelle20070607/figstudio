@@ -7,7 +7,14 @@ from typing import Any
 
 import numpy as np
 
-from figstudio.models import DatasetRef, FigureSpec, PlotLayer, ValidationIssue, ValidationResponse
+from figstudio.models import (
+    DatasetRef,
+    FigureSpec,
+    PlotLayer,
+    RecipeLayer,
+    ValidationIssue,
+    ValidationResponse,
+)
 
 
 @dataclass
@@ -51,7 +58,106 @@ def validate_figure_spec(namespace: dict[str, Any], spec: FigureSpec) -> Validat
         if axis.yscale == "log" and y_value is not None and layer.kind not in {"heatmap", "contour"}:
             _check_positive(layer, issues, y_value, "y")
 
+    for recipe in spec.recipes:
+        if recipe.axes_id not in axes_by_id:
+            issues.append(
+                ValidationIssue(
+                    code="missing_axes",
+                    message=f"Recipe {recipe.id!r} targets missing axes {recipe.axes_id!r}.",
+                    layer_id=recipe.id,
+                    axes_id=recipe.axes_id,
+                    field="axes_id",
+                )
+            )
+            continue
+        _validate_recipe(namespace, recipe, issues)
+
     return ValidationResponse(ok=not any(issue.severity == "error" for issue in issues), issues=issues)
+
+
+def _validate_recipe(
+    namespace: dict[str, Any],
+    recipe: RecipeLayer,
+    issues: list[ValidationIssue],
+) -> None:
+    data = recipe.dataset
+    value = namespace.get(data.variable)
+    if value is None:
+        issues.append(
+            ValidationIssue(
+                code="missing_variable",
+                message=f"Recipe {recipe.id!r} references missing variable {data.variable!r}.",
+                layer_id=recipe.id,
+                axes_id=recipe.axes_id,
+                field="dataset.variable",
+                details={"variable": data.variable, "dataset": data.model_dump()},
+            )
+        )
+        return
+
+    if not _is_dataframe(value):
+        issues.append(
+            ValidationIssue(
+                code="unsupported_recipe_source",
+                message=(
+                    f"Recipe {recipe.id!r} requires a pandas DataFrame variable; "
+                    f"{data.variable!r} is {type(value).__name__}."
+                ),
+                layer_id=recipe.id,
+                axes_id=recipe.axes_id,
+                field="dataset.variable",
+                details={"variable": data.variable, "type": type(value).__name__},
+            )
+        )
+        return
+
+    required = ["x", "y"]
+    if recipe.kind == "paired_before_after":
+        required.append("subject")
+
+    for field in required:
+        if not getattr(data, field):
+            issues.append(
+                ValidationIssue(
+                    code="missing_column",
+                    message=f"Recipe {recipe.id!r} requires dataset.{field}.",
+                    layer_id=recipe.id,
+                    axes_id=recipe.axes_id,
+                    field=f"dataset.{field}",
+                    details={"field": field, "dataset": data.model_dump()},
+                )
+            )
+
+    for field in ["x", "y", "group", "subject"]:
+        column = getattr(data, field)
+        if column:
+            _check_dataframe_column(value, recipe, column, field, issues)
+
+
+def _is_dataframe(value: Any) -> bool:
+    return type(value).__module__.startswith("pandas") and type(value).__name__ == "DataFrame"
+
+
+def _check_dataframe_column(
+    value: Any,
+    recipe: RecipeLayer,
+    column: str,
+    field: str,
+    issues: list[ValidationIssue],
+) -> None:
+    columns = [str(item) for item in getattr(value, "columns", [])]
+    if column in columns:
+        return
+    issues.append(
+        ValidationIssue(
+            code="missing_column",
+            message=f"Recipe {recipe.id!r} references missing column {column!r}.",
+            layer_id=recipe.id,
+            axes_id=recipe.axes_id,
+            field=f"dataset.{field}",
+            details={"variable": recipe.dataset.variable, "column": column},
+        )
+    )
 
 
 def _resolve_z(

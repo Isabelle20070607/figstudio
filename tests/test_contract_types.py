@@ -14,6 +14,9 @@ from figstudio.models import (
     LayerStyle,
     PlotKind,
     PlotLayer,
+    RecipeDatasetRef,
+    RecipeKind,
+    RecipeLayer,
     RenderResponse,
     SaveCodeResponse,
     SessionInfo,
@@ -46,6 +49,7 @@ def test_frontend_plot_and_preset_literals_match_backend_contracts():
     source = _typescript_source()
 
     assert _type_literals(source, "PlotKind") == set(get_args(PlotKind))
+    assert _type_literals(source, "RecipeKind") == set(get_args(RecipeKind))
     assert _type_literals(source, "FigurePreset") == set(get_args(FigurePreset))
 
 
@@ -54,8 +58,10 @@ def test_frontend_interfaces_cover_backend_model_fields():
     model_interfaces = {
         VariableSummary: "VariableSummary",
         DatasetRef: "DatasetRef",
+        RecipeDatasetRef: "RecipeDatasetRef",
         LayerStyle: "LayerStyle",
         PlotLayer: "PlotLayer",
+        RecipeLayer: "RecipeLayer",
         AxesSpec: "AxesSpec",
         AnnotationSpec: "AnnotationSpec",
         FigureStyle: "FigureStyle",

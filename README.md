@@ -1,8 +1,8 @@
 # FigStudio
 
-FigStudio is a local graphical editor for Matplotlib figures. It is built for scientific Python users who already have data in a script or notebook and want a faster way to create, style, preview, export, and save reproducible Matplotlib OO code.
+FigStudio is a local figure-workflow tool for reproducible, publication-ready Matplotlib figure panels. It is built for scientific Python users who already have data in a script or notebook and want a faster way to create plot layers, add common statistics recipes, style panels, preview, export, and save readable Matplotlib OO code.
 
-FigStudio 是一个本地 Matplotlib 图形编辑器。它面向已经在脚本或 Notebook 中完成数据处理的科研 Python 用户，用 GUI 快速创建、调整、预览、导出并保存可复现的 Matplotlib OO 代码。
+FigStudio 是一个本地 figure-workflow 工具，用于制作可复现、适合发表的 Matplotlib 图版。它面向已经在脚本或 Notebook 中完成数据处理的科研 Python 用户，用 GUI 快速创建图层、添加常见统计 recipe、调整图版、预览、导出并保存可读的 Matplotlib OO 代码。
 
 ## Install / 安装
 

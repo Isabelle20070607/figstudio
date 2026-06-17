@@ -73,7 +73,7 @@ jobs:
           . .smoke-venv/bin/activate
           python -m pip install --upgrade pip
           for attempt in 1 2 3; do
-            python -m pip install figstudio==0.1.0 && break
+            python -m pip install figstudio==0.2.0 && break
             sleep 20
           done
           figstudio --version

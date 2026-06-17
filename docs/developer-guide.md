@@ -100,9 +100,9 @@ cd frontend
 npm run test:e2e
 ```
 
-The Playwright config starts `examples/smoke_server.py` on `127.0.0.1:8765` and covers add-layer, preset, annotation, export, import/export, subplot, validation focus, and save-code flows.
+The Playwright config starts `examples/smoke_server.py` on `127.0.0.1:8765` and covers add-layer, add-recipe, preset, annotation, export, import/export, subplot, validation focus, and save-code flows.
 
-Playwright 配置会在 `127.0.0.1:8765` 启动 `examples/smoke_server.py`，覆盖 add-layer、preset、annotation、export、import/export、subplot、validation focus 和 save-code 流程。
+Playwright 配置会在 `127.0.0.1:8765` 启动 `examples/smoke_server.py`，覆盖 add-layer、add-recipe、preset、annotation、export、import/export、subplot、validation focus 和 save-code 流程。
 
 Build the package:
 
@@ -147,6 +147,36 @@ When adding a new plot kind, update the full contract in one pass:
 Generated plotting code must remain plain Matplotlib OO code and must not require `figstudio` at runtime.
 
 生成绘图代码必须保持为纯 Matplotlib OO code，运行时不得依赖 `figstudio`。
+
+## Adding a Recipe / 新增 Recipe
+
+Recipes sit beside plot layers instead of replacing them. They should capture reusable scientific plotting intent while preserving the core generated-code contract.
+
+Recipe 与 plot layer 并列存在，而不是替代 plot layer。它们应表达可复用的科研绘图意图，同时保持核心 generated-code contract。
+
+When adding a new recipe, update the full contract in one pass:
+
+新增 recipe 时，一次性更新完整 contract：
+
+- Add the literal to `RecipeKind` and any required fields to `RecipeDatasetRef` or `RecipeLayer` in `src/figstudio/models.py`.
+- Add matching TypeScript support in `frontend/src/types.ts`.
+- Add UI creation and recipe controls in `frontend/src/App.tsx`.
+- Add readable Matplotlib OO code generation in `src/figstudio/codegen.py`.
+- Keep generated recipe imports limited to Matplotlib. Use methods on existing user DataFrame variables instead of serializing data into code.
+- Add validation in `src/figstudio/validation.py`, including required columns and allowed source variable kinds.
+- Add codegen tests, validation tests, render/API smoke coverage, and contract drift coverage.
+- Extend e2e smoke when the new recipe changes the user workflow.
+- Update `docs/user-guide.md`, `docs/api-reference.md`, `docs/technical-design.md`, `docs/prd.md`, and `docs/roadmap.md`.
+
+- 在 `src/figstudio/models.py` 的 `RecipeKind` 中加入 literal，并按需更新 `RecipeDatasetRef` 或 `RecipeLayer` 字段。
+- 在 `frontend/src/types.ts` 中加入匹配的 TypeScript 支持。
+- 在 `frontend/src/App.tsx` 中加入 UI 创建逻辑和 recipe 控件。
+- 在 `src/figstudio/codegen.py` 中加入可读的 Matplotlib OO 代码生成。
+- 生成 recipe 代码的 import 必须限于 Matplotlib。使用现有用户 DataFrame 变量的方法，不要把数据序列化进代码。
+- 在 `src/figstudio/validation.py` 中加入校验，包括必需列和允许的 source variable kind。
+- 增加 codegen 测试、validation 测试、render/API 冒烟覆盖和 contract drift 覆盖。
+- 如果新 recipe 改变用户工作流，扩展 e2e smoke。
+- 更新 `docs/user-guide.md`、`docs/api-reference.md`、`docs/technical-design.md`、`docs/prd.md` 和 `docs/roadmap.md`。
 
 ## Changing Data Contracts / 修改数据契约
 

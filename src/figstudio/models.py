@@ -22,6 +22,8 @@ PlotKind = Literal[
     "fill_between",
 ]
 
+RecipeKind = Literal["mean_sem_line", "grouped_points", "paired_before_after"]
+
 FigurePreset = Literal["custom", "journal_single", "journal_double", "poster", "slide"]
 
 
@@ -48,6 +50,14 @@ class DatasetRef(BaseModel):
     yerr: str | None = None
 
 
+class RecipeDatasetRef(BaseModel):
+    variable: str
+    x: str | None = None
+    y: str | None = None
+    group: str | None = None
+    subject: str | None = None
+
+
 class LayerStyle(BaseModel):
     label: str | None = None
     color: str | None = None
@@ -58,6 +68,7 @@ class LayerStyle(BaseModel):
     cmap: str | None = None
     bins: int | None = None
     fill_alpha: float | None = None
+    colorbar: bool | None = None
 
 
 class PlotLayer(BaseModel):
@@ -68,6 +79,17 @@ class PlotLayer(BaseModel):
     style: LayerStyle = Field(default_factory=LayerStyle)
     readonly: bool = False
     source: str = "generated"
+
+
+class RecipeLayer(BaseModel):
+    id: str
+    kind: RecipeKind
+    axes_id: str = "ax0"
+    dataset: RecipeDatasetRef
+    style: LayerStyle = Field(default_factory=LayerStyle)
+    error: Literal["sem", "sd", "none"] = "sem"
+    readonly: bool = False
+    source: str = "recipe"
 
 
 class AxesSpec(BaseModel):
@@ -113,6 +135,7 @@ class FigureSpec(BaseModel):
     cols: int = 1
     axes: list[AxesSpec] = Field(default_factory=lambda: [AxesSpec()])
     layers: list[PlotLayer] = Field(default_factory=list)
+    recipes: list[RecipeLayer] = Field(default_factory=list)
     annotations: list[AnnotationSpec] = Field(default_factory=list)
     style: FigureStyle = Field(default_factory=FigureStyle)
     show: bool = False

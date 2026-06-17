@@ -15,10 +15,15 @@ from figstudio.session import FigStudioSession
 
 def main() -> None:
     os.environ.setdefault("FIGSTUDIO_DEV_STATIC", "1")
+    time = np.tile(np.arange(5), 8)
+    subject = np.repeat([f"s{index}" for index in range(1, 9)], 5)
+    condition = np.repeat(["baseline", "drug"], 20)
     df = pd.DataFrame(
         {
-            "time": np.linspace(0, 10, 80),
-            "signal": np.sin(np.linspace(0, 10, 80)),
+            "time": time,
+            "signal": np.sin(time / 2) + np.repeat(np.linspace(-0.2, 0.2, 8), 5),
+            "condition": condition,
+            "subject": subject,
         }
     )
     session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8765)

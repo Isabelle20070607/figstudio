@@ -54,7 +54,7 @@ def _frontend_dist_path() -> Path:
 
 
 def create_app(session: "FigStudioSession") -> FastAPI:
-    app = FastAPI(title="FigStudio", version="0.1.0")
+    app = FastAPI(title="FigStudio", version="0.2.0")
     codegen = MatplotlibCodegen()
 
     frontend_dist = _frontend_dist_path()

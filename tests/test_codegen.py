@@ -1,5 +1,5 @@
 from figstudio.codegen import MatplotlibCodegen
-from figstudio.models import DatasetRef, FigureSpec, LayerStyle, PlotLayer
+from figstudio.models import DatasetRef, FigureSpec, LayerStyle, PlotLayer, RecipeDatasetRef, RecipeLayer
 
 
 def test_generates_plain_oo_matplotlib_code_for_dataframe_line():
@@ -17,6 +17,8 @@ def test_generates_plain_oo_matplotlib_code_for_dataframe_line():
     code = MatplotlibCodegen().generate(spec)
 
     assert "import matplotlib.pyplot as plt" in code
+    assert "with plt.rc_context({'font.size': 10}):" in code
+    assert "plt.rcParams" not in code
     assert "fig, axes = plt.subplots" in code
     assert "axes_flat[0].plot(df['time'], df['value']" in code
     assert "label='Signal'" in code
@@ -40,6 +42,24 @@ def test_heatmap_adds_colorbar():
 
     assert "imshow(matrix, cmap='magma')" in code
     assert "fig.colorbar(image_heat_1, ax=axes_flat[0])" in code
+
+
+def test_heatmap_colorbar_can_be_disabled():
+    spec = FigureSpec(
+        layers=[
+            PlotLayer(
+                id="heat-1",
+                kind="heatmap",
+                dataset=DatasetRef(variable="matrix"),
+                style=LayerStyle(cmap="magma", colorbar=False),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "imshow(matrix, cmap='magma')" in code
+    assert "fig.colorbar(image_heat_1, ax=axes_flat[0])" not in code
 
 
 def test_generates_code_for_independent_x_and_y_variables():
@@ -81,3 +101,69 @@ def test_axis_can_disable_legend_for_labeled_layers():
 
     assert "label='Values'" in code
     assert ".legend()" not in code
+
+
+def test_generates_mean_sem_line_recipe_code():
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="mean_sem_line",
+                dataset=RecipeDatasetRef(variable="df", x="time", y="signal", group="condition"),
+                style=LayerStyle(label="Signal", color="#2563eb", marker="o"),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "_recipe_recipe_1_df = df" in code
+    assert "groupby('time', sort=False)['signal'].agg(['mean', 'sem'])" in code
+    assert "label=f'Signal {_recipe_recipe_1_group}'" in code
+    assert "axes_flat[0].legend()" in code
+    assert "figstudio" not in code.lower()
+
+
+def test_generates_grouped_points_recipe_code():
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="grouped_points",
+                dataset=RecipeDatasetRef(variable="df", x="condition", y="response"),
+                style=LayerStyle(label="Response", color="#0f766e", marker="o"),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "_recipe_recipe_1_order = list(dict.fromkeys" in code
+    assert "axes_flat[0].scatter(_recipe_recipe_1_x, _recipe_recipe_1_values" in code
+    assert ".hlines(_recipe_recipe_1_mean" in code
+    assert "set_xticklabels([str(value) for value in _recipe_recipe_1_order])" in code
+
+
+def test_generates_paired_before_after_recipe_code():
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="paired_before_after",
+                dataset=RecipeDatasetRef(
+                    variable="df",
+                    x="condition",
+                    y="response",
+                    subject="subject",
+                ),
+                style=LayerStyle(label="Response", color="#dc2626", marker="o"),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "_recipe_recipe_1_subjects = list(dict.fromkeys" in code
+    assert "groupby('condition', sort=False)['response'].mean().reindex" in code
+    assert "axes_flat[0].plot(_recipe_recipe_1_x, _recipe_recipe_1_paired.tolist()" in code
+    assert "axes_flat[0].errorbar(_recipe_recipe_1_x, _recipe_recipe_1_summary['mean']" in code

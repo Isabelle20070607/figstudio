@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
+import pandas as pd
 
-from figstudio.models import DatasetRef, FigureSpec, PlotLayer
+from figstudio.models import DatasetRef, FigureSpec, PlotLayer, RecipeDatasetRef, RecipeLayer
 from figstudio.registry import VariableRegistry
 from figstudio.server import create_app
 from figstudio.session import FigStudioSession
@@ -132,3 +133,79 @@ def test_validate_endpoint_reports_dimension_mismatch():
     assert validation.status_code == 200
     assert validation.json()["ok"] is False
     assert validation.json()["issues"][0]["code"] == "dimension_mismatch"
+
+
+def test_recipe_api_smoke_workflow():
+    df = pd.DataFrame(
+        {
+            "condition": ["before", "after", "before", "after"],
+            "subject": ["s1", "s1", "s2", "s2"],
+            "response": [1.0, 1.4, 0.8, 1.1],
+        }
+    )
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="paired_before_after",
+                dataset=RecipeDatasetRef(
+                    variable="df",
+                    x="condition",
+                    y="response",
+                    subject="subject",
+                ),
+            )
+        ]
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    rendered = client.post("/api/render", json={"spec": spec.model_dump(), "format": "svg"})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is True
+    assert rendered.status_code == 200
+    assert "<svg" in rendered.json()["image"]
+    assert "_recipe_recipe_1_subjects" in rendered.json()["code"]
+
+
+def test_recipe_validation_reports_non_dataframe_source():
+    session = FigStudioSession(registry=VariableRegistry({"values": [1, 2, 3]}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="mean_sem_line",
+                dataset=RecipeDatasetRef(variable="values", x="condition", y="response"),
+            )
+        ]
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is False
+    assert validation.json()["issues"][0]["code"] == "unsupported_recipe_source"
+
+
+def test_recipe_validation_reports_missing_columns():
+    session = FigStudioSession(registry=VariableRegistry({"df": pd.DataFrame({"condition": ["a"]})}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="grouped_points",
+                dataset=RecipeDatasetRef(variable="df", x="condition", y="missing"),
+            )
+        ]
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is False
+    assert validation.json()["issues"][0]["code"] == "missing_column"
+    assert validation.json()["issues"][0]["field"] == "dataset.y"

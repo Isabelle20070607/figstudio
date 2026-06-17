@@ -63,11 +63,11 @@ The editor still maps data, renders previews, exports files, and generates code.
 
 ## Editor Areas / 编辑器区域
 
-- Left: variables and layer creation.
+- Left: variables plus layer and recipe creation.
 - Center: Matplotlib preview, validation messages, export controls, and generated code.
 - Right: figure, axes, subplot, annotation, and layer controls.
 
-- 左侧：变量和图层创建。
+- 左侧：变量，以及图层和 recipe 创建。
 - 中间：Matplotlib 预览、校验消息、导出控件和生成代码。
 - 右侧：图、坐标轴、subplot、注释和图层控件。
 
@@ -97,19 +97,41 @@ Supported public beta plot types are `line`, `scatter`, `bar`, `barh`, `hist`, `
 
 公开 beta 支持的图层类型包括 `line`、`scatter`、`bar`、`barh`、`hist`、`boxplot`、`violin`、`errorbar`、`heatmap`、`contour`、`step` 和 `fill_between`。
 
+### Statistics Recipes / 统计 Recipe
+
+Use the recipe creation mode when the selected variable is a pandas DataFrame. Recipe MVP supports:
+
+选择 pandas DataFrame 变量时，可以使用 recipe creation mode。Recipe MVP 支持：
+
+- `mean_sem_line`: group by X and optional group column, compute mean plus SEM or SD, then draw a line with error bars.
+- `grouped_points`: keep first-seen category order, scatter individual points by category, and overlay mean plus SEM or SD.
+- `paired_before_after`: group paired observations by subject, draw subject traces, and overlay condition means.
+
+- `mean_sem_line`：按 X 和可选 group 列分组，计算 mean 与 SEM 或 SD，再绘制带误差线的折线。
+- `grouped_points`：保留首次出现的 category 顺序，按 category 绘制 individual points，并叠加 mean 与 SEM 或 SD。
+- `paired_before_after`：按 subject 分组配对 observation，绘制 subject trace，并叠加 condition mean。
+
+Recipes store the DataFrame variable name, column names, style choices, and target axes in the FigureSpec. They do not store raw DataFrame data. Generated code still imports only Matplotlib and computes statistics from the live DataFrame variable.
+
+Recipe 会把 DataFrame 变量名、列名、样式选择和目标 axes 存进 FigureSpec，但不保存原始 DataFrame 数据。生成代码仍只 import Matplotlib，并从 live DataFrame 变量计算统计量。
+
+See `examples/general_stats_recipe.py` for a synthetic repeated-measures DataFrame that can exercise all three recipes.
+
+`examples/general_stats_recipe.py` 提供了一个 synthetic repeated-measures DataFrame，可用于试用三种 recipe。
+
 ## Editing Figures / 编辑图形
 
 The figure inspector controls size, DPI, rows, columns, title, font settings, and style preset. Rows and columns create a simple subplot grid with axes ids such as `ax0`, `ax1`, and `ax2`.
 
 Figure inspector 控制图尺寸、DPI、行数、列数、总标题、字体设置和样式预设。行数和列数会创建基础 subplot 网格，坐标轴 id 形如 `ax0`、`ax1`、`ax2`。
 
-The axes inspector controls title, axis labels, scales, limits, grid, legend, and contour colorbar. Log-scaled axes are validated before rendering so non-positive data can be fixed before Matplotlib fails.
+The axes inspector controls title, axis labels, scales, limits, grid, legend, and contour colorbar fallback. Log-scaled axes are validated before rendering so non-positive data can be fixed before Matplotlib fails.
 
-Axes inspector 控制标题、坐标轴标签、缩放、范围、网格、图例和 contour colorbar。log 坐标轴会在渲染前校验，便于在 Matplotlib 报错前修复非正数据。
+Axes inspector 控制标题、坐标轴标签、缩放、范围、网格、图例和 contour colorbar fallback。log 坐标轴会在渲染前校验，便于在 Matplotlib 报错前修复非正数据。
 
-Layer controls can change the target axes, plot type, label, color, marker, line style, line width, alpha, colormap, histogram bins, and fill alpha where those options apply.
+Layer controls can change the target axes, plot type, label, color, marker, line style, line width, alpha, colormap, heatmap colorbar, histogram bins, and fill alpha where those options apply. Recipe controls can change the target axes, recipe kind, DataFrame source, required columns, error style, label, color, marker, line style, line width, and alpha.
 
-Layer controls 可在适用时调整目标坐标轴、图层类型、标签、颜色、marker、线型、线宽、透明度、colormap、histogram bins 和 fill alpha。
+Layer controls 可在适用时调整目标坐标轴、图层类型、标签、颜色、marker、线型、线宽、透明度、colormap、heatmap colorbar、histogram bins 和 fill alpha。Recipe controls 可调整目标坐标轴、recipe 类型、DataFrame source、必需列、error style、标签、颜色、marker、线型、线宽和透明度。
 
 ## Annotations / 注释
 
@@ -171,12 +193,14 @@ Before rendering, FigStudio checks common failures:
 渲染前，FigStudio 会检查常见错误：
 
 - missing variables or DataFrame columns;
+- recipe sources that are not pandas DataFrames;
 - layers targeting missing axes;
 - X/Y/Y error dimension mismatches;
 - heatmap or contour layers without 2D value data;
 - non-positive data on log-scaled axes.
 
 - 缺失变量或 DataFrame 列；
+- recipe source 不是 pandas DataFrame；
 - 图层指向不存在的 axes；
 - X/Y/Y error 维度不匹配；
 - heatmap 或 contour 缺少二维 value 数据；

@@ -27,6 +27,8 @@ import type {
   LayerStyle,
   PlotKind,
   PlotLayer,
+  RecipeKind,
+  RecipeLayer,
   ValidationIssue,
   VariableSummary
 } from "./types";
@@ -45,6 +47,14 @@ const plotKinds: PlotKind[] = [
   "step",
   "fill_between"
 ];
+
+const recipeKinds: RecipeKind[] = ["mean_sem_line", "grouped_points", "paired_before_after"];
+const recipeLabels: Record<RecipeKind, string> = {
+  mean_sem_line: "Mean +/- SEM line",
+  grouped_points: "Grouped points",
+  paired_before_after: "Paired before/after"
+};
+const errorModes: RecipeLayer["error"][] = ["sem", "sd", "none"];
 
 const colors = ["#2563eb", "#0f766e", "#dc2626", "#9333ea", "#b45309", "#111827"];
 const markers = ["", "o", "s", "^", "D", "x"];
@@ -162,6 +172,10 @@ function resizeAxes(spec: FigureSpec, rows: number, cols: number): FigureSpec {
       ...layer,
       axes_id: validIds.has(layer.axes_id) ? layer.axes_id : axes[0].id
     })),
+    recipes: (spec.recipes ?? []).map((recipe) => ({
+      ...recipe,
+      axes_id: validIds.has(recipe.axes_id) ? recipe.axes_id : axes[0].id
+    })),
     annotations: spec.annotations.map((annotation) => ({
       ...annotation,
       axes_id: validIds.has(annotation.axes_id) ? annotation.axes_id : axes[0].id
@@ -261,7 +275,8 @@ function createLayer(
     alpha: kind === "scatter" ? 0.85 : null,
     cmap: kind === "heatmap" || kind === "contour" ? "viridis" : null,
     bins: kind === "hist" ? 30 : null,
-    fill_alpha: kind === "fill_between" ? 0.3 : null
+    fill_alpha: kind === "fill_between" ? 0.3 : null,
+    colorbar: kind === "heatmap" ? true : null
   };
   return {
     id: createId("layer"),
@@ -274,6 +289,49 @@ function createLayer(
   };
 }
 
+function createRecipe({
+  kind,
+  variable,
+  xColumn,
+  yColumn,
+  groupColumn,
+  subjectColumn,
+  error
+}: {
+  kind: RecipeKind;
+  variable: VariableSummary;
+  xColumn: string;
+  yColumn: string;
+  groupColumn: string;
+  subjectColumn: string;
+  error: RecipeLayer["error"];
+}): RecipeLayer {
+  const label = yColumn || variable.name;
+  return {
+    id: createId("recipe"),
+    kind,
+    axes_id: "ax0",
+    dataset: {
+      variable: variable.name,
+      x: xColumn || null,
+      y: yColumn || null,
+      group: kind === "mean_sem_line" && groupColumn ? groupColumn : null,
+      subject: kind === "paired_before_after" ? subjectColumn || null : null
+    },
+    style: {
+      label,
+      color: colors[0],
+      marker: kind === "grouped_points" || kind === "paired_before_after" ? "o" : null,
+      linestyle: kind === "mean_sem_line" ? "-" : null,
+      linewidth: kind === "mean_sem_line" || kind === "paired_before_after" ? 1.8 : null,
+      alpha: kind === "grouped_points" ? 0.78 : null
+    },
+    error,
+    readonly: false,
+    source: "recipe"
+  };
+}
+
 function cloneLayer(layer: PlotLayer): PlotLayer {
   return {
     ...structuredClone(layer),
@@ -281,6 +339,17 @@ function cloneLayer(layer: PlotLayer): PlotLayer {
     style: {
       ...layer.style,
       label: layer.style.label ? `${layer.style.label} copy` : undefined
+    }
+  };
+}
+
+function cloneRecipe(recipe: RecipeLayer): RecipeLayer {
+  return {
+    ...structuredClone(recipe),
+    id: createId("recipe"),
+    style: {
+      ...recipe.style,
+      label: recipe.style.label ? `${recipe.style.label} copy` : undefined
     }
   };
 }
@@ -404,6 +473,10 @@ export function App() {
     () => spec?.layers.find((layer) => layer.id === selectedLayerId),
     [selectedLayerId, spec?.layers]
   );
+  const selectedRecipe = useMemo(
+    () => spec?.recipes?.find((recipe) => recipe.id === selectedLayerId),
+    [selectedLayerId, spec?.recipes]
+  );
 
   useEffect(() => {
     if (!spec?.axes.length) {
@@ -463,7 +536,7 @@ export function App() {
     const timeout = window.setTimeout(focusTarget, 80);
     pendingIssueFocusRef.current = null;
     return () => window.clearTimeout(timeout);
-  }, [selectedAxisId, selectedLayerId, spec?.axes, spec?.layers]);
+  }, [selectedAxisId, selectedLayerId, spec?.axes, spec?.layers, spec?.recipes]);
 
   async function renderNow() {
     if (!spec) {
@@ -555,6 +628,7 @@ export function App() {
         ...raw,
         axes: raw.axes ?? [createAxis(0, 0, 0)],
         layers: raw.layers ?? [],
+        recipes: raw.recipes ?? [],
         annotations: raw.annotations ?? [],
         style: {
           preset: "custom",
@@ -565,7 +639,7 @@ export function App() {
         }
       } as FigureSpec;
       setSpec(imported);
-      setSelectedLayerId(imported.layers[0]?.id ?? "");
+      setSelectedLayerId(imported.layers[0]?.id ?? imported.recipes[0]?.id ?? "");
       setStatus("FigureSpec imported");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Spec import failed");
@@ -584,11 +658,28 @@ export function App() {
     setSelectedLayerId("");
   }
 
+  function deleteRecipe(id: string) {
+    updateSpec((draft) => ({
+      ...draft,
+      recipes: (draft.recipes ?? []).filter((recipe) => recipe.id !== id)
+    }));
+    setSelectedLayerId("");
+  }
+
   function duplicateLayer(layer: PlotLayer) {
     const next = cloneLayer(layer);
     updateSpec((draft) => ({
       ...draft,
       layers: [...draft.layers, next]
+    }));
+    setSelectedLayerId(next.id);
+  }
+
+  function duplicateRecipe(recipe: RecipeLayer) {
+    const next = cloneRecipe(recipe);
+    updateSpec((draft) => ({
+      ...draft,
+      recipes: [...(draft.recipes ?? []), next]
     }));
     setSelectedLayerId(next.id);
   }
@@ -682,6 +773,13 @@ export function App() {
             }));
             setSelectedLayerId(layer.id);
           }}
+          onAddRecipe={(recipe) => {
+            updateSpec((draft) => ({
+              ...draft,
+              recipes: [...(draft.recipes ?? []), recipe]
+            }));
+            setSelectedLayerId(recipe.id);
+          }}
         />
 
         <section className="canvas-column">
@@ -709,6 +807,7 @@ export function App() {
         <Inspector
           spec={spec}
           selectedLayer={selectedLayer}
+          selectedRecipe={selectedRecipe}
           selectedAxisId={selectedAxisId}
           layerFocusRequest={layerFocusRequest}
           onSelectLayer={setSelectedLayerId}
@@ -716,6 +815,8 @@ export function App() {
           onUpdateSpec={updateSpec}
           onDeleteLayer={deleteLayer}
           onDuplicateLayer={duplicateLayer}
+          onDeleteRecipe={deleteRecipe}
+          onDuplicateRecipe={duplicateRecipe}
         />
       </section>
     </main>
@@ -727,10 +828,13 @@ interface VariablePanelProps {
   selected?: string;
   onSelect: (name: string) => void;
   onAddLayer: (layer: PlotLayer) => void;
+  onAddRecipe: (recipe: RecipeLayer) => void;
 }
 
-function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePanelProps) {
+function VariablePanel({ variables, selected, onSelect, onAddLayer, onAddRecipe }: VariablePanelProps) {
   const variable = variables.find((item) => item.name === selected) ?? variables[0];
+  const dataframeVariables = variables.filter((item) => item.kind === "dataframe");
+  const [builderMode, setBuilderMode] = useState<"layer" | "recipe">("layer");
   const [kind, setKind] = useState<PlotKind>("line");
   const [xVariable, setXVariable] = useState(indexSource);
   const [xColumn, setXColumn] = useState("");
@@ -738,10 +842,20 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
   const [yColumn, setYColumn] = useState("");
   const [yerrVariable, setYerrVariable] = useState(noneSource);
   const [yerrColumn, setYerrColumn] = useState("");
+  const [recipeKind, setRecipeKind] = useState<RecipeKind>("mean_sem_line");
+  const [recipeVariableName, setRecipeVariableName] = useState("");
+  const [recipeXColumn, setRecipeXColumn] = useState("");
+  const [recipeYColumn, setRecipeYColumn] = useState("");
+  const [recipeGroupColumn, setRecipeGroupColumn] = useState("");
+  const [recipeSubjectColumn, setRecipeSubjectColumn] = useState("");
+  const [recipeError, setRecipeError] = useState<RecipeLayer["error"]>("sem");
 
   const xVar = findVariable(variables, xVariable);
   const yVar = findVariable(variables, yVariable) ?? variable;
   const yerrVar = findVariable(variables, yerrVariable);
+  const recipeVariable =
+    dataframeVariables.find((item) => item.name === recipeVariableName) ??
+    (variable?.kind === "dataframe" ? variable : dataframeVariables[0]);
   const compatibility = compatibilityText(kind, yVar, xVar);
 
   useEffect(() => {
@@ -755,6 +869,20 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
     setYerrVariable(noneSource);
     setYerrColumn("");
   }, [variable?.name, kind]);
+
+  useEffect(() => {
+    if (!recipeVariable) {
+      return;
+    }
+    const subjectColumn =
+      recipeVariable.columns.find((column) => /subject|animal|mouse|participant|id/i.test(column)) ??
+      firstColumn(recipeVariable);
+    setRecipeVariableName(recipeVariable.name);
+    setRecipeXColumn(firstColumn(recipeVariable));
+    setRecipeYColumn(secondColumn(recipeVariable));
+    setRecipeGroupColumn("");
+    setRecipeSubjectColumn(subjectColumn);
+  }, [recipeVariable?.name, recipeKind]);
 
   return (
     <aside className="side-panel variables-panel" data-testid="variable-panel">
@@ -777,118 +905,227 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
       </div>
 
       <div className="builder">
-        <h2>Create layer</h2>
+        <h2>{builderMode === "layer" ? "Create layer" : "Create recipe"}</h2>
         <label>
-          Plot type
+          Build
           <select
-            data-testid="plot-kind-select"
-            value={kind}
-            onChange={(event) => setKind(event.target.value as PlotKind)}
+            data-testid="builder-mode-select"
+            value={builderMode}
+            onChange={(event) => setBuilderMode(event.target.value as "layer" | "recipe")}
           >
-            {plotKinds.map((plotKind) => (
-              <option key={plotKind} value={plotKind}>
-                {plotKind}
-              </option>
-            ))}
+            <option value="layer">Plot layer</option>
+            <option value="recipe">Stats recipe</option>
           </select>
         </label>
 
-        <div className="source-grid">
-          <label>
-            Y / value source
-            <select
-              data-testid="y-source-select"
-              value={yVar?.name ?? ""}
-              onChange={(event) => setYVariable(event.target.value)}
-            >
-              {variables.map((item) => (
-                <option key={item.name} value={item.name}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {yVar?.columns.length ? (
+        {builderMode === "layer" ? (
+          <>
             <label>
-              Y / value column
+              Plot type
               <select
-                data-testid="y-column-select"
-                value={yColumn}
-                onChange={(event) => setYColumn(event.target.value)}
+                data-testid="plot-kind-select"
+                value={kind}
+                onChange={(event) => setKind(event.target.value as PlotKind)}
               >
-                <option value="">variable</option>
-                {yVar.columns.map((column) => (
-                  <option key={column} value={column}>
-                    {column}
+                {plotKinds.map((plotKind) => (
+                  <option key={plotKind} value={plotKind}>
+                    {plotKind}
                   </option>
                 ))}
               </select>
             </label>
-          ) : null}
-        </div>
 
-        <div className="source-grid">
-          <label>
-            X source
-            <select
-              data-testid="x-source-select"
-              value={xVariable}
-              onChange={(event) => setXVariable(event.target.value)}
+            <div className="source-grid">
+              <label>
+                Y / value source
+                <select
+                  data-testid="y-source-select"
+                  value={yVar?.name ?? ""}
+                  onChange={(event) => setYVariable(event.target.value)}
+                >
+                  {variables.map((item) => (
+                    <option key={item.name} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {yVar?.columns.length ? (
+                <label>
+                  Y / value column
+                  <select
+                    data-testid="y-column-select"
+                    value={yColumn}
+                    onChange={(event) => setYColumn(event.target.value)}
+                  >
+                    <option value="">variable</option>
+                    {yVar.columns.map((column) => (
+                      <option key={column} value={column}>
+                        {column}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </div>
+
+            <div className="source-grid">
+              <label>
+                X source
+                <select
+                  data-testid="x-source-select"
+                  value={xVariable}
+                  onChange={(event) => setXVariable(event.target.value)}
+                >
+                  <option value={indexSource}>index</option>
+                  {variables.map((item) => (
+                    <option key={item.name} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {xVar?.columns.length ? (
+                <label>
+                  X column
+                  <select
+                    data-testid="x-column-select"
+                    value={xColumn}
+                    onChange={(event) => setXColumn(event.target.value)}
+                  >
+                    <option value="">variable</option>
+                    {xVar.columns.map((column) => (
+                      <option key={column} value={column}>
+                        {column}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </div>
+
+            {kind === "errorbar" ? (
+              <div className="source-grid">
+                <label>
+                  Error source
+                  <select
+                    data-testid="error-source-select"
+                    value={yerrVariable}
+                    onChange={(event) => setYerrVariable(event.target.value)}
+                  >
+                    <option value={noneSource}>none</option>
+                    {variables.map((item) => (
+                      <option key={item.name} value={item.name}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {yerrVar?.columns.length ? (
+                  <label>
+                    Error column
+                    <select
+                      data-testid="error-column-select"
+                      value={yerrColumn}
+                      onChange={(event) => setYerrColumn(event.target.value)}
+                    >
+                      <option value="">variable</option>
+                      {yerrVar.columns.map((column) => (
+                        <option key={column} value={column}>
+                          {column}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+              </div>
+            ) : null}
+
+            {compatibility ? <p className="compatibility-note">{compatibility}</p> : null}
+
+            <button
+              className="primary-button"
+              data-testid="add-layer-button"
+              disabled={!variable || !yVar}
+              onClick={() =>
+                yVar &&
+                onAddLayer(createLayer(kind, variables, yVar.name, yColumn, xVariable, xColumn, yerrVariable, yerrColumn))
+              }
             >
-              <option value={indexSource}>index</option>
-              {variables.map((item) => (
-                <option key={item.name} value={item.name}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {xVar?.columns.length ? (
+              <Layers3 size={16} />
+              Add layer
+            </button>
+          </>
+        ) : (
+          <>
             <label>
-              X column
+              Recipe
               <select
-                data-testid="x-column-select"
-                value={xColumn}
-                onChange={(event) => setXColumn(event.target.value)}
+                data-testid="recipe-kind-select"
+                value={recipeKind}
+                onChange={(event) => setRecipeKind(event.target.value as RecipeKind)}
               >
-                <option value="">variable</option>
-                {xVar.columns.map((column) => (
-                  <option key={column} value={column}>
-                    {column}
+                {recipeKinds.map((item) => (
+                  <option key={item} value={item}>
+                    {recipeLabels[item]}
                   </option>
                 ))}
               </select>
             </label>
-          ) : null}
-        </div>
-
-        {kind === "errorbar" ? (
-          <div className="source-grid">
             <label>
-              Error source
+              DataFrame
               <select
-                data-testid="error-source-select"
-                value={yerrVariable}
-                onChange={(event) => setYerrVariable(event.target.value)}
+                data-testid="recipe-source-select"
+                value={recipeVariable?.name ?? ""}
+                onChange={(event) => setRecipeVariableName(event.target.value)}
               >
-                <option value={noneSource}>none</option>
-                {variables.map((item) => (
+                {dataframeVariables.map((item) => (
                   <option key={item.name} value={item.name}>
                     {item.name}
                   </option>
                 ))}
               </select>
             </label>
-            {yerrVar?.columns.length ? (
+            <div className="source-grid">
               <label>
-                Error column
+                X / condition
                 <select
-                  data-testid="error-column-select"
-                  value={yerrColumn}
-                  onChange={(event) => setYerrColumn(event.target.value)}
+                  data-testid="recipe-x-column-select"
+                  value={recipeXColumn}
+                  onChange={(event) => setRecipeXColumn(event.target.value)}
                 >
-                  <option value="">variable</option>
-                  {yerrVar.columns.map((column) => (
+                  {recipeVariable?.columns.map((column) => (
+                    <option key={column} value={column}>
+                      {column}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Y / value
+                <select
+                  data-testid="recipe-y-column-select"
+                  value={recipeYColumn}
+                  onChange={(event) => setRecipeYColumn(event.target.value)}
+                >
+                  {recipeVariable?.columns.map((column) => (
+                    <option key={column} value={column}>
+                      {column}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {recipeKind === "mean_sem_line" ? (
+              <label>
+                Group column
+                <select
+                  data-testid="recipe-group-column-select"
+                  value={recipeGroupColumn}
+                  onChange={(event) => setRecipeGroupColumn(event.target.value)}
+                >
+                  <option value="">none</option>
+                  {recipeVariable?.columns.map((column) => (
                     <option key={column} value={column}>
                       {column}
                     </option>
@@ -896,23 +1133,63 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer }: VariablePa
                 </select>
               </label>
             ) : null}
-          </div>
-        ) : null}
-
-        {compatibility ? <p className="compatibility-note">{compatibility}</p> : null}
-
-        <button
-          className="primary-button"
-          data-testid="add-layer-button"
-          disabled={!variable || !yVar}
-          onClick={() =>
-            yVar &&
-            onAddLayer(createLayer(kind, variables, yVar.name, yColumn, xVariable, xColumn, yerrVariable, yerrColumn))
-          }
-        >
-          <Layers3 size={16} />
-          Add layer
-        </button>
+            {recipeKind === "paired_before_after" ? (
+              <label>
+                Subject column
+                <select
+                  data-testid="recipe-subject-column-select"
+                  value={recipeSubjectColumn}
+                  onChange={(event) => setRecipeSubjectColumn(event.target.value)}
+                >
+                  {recipeVariable?.columns.map((column) => (
+                    <option key={column} value={column}>
+                      {column}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <label>
+              Error
+              <select
+                data-testid="recipe-error-select"
+                value={recipeError}
+                onChange={(event) => setRecipeError(event.target.value as RecipeLayer["error"])}
+              >
+                {errorModes.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!dataframeVariables.length ? (
+              <p className="compatibility-note">Stats recipes require a pandas DataFrame variable.</p>
+            ) : null}
+            <button
+              className="primary-button"
+              data-testid="add-recipe-button"
+              disabled={!recipeVariable || !recipeXColumn || !recipeYColumn}
+              onClick={() =>
+                recipeVariable &&
+                onAddRecipe(
+                  createRecipe({
+                    kind: recipeKind,
+                    variable: recipeVariable,
+                    xColumn: recipeXColumn,
+                    yColumn: recipeYColumn,
+                    groupColumn: recipeGroupColumn,
+                    subjectColumn: recipeSubjectColumn,
+                    error: recipeError
+                  })
+                )
+              }
+            >
+              <Layers3 size={16} />
+              Add recipe
+            </button>
+          </>
+        )}
       </div>
     </aside>
   );
@@ -1116,16 +1393,20 @@ function AnnotationControls({
 function Inspector({
   spec,
   selectedLayer,
+  selectedRecipe,
   selectedAxisId,
   layerFocusRequest,
   onSelectLayer,
   onSelectAxis,
   onUpdateSpec,
   onDeleteLayer,
-  onDuplicateLayer
+  onDuplicateLayer,
+  onDeleteRecipe,
+  onDuplicateRecipe
 }: {
   spec?: FigureSpec;
   selectedLayer?: PlotLayer;
+  selectedRecipe?: RecipeLayer;
   selectedAxisId: string;
   layerFocusRequest: { layerId: string; nonce: number } | null;
   onSelectLayer: (id: string) => void;
@@ -1133,8 +1414,11 @@ function Inspector({
   onUpdateSpec: (updater: (spec: FigureSpec) => FigureSpec) => void;
   onDeleteLayer: (id: string) => void;
   onDuplicateLayer: (layer: PlotLayer) => void;
+  onDeleteRecipe: (id: string) => void;
+  onDuplicateRecipe: (recipe: RecipeLayer) => void;
 }) {
   const selectedAxis = spec?.axes.find((axis) => axis.id === selectedAxisId) ?? spec?.axes[0];
+  const recipes = spec?.recipes ?? [];
 
   return (
     <aside className="side-panel inspector-panel" data-testid="inspector-panel">
@@ -1379,6 +1663,26 @@ function Inspector({
                   </small>
                 </button>
               ))}
+              {recipes.map((recipe) => (
+                <button
+                  key={recipe.id}
+                  className={recipe.id === selectedRecipe?.id ? "selected" : ""}
+                  data-testid="layer-row"
+                  data-layer-id={recipe.id}
+                  data-axes-id={recipe.axes_id}
+                  ref={(node) => {
+                    if (node && layerFocusRequest?.layerId === recipe.id) {
+                      window.setTimeout(() => node.focus({ preventScroll: true }), 0);
+                    }
+                  }}
+                  onClick={() => onSelectLayer(recipe.id)}
+                >
+                  <span>{recipe.style.label || recipe.dataset.y || recipe.dataset.variable}</span>
+                  <small>
+                    recipe · {recipe.kind} · {recipe.axes_id}
+                  </small>
+                </button>
+              ))}
             </div>
             {selectedLayer ? (
               <>
@@ -1407,8 +1711,41 @@ function Inspector({
                   }
                 />
               </>
+            ) : selectedRecipe ? (
+              <>
+                <div className="layer-actions">
+                  <button
+                    className="mini-button"
+                    data-testid="duplicate-layer-button"
+                    onClick={() => onDuplicateRecipe(selectedRecipe)}
+                  >
+                    <Copy size={14} />
+                    Duplicate
+                  </button>
+                  <button
+                    className="mini-button danger-button"
+                    data-testid="delete-layer-button"
+                    onClick={() => onDeleteRecipe(selectedRecipe.id)}
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                </div>
+                <RecipeControls
+                  recipe={selectedRecipe}
+                  axes={spec.axes}
+                  onChange={(next) =>
+                    onUpdateSpec((draft) => ({
+                      ...draft,
+                      recipes: (draft.recipes ?? []).map((recipe) =>
+                        recipe.id === next.id ? next : recipe
+                      )
+                    }))
+                  }
+                />
+              </>
             ) : (
-              <p className="muted">Select or add a layer to edit style.</p>
+              <p className="muted">Select or add a layer or recipe to edit style.</p>
             )}
           </section>
         </>
@@ -1426,6 +1763,149 @@ function updateAxis(
     ...draft,
     axes: draft.axes.map((axis) => (axis.id === axisId ? { ...axis, ...patch } : axis))
   }));
+}
+
+function RecipeControls({
+  recipe,
+  axes,
+  onChange
+}: {
+  recipe: RecipeLayer;
+  axes: AxesSpec[];
+  onChange: (recipe: RecipeLayer) => void;
+}) {
+  return (
+    <div className="layer-controls">
+      <SelectField
+        label="Axes"
+        value={recipe.axes_id}
+        options={axes.map((axis) => axis.id)}
+        testId="recipe-axes-field"
+        field="axes_id"
+        onChange={(value) => onChange({ ...recipe, axes_id: value })}
+      />
+      <SelectField
+        label="Recipe"
+        value={recipe.kind}
+        options={recipeKinds}
+        optionLabel={(value) => recipeLabels[value as RecipeKind]}
+        testId="recipe-kind-field"
+        field="kind"
+        onChange={(value) => onChange({ ...recipe, kind: value as RecipeKind })}
+      />
+      <TextField
+        label="DataFrame"
+        value={recipe.dataset.variable}
+        testId="recipe-variable-field"
+        field="dataset.variable"
+        onChange={(value) => onChange({ ...recipe, dataset: { ...recipe.dataset, variable: value } })}
+      />
+      <div className="split-row">
+        <TextField
+          label="X column"
+          value={recipe.dataset.x ?? ""}
+          testId="recipe-x-field"
+          field="dataset.x"
+          onChange={(value) => onChange({ ...recipe, dataset: { ...recipe.dataset, x: value || null } })}
+        />
+        <TextField
+          label="Y column"
+          value={recipe.dataset.y ?? ""}
+          testId="recipe-y-field"
+          field="dataset.y"
+          onChange={(value) => onChange({ ...recipe, dataset: { ...recipe.dataset, y: value || null } })}
+        />
+      </div>
+      {recipe.kind === "mean_sem_line" ? (
+        <TextField
+          label="Group column"
+          value={recipe.dataset.group ?? ""}
+          testId="recipe-group-field"
+          field="dataset.group"
+          onChange={(value) => onChange({ ...recipe, dataset: { ...recipe.dataset, group: value || null } })}
+        />
+      ) : null}
+      {recipe.kind === "paired_before_after" ? (
+        <TextField
+          label="Subject column"
+          value={recipe.dataset.subject ?? ""}
+          testId="recipe-subject-field"
+          field="dataset.subject"
+          onChange={(value) => onChange({ ...recipe, dataset: { ...recipe.dataset, subject: value || null } })}
+        />
+      ) : null}
+      <SelectField
+        label="Error"
+        value={recipe.error}
+        options={errorModes}
+        testId="recipe-error-field"
+        field="error"
+        onChange={(value) => onChange({ ...recipe, error: value as RecipeLayer["error"] })}
+      />
+      <TextField
+        label="Label"
+        value={recipe.style.label ?? ""}
+        testId="recipe-label-field"
+        field="style.label"
+        onChange={(value) => onChange({ ...recipe, style: { ...recipe.style, label: value || null } })}
+      />
+      <label data-testid="recipe-color-field" data-field="style.color">
+        Color
+        <div className="swatches">
+          {colors.map((color) => (
+            <button
+              key={color}
+              className={recipe.style.color === color ? "selected" : ""}
+              style={{ background: color }}
+              aria-label={color}
+              data-testid="recipe-color-swatch"
+              onClick={() => onChange({ ...recipe, style: { ...recipe.style, color } })}
+            />
+          ))}
+        </div>
+      </label>
+      <div className="split-row">
+        <SelectField
+          label="Marker"
+          value={recipe.style.marker ?? ""}
+          options={markers}
+          testId="recipe-marker-field"
+          field="style.marker"
+          optionLabel={(value) => value || "none"}
+          onChange={(value) => onChange({ ...recipe, style: { ...recipe.style, marker: value || null } })}
+        />
+        <SelectField
+          label="Line style"
+          value={recipe.style.linestyle ?? ""}
+          options={linestyles}
+          testId="recipe-linestyle-field"
+          field="style.linestyle"
+          onChange={(value) => onChange({ ...recipe, style: { ...recipe.style, linestyle: value || null } })}
+        />
+      </div>
+      <div className="split-row">
+        <NumberField
+          label="Line width"
+          value={recipe.style.linewidth ?? 1.8}
+          step={0.1}
+          min={0}
+          testId="recipe-linewidth-field"
+          field="style.linewidth"
+          onChange={(value) => onChange({ ...recipe, style: { ...recipe.style, linewidth: value } })}
+        />
+        <NumberField
+          label="Alpha"
+          value={recipe.style.alpha ?? 1}
+          step={0.05}
+          min={0}
+          max={1}
+          testId="recipe-alpha-field"
+          field="style.alpha"
+          onChange={(value) => onChange({ ...recipe, style: { ...recipe.style, alpha: value } })}
+        />
+      </div>
+    </div>
+  );
 }
 
 function LayerControls({
@@ -1464,14 +1944,23 @@ function LayerControls({
         onChange={(value) => onChange({ ...layer, style: { ...layer.style, label: value || null } })}
       />
       {isFieldLayer ? (
-        <SelectField
-          label="Colormap"
-          value={layer.style.cmap ?? "viridis"}
-          options={cmaps}
-          testId="layer-cmap-field"
-          field="style.cmap"
-          onChange={(value) => onChange({ ...layer, style: { ...layer.style, cmap: value } })}
-        />
+        <>
+          <SelectField
+            label="Colormap"
+            value={layer.style.cmap ?? "viridis"}
+            options={cmaps}
+            testId="layer-cmap-field"
+            field="style.cmap"
+            onChange={(value) => onChange({ ...layer, style: { ...layer.style, cmap: value } })}
+          />
+          <ToggleField
+            label="Colorbar"
+            value={layer.style.colorbar ?? layer.kind === "heatmap"}
+            testId="layer-colorbar-field"
+            field="style.colorbar"
+            onChange={(value) => onChange({ ...layer, style: { ...layer.style, colorbar: value } })}
+          />
+        </>
       ) : (
         <label data-testid="layer-color-field" data-field="style.color">
           Color

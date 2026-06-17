@@ -6,7 +6,7 @@ import keyword
 import re
 from dataclasses import dataclass
 
-from figstudio.models import AxesSpec, DatasetRef, FigureSpec, PlotLayer
+from figstudio.models import AxesSpec, DatasetRef, FigureSpec, PlotLayer, RecipeLayer
 
 
 _IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -49,12 +49,23 @@ class MatplotlibCodegen:
         if self.include_imports:
             lines.extend(["import matplotlib.pyplot as plt", ""])
 
+        rc_params: dict[str, object] = {}
         if spec.style.font_family:
-            lines.append(f"plt.rcParams['font.family'] = {spec.style.font_family!r}")
+            rc_params["font.family"] = spec.style.font_family
         if spec.style.font_size:
-            lines.append(f"plt.rcParams['font.size'] = {spec.style.font_size!r}")
-        if spec.style.font_family or spec.style.font_size:
-            lines.append("")
+            rc_params["font.size"] = spec.style.font_size
+
+        body = self._figure_body(spec)
+        if rc_params:
+            lines.append(f"with plt.rc_context({_literal(rc_params)}):")
+            lines.extend(f"    {line}" if line else "" for line in body)
+        else:
+            lines.extend(body)
+
+        return "\n".join(lines).rstrip() + "\n"
+
+    def _figure_body(self, spec: FigureSpec) -> list[str]:
+        lines: list[str] = []
 
         layout = (
             f"fig, axes = plt.subplots({spec.rows}, {spec.cols}, "
@@ -78,6 +89,13 @@ class MatplotlibCodegen:
             axis_index = axis_lookup.get(layer.axes_id, 0)
             lines.extend(self._layer_code(layer, axis_index, spec.axes[axis_index]))
             if layer.style.label and layer.kind not in {"heatmap", "contour"}:
+                legend_axes.add(axis_index)
+            lines.append("")
+
+        for recipe in spec.recipes:
+            axis_index = axis_lookup.get(recipe.axes_id, 0)
+            lines.extend(self._recipe_code(recipe, axis_index))
+            if recipe.style.label:
                 legend_axes.add(axis_index)
             lines.append("")
 
@@ -106,7 +124,7 @@ class MatplotlibCodegen:
         if spec.show:
             lines.append("plt.show()")
 
-        return "\n".join(lines).rstrip() + "\n"
+        return lines
 
     def notebook_cell(self, spec: FigureSpec) -> str:
         return self.generate(spec)
@@ -195,13 +213,191 @@ class MatplotlibCodegen:
 
         lines = [call.replace(", )", ")").replace("(, ", "(")]
         if layer.kind == "heatmap":
-            lines.append(f"fig.colorbar(image_{layer.id.replace('-', '_')}, ax={ax})")
+            if style.colorbar is not False:
+                lines.append(f"fig.colorbar(image_{layer.id.replace('-', '_')}, ax={ax})")
         if layer.kind == "contour":
             contour_name = f"contour_{layer.id.replace('-', '_')}"
-            if axis.colorbar:
+            show_colorbar = style.colorbar if style.colorbar is not None else axis.colorbar
+            if show_colorbar:
                 lines.append(f"fig.colorbar({contour_name}, ax={ax})")
             lines.append(f"{ax}.clabel({contour_name}, inline=True, fontsize=8)")
         return lines
+
+    def _recipe_code(self, recipe: RecipeLayer, axis_index: int) -> list[str]:
+        if recipe.kind == "mean_sem_line":
+            return self._mean_sem_line_code(recipe, axis_index)
+        if recipe.kind == "grouped_points":
+            return self._grouped_points_code(recipe, axis_index)
+        if recipe.kind == "paired_before_after":
+            return self._paired_before_after_code(recipe, axis_index)
+        raise ValueError(f"Unsupported recipe kind: {recipe.kind}")
+
+    def _mean_sem_line_code(self, recipe: RecipeLayer, axis_index: int) -> list[str]:
+        data = recipe.dataset
+        var = _safe_var(data.variable)
+        prefix = self._recipe_prefix(recipe)
+        ax = f"axes_flat[{axis_index}]"
+        stat = self._recipe_error_stat(recipe)
+        yerr = f"{prefix}_summary[{stat!r}]" if stat else "None"
+        agg = "['mean', " + repr(stat) + "]" if stat else "['mean']"
+        kwargs = self._recipe_line_kwargs(recipe)
+
+        lines = [
+            f"{prefix}_df = {var}",
+            f"{prefix}_x_order = list(dict.fromkeys({prefix}_df[{data.x!r}].dropna().tolist()))",
+        ]
+        if data.group:
+            lines.extend(
+                [
+                    f"{prefix}_groups = list(dict.fromkeys({prefix}_df[{data.group!r}].dropna().tolist()))",
+                    f"for {prefix}_group in {prefix}_groups:",
+                    f"    {prefix}_group_df = {prefix}_df[{prefix}_df[{data.group!r}] == {prefix}_group]",
+                    (
+                        f"    {prefix}_summary = {prefix}_group_df.groupby({data.x!r}, sort=False)"
+                        f"[{data.y!r}].agg({agg}).reindex({prefix}_x_order)"
+                    ),
+                    (
+                        f"    {ax}.errorbar({prefix}_x_order, {prefix}_summary['mean'], "
+                        f"yerr={yerr}, label=f'{recipe.style.label or data.y} {{{prefix}_group}}', "
+                        f"{kwargs})"
+                    ),
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    (
+                        f"{prefix}_summary = {prefix}_df.groupby({data.x!r}, sort=False)"
+                        f"[{data.y!r}].agg({agg}).reindex({prefix}_x_order)"
+                    ),
+                    (
+                        f"{ax}.errorbar({prefix}_x_order, {prefix}_summary['mean'], "
+                        f"yerr={yerr}, {_kwargs(label=recipe.style.label, **self._line_style(recipe))})"
+                    ),
+                ]
+            )
+        return [line.replace(", )", ")").replace("(, ", "(") for line in lines]
+
+    def _grouped_points_code(self, recipe: RecipeLayer, axis_index: int) -> list[str]:
+        data = recipe.dataset
+        var = _safe_var(data.variable)
+        prefix = self._recipe_prefix(recipe)
+        ax = f"axes_flat[{axis_index}]"
+        stat = self._recipe_error_stat(recipe)
+        point_kwargs = _kwargs(color=recipe.style.color, marker=recipe.style.marker, alpha=recipe.style.alpha)
+        mean_kwargs = _kwargs(color=recipe.style.color, linewidth=recipe.style.linewidth or 1.8)
+
+        lines = [
+            f"{prefix}_df = {var}",
+            f"{prefix}_order = list(dict.fromkeys({prefix}_df[{data.x!r}].dropna().tolist()))",
+            f"{prefix}_positions = {{value: index for index, value in enumerate({prefix}_order)}}",
+            f"for {prefix}_category in {prefix}_order:",
+            f"    {prefix}_values = {prefix}_df.loc[{prefix}_df[{data.x!r}] == {prefix}_category, {data.y!r}].dropna()",
+            (
+                f"    {prefix}_offsets = [((index % 7) - 3) * 0.035 "
+                f"for index in range(len({prefix}_values))]"
+            ),
+            (
+                f"    {prefix}_x = [{prefix}_positions[{prefix}_category] + offset "
+                f"for offset in {prefix}_offsets]"
+            ),
+            f"    {ax}.scatter({prefix}_x, {prefix}_values, {point_kwargs})",
+            f"    if len({prefix}_values):",
+            f"        {prefix}_mean = {prefix}_values.mean()",
+            (
+                f"        {ax}.hlines({prefix}_mean, {prefix}_positions[{prefix}_category] - 0.22, "
+                f"{prefix}_positions[{prefix}_category] + 0.22, {mean_kwargs})"
+            ),
+        ]
+        if stat:
+            lines.extend(
+                [
+                    f"        {prefix}_error = {prefix}_values.{stat}()",
+                    (
+                        f"        {ax}.errorbar([{prefix}_positions[{prefix}_category]], "
+                        f"[{prefix}_mean], yerr=[{prefix}_error], fmt='none', "
+                        f"ecolor={recipe.style.color!r}, capsize=4)"
+                    ),
+                ]
+            )
+        lines.extend(
+            [
+                f"{ax}.set_xticks(list({prefix}_positions.values()))",
+                f"{ax}.set_xticklabels([str(value) for value in {prefix}_order])",
+            ]
+        )
+        if recipe.style.label:
+            lines.append(f"{ax}.scatter([], [], label={recipe.style.label!r}, {point_kwargs})")
+        return [line.replace(", )", ")").replace("(, ", "(") for line in lines]
+
+    def _paired_before_after_code(self, recipe: RecipeLayer, axis_index: int) -> list[str]:
+        data = recipe.dataset
+        var = _safe_var(data.variable)
+        prefix = self._recipe_prefix(recipe)
+        ax = f"axes_flat[{axis_index}]"
+        stat = self._recipe_error_stat(recipe)
+        yerr = f"{prefix}_summary[{stat!r}]" if stat else "None"
+        agg = "['mean', " + repr(stat) + "]" if stat else "['mean']"
+        subject_kwargs = _kwargs(
+            color=recipe.style.color,
+            marker=recipe.style.marker,
+            linewidth=recipe.style.linewidth or 1.0,
+            alpha=recipe.style.alpha if recipe.style.alpha is not None else 0.35,
+        )
+        summary_kwargs = _kwargs(
+            label=recipe.style.label,
+            color=recipe.style.color,
+            marker=recipe.style.marker or "o",
+            linewidth=(recipe.style.linewidth or 1.8) + 0.4,
+            alpha=1.0,
+        )
+
+        lines = [
+            f"{prefix}_df = {var}",
+            f"{prefix}_order = list(dict.fromkeys({prefix}_df[{data.x!r}].dropna().tolist()))",
+            f"{prefix}_x = list(range(len({prefix}_order)))",
+            f"{prefix}_subjects = list(dict.fromkeys({prefix}_df[{data.subject!r}].dropna().tolist()))",
+            f"for {prefix}_subject in {prefix}_subjects:",
+            f"    {prefix}_subject_df = {prefix}_df[{prefix}_df[{data.subject!r}] == {prefix}_subject]",
+            (
+                f"    {prefix}_paired = {prefix}_subject_df.groupby({data.x!r}, sort=False)"
+                f"[{data.y!r}].mean().reindex({prefix}_order)"
+            ),
+            f"    {ax}.plot({prefix}_x, {prefix}_paired.tolist(), {subject_kwargs})",
+            (
+                f"{prefix}_summary = {prefix}_df.groupby({data.x!r}, sort=False)"
+                f"[{data.y!r}].agg({agg}).reindex({prefix}_order)"
+            ),
+            (
+                f"{ax}.errorbar({prefix}_x, {prefix}_summary['mean'], yerr={yerr}, "
+                f"{summary_kwargs})"
+            ),
+            f"{ax}.set_xticks({prefix}_x)",
+            f"{ax}.set_xticklabels([str(value) for value in {prefix}_order])",
+        ]
+        return [line.replace(", )", ")").replace("(, ", "(") for line in lines]
+
+    def _recipe_prefix(self, recipe: RecipeLayer) -> str:
+        return f"_recipe_{recipe.id.replace('-', '_')}"
+
+    def _recipe_error_stat(self, recipe: RecipeLayer) -> str | None:
+        if recipe.error == "sem":
+            return "sem"
+        if recipe.error == "sd":
+            return "std"
+        return None
+
+    def _line_style(self, recipe: RecipeLayer) -> dict[str, object]:
+        return {
+            "color": recipe.style.color,
+            "marker": recipe.style.marker,
+            "linestyle": recipe.style.linestyle,
+            "linewidth": recipe.style.linewidth,
+            "alpha": recipe.style.alpha,
+        }
+
+    def _recipe_line_kwargs(self, recipe: RecipeLayer) -> str:
+        return _kwargs(**self._line_style(recipe))
 
     def _xy(self, data: DatasetRef) -> str:
         y_expr = self._value(data)

@@ -13,6 +13,12 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await expect(page.getByTestId("figure-preview")).toBeVisible();
   await expect(page.getByTestId("status-line")).toContainText("Preview synced");
 
+  await page.getByTestId("builder-mode-select").selectOption("recipe");
+  await page.getByTestId("recipe-kind-select").selectOption("mean_sem_line");
+  await page.getByTestId("add-recipe-button").click();
+  await expect(page.locator('[data-testid="layer-row"]').filter({ hasText: "recipe · mean_sem_line" })).toBeVisible();
+  await expect(page.getByTestId("status-line")).toContainText("Preview synced");
+
   await page.getByTestId("style-preset-field-select").selectOption("journal_single");
   await expect(page.getByTestId("figure-width-field-input")).toHaveValue("3.35");
 
@@ -89,6 +95,7 @@ test("validation issues select the affected editor context", async ({ page }, te
             source: "generated"
           }
         ],
+        recipes: [],
         annotations: [],
         style: {
           preset: "custom",
