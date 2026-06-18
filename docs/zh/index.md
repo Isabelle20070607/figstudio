@@ -19,5 +19,6 @@ FigStudio 面向已经在脚本或 Notebook 中准备好数据、希望更快得
 | 继续开发 | [开发者指南](contributing/developer-guide.md) |
 | 当前 beta 范围 | [产品需求](product/prd.md) |
 | 后续计划 | [路线图](product/roadmap.md) |
+| 发布说明和 what's new | [发布说明](product/release-notes.md) |
 
 English documentation is available at [../en/index.md](../en/index.md).

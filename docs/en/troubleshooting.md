@@ -4,7 +4,7 @@ FigStudio validates common problems before rendering, saving, or exporting. Star
 
 ## Validation Issues
 
-Click an issue card. When the API provides enough context, FigStudio selects the affected layer, recipe, axes, or field.
+Click an issue card. When the API provides enough context, FigStudio shows a suggested fix and selects the affected layer, recipe, axes, or field.
 
 Common validation problems:
 
@@ -18,6 +18,8 @@ Common validation problems:
 | Heatmap or contour lacks 2D values | Use a 2D ndarray or gridded value source. |
 | Non-positive data on a log axis | Filter data, change limits, or switch back to linear scale. |
 | Missing style profile | Select an available profile, restore `.figstudio/styles.json`, or accept fallback defaults. |
+
+Issue payloads may include a `suggestion` plus details such as available variables, DataFrame columns, axes ids, profile ids, or a suggested replacement value. The editor displays that suggestion before falling back to the generic repair text above.
 
 ## Error Codes
 

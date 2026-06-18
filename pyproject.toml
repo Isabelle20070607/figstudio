@@ -1,6 +1,6 @@
 [project]
 name = "figstudio"
-version = "0.3.0"
+version = "0.3.1"
 description = "A local figure-workflow tool for reproducible, publication-ready Matplotlib panels."
 readme = "README.md"
 license = { file = "LICENSE" }

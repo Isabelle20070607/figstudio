@@ -32,7 +32,7 @@ flowchart TD
 - `registry.py`：保存 live Python objects，并向 UI 暴露安全 `VariableSummary` records。
 - `models.py`：定义 Pydantic request、response、error、session、validation 和 FigureSpec models。
 - `style_profiles.py`：加载 `.figstudio/styles.json`，报告非致命 warnings，并在不修改 `FigureSpec` 的前提下解析 profile defaults。
-- `validation.py`：校验 layout geometry、缺失变量/列、非 DataFrame recipe sources、缺失 axes、dimension mismatches、二维要求和 log-scale positivity。
+- `validation.py`：校验 layout geometry、缺失变量/列、非 DataFrame recipe sources、缺失 axes、dimension mismatches、二维要求和 log-scale positivity，并在有上下文时添加 field-level repair suggestions。
 - `codegen.py`：把 `FigureSpec` 转换为纯 Matplotlib OO code，不引入 FigStudio runtime dependency。
 - `render.py`：在 Agg backend 下用 live namespace 执行生成代码，并返回 preview/export bytes。
 - `sync.py`：替换唯一受控脚本块，并拒绝不安全 marker states。
@@ -46,7 +46,7 @@ flowchart TD
 3. `FigStudioSession` 依据 `project_path`、`script_path` 或当前工作目录解析 project root。
 4. FastAPI app 在 `127.0.0.1` 服务 React editor 和 `/api/*` endpoints。
 5. Editor 加载 project style profiles，并创建或导入 `FigureSpec`。
-6. Backend validation 基于 live namespace 和 loaded profile ids 校验 spec。
+6. Backend validation 基于 live namespace 和 loaded profile ids 校验 spec，并返回带可选 repair suggestions 的 structured issues。
 7. Codegen 解析 effective profile values 并创建 Matplotlib OO code。
 8. Render/export 用 Agg 执行生成代码。
 9. Save code 要么替换受控脚本块，要么返回 notebook replacement code。

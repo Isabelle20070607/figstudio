@@ -194,6 +194,7 @@ export interface ValidationIssue {
   severity: "error" | "warning";
   code: string;
   message: string;
+  suggestion?: string | null;
   layer_id?: string | null;
   axes_id?: string | null;
   field?: string | null;

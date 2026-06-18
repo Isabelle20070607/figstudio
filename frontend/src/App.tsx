@@ -645,6 +645,9 @@ function nextStepStatus(spec: FigureSpec): string {
 }
 
 function validationRepairText(issue: ValidationIssue): string {
+  if (issue.suggestion) {
+    return issue.suggestion;
+  }
   switch (issue.code) {
     case "missing_variable":
       return "Choose an available source variable, or restart FigStudio from a scope that contains this name.";
@@ -1600,7 +1603,7 @@ function ValidationList({
           <strong>{issue.code}</strong>
           <span>
             {issue.message}
-            <small>{validationRepairText(issue)}</small>
+            <small>Suggested fix: {validationRepairText(issue)}</small>
           </span>
         </button>
       ))}

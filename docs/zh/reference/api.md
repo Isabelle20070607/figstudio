@@ -110,6 +110,8 @@ HTTP errors 使用：
 
 Validation issue codes 包括 `missing_style_profile`、`invalid_grid_size`、`duplicate_axes_id`、`invalid_axes_span`、`axes_out_of_bounds`、`axes_overlap`、`missing_axes`、`missing_variable`、`missing_column`、`unsupported_recipe_source`、`dimension_mismatch`、`requires_2d_data` 和 `log_scale_non_positive`。
 
+每个 validation issue 可能包含用于 UI repair guidance 的 `suggestion`。`details` 可以包含有界上下文，例如 `available_variables`、`available_columns`、`available_axes`、`available_profiles` 和 `suggested_value`；不会包含原始 DataFrame contents。
+
 ## Compatibility Notes
 
 - 生成绘图代码必须能在不 import FigStudio 的情况下运行。

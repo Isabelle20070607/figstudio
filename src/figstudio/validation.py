@@ -20,10 +20,130 @@ from figstudio.models import (
 from figstudio.style_profiles import missing_profile_issue_details
 
 
+MAX_REPAIR_CHOICES = 12
+
+
 @dataclass
 class _ResolvedValue:
     value: Any
     label: str
+
+
+def _limited_strings(values: list[str]) -> tuple[list[str], bool]:
+    return values[:MAX_REPAIR_CHOICES], len(values) > MAX_REPAIR_CHOICES
+
+
+def _choice_details(values: list[str], key: str) -> tuple[dict[str, Any], str | None]:
+    visible, truncated = _limited_strings(values)
+    details: dict[str, Any] = {key: visible}
+    if truncated:
+        details[f"{key}_truncated"] = True
+    if visible:
+        details["suggested_value"] = visible[0]
+    return details, visible[0] if visible else None
+
+
+def _available_variable_names(namespace: dict[str, Any]) -> list[str]:
+    return sorted(str(name) for name in namespace if not str(name).startswith("_"))
+
+
+def _dataframe_variable_names(namespace: dict[str, Any]) -> list[str]:
+    return sorted(str(name) for name, value in namespace.items() if _is_dataframe(value))
+
+
+def _variable_repair(
+    namespace: dict[str, Any],
+    *,
+    field: str,
+    missing: str | None,
+) -> tuple[dict[str, Any], str]:
+    details, suggested = _choice_details(_available_variable_names(namespace), "available_variables")
+    details["variable"] = missing
+    if suggested:
+        return (
+            details,
+            f"Set {field} to {suggested!r}, or reopen FigStudio with {missing!r} in scope.",
+        )
+    return details, f"Reopen FigStudio from a Python scope that contains {missing!r}."
+
+
+def _dataframe_source_repair(
+    namespace: dict[str, Any],
+    *,
+    variable: str,
+) -> tuple[dict[str, Any], str]:
+    details, suggested = _choice_details(_dataframe_variable_names(namespace), "available_dataframes")
+    details["variable"] = variable
+    details["type"] = type(namespace.get(variable)).__name__
+    if suggested:
+        return details, f"Set dataset.variable to DataFrame {suggested!r}, or switch to a normal plot layer."
+    return details, "Use a pandas DataFrame source for this recipe, or switch to a normal plot layer."
+
+
+def _dataframe_columns(value: Any) -> list[str]:
+    columns = getattr(value, "columns", None)
+    if columns is None:
+        return []
+    return [str(item) for item in columns]
+
+
+def _is_numeric_column(value: Any, column: str) -> bool:
+    try:
+        dtype = value[column].dtype
+        return bool(np.issubdtype(dtype, np.number))
+    except Exception:
+        try:
+            return bool(np.issubdtype(np.asarray(value[column]).dtype, np.number))
+        except Exception:
+            return False
+
+
+def _suggested_dataframe_column(value: Any, field: str) -> str | None:
+    columns = _dataframe_columns(value)
+    if not columns:
+        return None
+    if field in {"y", "z", "yerr"}:
+        for column in columns:
+            if _is_numeric_column(value, column):
+                return column
+    if field in {"group", "subject"}:
+        for column in columns:
+            if not _is_numeric_column(value, column):
+                return column
+    return columns[0]
+
+
+def _column_repair(
+    value: Any,
+    *,
+    variable: str,
+    field: str,
+) -> tuple[dict[str, Any], str]:
+    columns = _dataframe_columns(value)
+    visible, truncated = _limited_strings(columns)
+    suggested = _suggested_dataframe_column(value, field)
+    details: dict[str, Any] = {"variable": variable, "available_columns": visible}
+    if truncated:
+        details["available_columns_truncated"] = True
+    if suggested:
+        details["suggested_value"] = suggested
+        return details, f"Set dataset.{field} to {suggested!r}, or choose another column on {variable!r}."
+    return details, f"Choose an existing column on {variable!r} for dataset.{field}."
+
+
+def _axes_repair(axes: list[AxesSpec], axes_id: str | None) -> tuple[dict[str, Any], str]:
+    details, suggested = _choice_details([axis.id for axis in axes], "available_axes")
+    details["axes_id"] = axes_id
+    if suggested:
+        return details, f"Set axes_id to {suggested!r}, or choose another existing panel."
+    return details, "Create a target axes before assigning this item."
+
+
+def _missing_profile_suggestion(details: dict[str, Any]) -> str:
+    available = details.get("available_profiles") or []
+    if available:
+        return f"Select profile {available[0]!r}, or choose No project profile."
+    return "Choose No project profile, or add this profile id to .figstudio/styles.json."
 
 
 def validate_figure_spec(
@@ -39,6 +159,7 @@ def validate_figure_spec(
                 severity="warning",
                 code="missing_style_profile",
                 message=f"Style profile {spec.style.profile_id!r} is not available in this project.",
+                suggestion=_missing_profile_suggestion(profile_details),
                 field="style.profile_id",
                 details=profile_details,
             )
@@ -48,13 +169,16 @@ def validate_figure_spec(
 
     for layer in spec.layers:
         if layer.axes_id not in axes_by_id:
+            details, suggestion = _axes_repair(spec.axes, layer.axes_id)
             issues.append(
                 ValidationIssue(
                     code="missing_axes",
                     message=f"Layer {layer.id!r} targets missing axes {layer.axes_id!r}.",
+                    suggestion=suggestion,
                     layer_id=layer.id,
                     axes_id=layer.axes_id,
                     field="axes_id",
+                    details=details,
                 )
             )
             continue
@@ -79,13 +203,16 @@ def validate_figure_spec(
 
     for recipe in spec.recipes:
         if recipe.axes_id not in axes_by_id:
+            details, suggestion = _axes_repair(spec.axes, recipe.axes_id)
             issues.append(
                 ValidationIssue(
                     code="missing_axes",
                     message=f"Recipe {recipe.id!r} targets missing axes {recipe.axes_id!r}.",
+                    suggestion=suggestion,
                     layer_id=recipe.id,
                     axes_id=recipe.axes_id,
                     field="axes_id",
+                    details=details,
                 )
             )
             continue
@@ -100,6 +227,7 @@ def _validate_axes_layout(spec: FigureSpec, issues: list[ValidationIssue]) -> No
             ValidationIssue(
                 code="invalid_grid_size",
                 message=f"FigureSpec rows must be positive; got {spec.rows}.",
+                suggestion="Set figure rows to at least 1 in the Figure controls.",
                 field="rows",
                 details={"rows": spec.rows, "cols": spec.cols},
             )
@@ -109,6 +237,7 @@ def _validate_axes_layout(spec: FigureSpec, issues: list[ValidationIssue]) -> No
             ValidationIssue(
                 code="invalid_grid_size",
                 message=f"FigureSpec cols must be positive; got {spec.cols}.",
+                suggestion="Set figure columns to at least 1 in the Figure controls.",
                 field="cols",
                 details={"rows": spec.rows, "cols": spec.cols},
             )
@@ -140,6 +269,7 @@ def _validate_axes_layout(spec: FigureSpec, issues: list[ValidationIssue]) -> No
                         f"Axes {axis.id!r} spans rows {axis.row}:{row_end} and "
                         f"cols {axis.col}:{col_end}, outside a {spec.rows}x{spec.cols} grid."
                     ),
+                    suggestion="Move this axes inside the grid, reduce its span, or increase figure rows/columns.",
                     axes_id=axis.id,
                     field="axes",
                     details=_axis_layout_details(axis) | {"rows": spec.rows, "cols": spec.cols},
@@ -167,6 +297,7 @@ def _validate_axes_layout(spec: FigureSpec, issues: list[ValidationIssue]) -> No
             ValidationIssue(
                 code="duplicate_axes_id",
                 message=f"Axes id {axis_id!r} is used more than once.",
+                suggestion="Use a built-in panel layout or make every axes id unique.",
                 axes_id=axis_id,
                 field="axes.id",
                 details={"axes_id": axis_id},
@@ -181,6 +312,7 @@ def _validate_axes_layout(spec: FigureSpec, issues: list[ValidationIssue]) -> No
                     f"Axes {overlap['axes'][0]!r} and {overlap['axes'][1]!r} "
                     f"both occupy cell ({overlap['row'] + 1}, {overlap['col'] + 1})."
                 ),
+                suggestion="Choose a valid panel layout or adjust row, column, and span values so cells do not overlap.",
                 axes_id=overlap["axes"][1],
                 field="axes",
                 details=overlap,
@@ -194,6 +326,7 @@ def _append_invalid_span(axis: AxesSpec, issues: list[ValidationIssue]) -> None:
             ValidationIssue(
                 code="invalid_axes_span",
                 message=f"Axes {axis.id!r} rowspan must be positive; got {axis.rowspan}.",
+                suggestion="Set axes rowspan to at least 1, or choose a built-in panel layout.",
                 axes_id=axis.id,
                 field="axes.rowspan",
                 details=_axis_layout_details(axis),
@@ -204,6 +337,7 @@ def _append_invalid_span(axis: AxesSpec, issues: list[ValidationIssue]) -> None:
             ValidationIssue(
                 code="invalid_axes_span",
                 message=f"Axes {axis.id!r} colspan must be positive; got {axis.colspan}.",
+                suggestion="Set axes colspan to at least 1, or choose a built-in panel layout.",
                 axes_id=axis.id,
                 field="axes.colspan",
                 details=_axis_layout_details(axis),
@@ -229,19 +363,23 @@ def _validate_recipe(
     data = recipe.dataset
     value = namespace.get(data.variable)
     if value is None:
+        details, suggestion = _variable_repair(namespace, field="dataset.variable", missing=data.variable)
+        details["dataset"] = data.model_dump()
         issues.append(
             ValidationIssue(
                 code="missing_variable",
                 message=f"Recipe {recipe.id!r} references missing variable {data.variable!r}.",
+                suggestion=suggestion,
                 layer_id=recipe.id,
                 axes_id=recipe.axes_id,
                 field="dataset.variable",
-                details={"variable": data.variable, "dataset": data.model_dump()},
+                details=details,
             )
         )
         return
 
     if not _is_dataframe(value):
+        details, suggestion = _dataframe_source_repair(namespace, variable=data.variable)
         issues.append(
             ValidationIssue(
                 code="unsupported_recipe_source",
@@ -249,10 +387,11 @@ def _validate_recipe(
                     f"Recipe {recipe.id!r} requires a pandas DataFrame variable; "
                     f"{data.variable!r} is {type(value).__name__}."
                 ),
+                suggestion=suggestion,
                 layer_id=recipe.id,
                 axes_id=recipe.axes_id,
                 field="dataset.variable",
-                details={"variable": data.variable, "type": type(value).__name__},
+                details=details,
             )
         )
         return
@@ -263,14 +402,18 @@ def _validate_recipe(
 
     for field in required:
         if not getattr(data, field):
+            details, suggestion = _column_repair(value, variable=data.variable, field=field)
+            details["field"] = field
+            details["dataset"] = data.model_dump()
             issues.append(
                 ValidationIssue(
                     code="missing_column",
                     message=f"Recipe {recipe.id!r} requires dataset.{field}.",
+                    suggestion=suggestion,
                     layer_id=recipe.id,
                     axes_id=recipe.axes_id,
                     field=f"dataset.{field}",
-                    details={"field": field, "dataset": data.model_dump()},
+                    details=details,
                 )
             )
 
@@ -294,14 +437,17 @@ def _check_dataframe_column(
     columns = [str(item) for item in getattr(value, "columns", [])]
     if column in columns:
         return
+    details, suggestion = _column_repair(value, variable=recipe.dataset.variable, field=field)
+    details["column"] = column
     issues.append(
         ValidationIssue(
             code="missing_column",
             message=f"Recipe {recipe.id!r} references missing column {column!r}.",
+            suggestion=suggestion,
             layer_id=recipe.id,
             axes_id=recipe.axes_id,
             field=f"dataset.{field}",
-            details={"variable": recipe.dataset.variable, "column": column},
+            details=details,
         )
     )
 
@@ -353,14 +499,18 @@ def _resolve_variable_column(
     issues: list[ValidationIssue],
 ) -> _ResolvedValue | None:
     if not variable_name or variable_name not in namespace:
+        field = f"dataset.{channel}_variable" if channel != "y" else "dataset.variable"
+        details, suggestion = _variable_repair(namespace, field=field, missing=variable_name)
+        details["dataset"] = data.model_dump()
         issues.append(
             ValidationIssue(
                 code="missing_variable",
                 message=f"Layer {layer.id!r} references missing variable {variable_name!r}.",
+                suggestion=suggestion,
                 layer_id=layer.id,
                 axes_id=layer.axes_id,
-                field=f"dataset.{channel}_variable" if channel != "y" else "dataset.variable",
-                details={"variable": variable_name, "dataset": data.model_dump()},
+                field=field,
+                details=details,
             )
         )
         return None
@@ -370,14 +520,17 @@ def _resolve_variable_column(
     if column:
         columns = getattr(value, "columns", None)
         if columns is not None and column not in [str(item) for item in columns]:
+            details, suggestion = _column_repair(value, variable=variable_name, field=channel)
+            details["column"] = column
             issues.append(
                 ValidationIssue(
                     code="missing_column",
                     message=f"Layer {layer.id!r} references missing column {column!r} on {variable_name!r}.",
+                    suggestion=suggestion,
                     layer_id=layer.id,
                     axes_id=layer.axes_id,
                     field=f"dataset.{channel}",
-                    details={"variable": variable_name, "column": column},
+                    details=details,
                 )
             )
             return None
@@ -385,14 +538,18 @@ def _resolve_variable_column(
             value = value[column]
             label = f"{variable_name}[{column!r}]"
         except Exception as exc:
+            details, suggestion = _column_repair(value, variable=variable_name, field=channel)
+            details["column"] = column
+            details["error"] = str(exc)
             issues.append(
                 ValidationIssue(
                     code="missing_column",
                     message=f"Layer {layer.id!r} could not read column {column!r} on {variable_name!r}: {exc}",
+                    suggestion=suggestion,
                     layer_id=layer.id,
                     axes_id=layer.axes_id,
                     field=f"dataset.{channel}",
-                    details={"variable": variable_name, "column": column},
+                    details=details,
                 )
             )
             return None
@@ -419,6 +576,7 @@ def _check_lengths(
         ValidationIssue(
             code="dimension_mismatch",
             message=f"Layer {layer.id!r} channel lengths differ: {lengths}.",
+            suggestion="Use X, Y, and error channels with matching first dimensions, or switch X back to index values.",
             layer_id=layer.id,
             axes_id=layer.axes_id,
             details={"lengths": lengths},
@@ -439,6 +597,7 @@ def _check_two_dimensional(
             ValidationIssue(
                 code="requires_2d_data",
                 message=f"{layer.kind} layer {layer.id!r} needs 2D value data.",
+                suggestion="Set dataset.z to a 2D value source, or switch to a plot type that accepts one-dimensional data.",
                 layer_id=layer.id,
                 axes_id=layer.axes_id,
                 field="dataset.z",
@@ -465,6 +624,7 @@ def _check_positive(
             ValidationIssue(
                 code="log_scale_non_positive",
                 message=f"Layer {layer.id!r} has non-positive {channel} data for a log-scaled axis.",
+                suggestion=f"Filter non-positive {channel} values, set positive limits, or switch this axis back to linear scale.",
                 layer_id=layer.id,
                 axes_id=layer.axes_id,
                 field=f"dataset.{channel}",

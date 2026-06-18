@@ -26,6 +26,7 @@ Users install the Python package, open a local browser editor from a script or n
 - Save generated code to one unique controlled script block or return notebook replacement code.
 - Import and export `.figstudio.json` session specs.
 - Store recipe intent and column mappings in specs, not raw DataFrame data.
+- Show validation issue cards with field-level repair suggestions when the live session provides enough context.
 
 ## User Stories
 
@@ -43,7 +44,7 @@ Users install the Python package, open a local browser editor from a script or n
 - A notebook-style session without `script_path` returns complete replacement code.
 - Generated code imports Matplotlib only and can run with the same user variables.
 - Export downloads PNG, SVG, and PDF produced by Matplotlib.
-- Validation, render, export, and writeback failures return readable structured errors.
+- Validation, render, export, and writeback failures return readable structured errors, including repair suggestions for common validation issues.
 - Existing Figure inspection preserves supported line, scatter, image, and bar data as editable generated layers.
 - A built wheel includes the React editor and serves it from `127.0.0.1` after clean install.
 - `figstudio.load_spec()` and `figstudio.save_spec()` round-trip a `.figstudio.json` file.

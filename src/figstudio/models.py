@@ -196,6 +196,7 @@ class ValidationIssue(BaseModel):
     severity: Literal["error", "warning"] = "error"
     code: str
     message: str
+    suggestion: str | None = None
     layer_id: str | None = None
     axes_id: str | None = None
     field: str | None = None

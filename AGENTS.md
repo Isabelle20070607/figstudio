@@ -25,6 +25,7 @@ Follow Codex AGENTS guidance: keep this file to durable repository expectations,
 | Path | Owns | Must not contain |
 | --- | --- | --- |
 | `README.md` | project positioning, quick start, development commands, docs index | detailed architecture, roadmap, long troubleshooting |
+| `CHANGELOG.md` | canonical chronological public release record and release evidence | user tutorials, roadmap planning, implementation runbooks |
 | `docs/en/` and `docs/zh/` | paired English and Chinese docs with matching relative paths | one language drifting structurally from the other |
 | `docs/*` top-level legacy stubs | compatibility links to the new locale pages | long-form duplicated content |
 | `docs/*/getting-started.md` | install, demo, script/notebook launch, first plot | API contracts, roadmap, developer workflow |
@@ -37,6 +38,7 @@ Follow Codex AGENTS guidance: keep this file to durable repository expectations,
 | `docs/*/contributing/developer-guide.md` | local development, feature-change workflow, tests, package checks, documentation sync | product positioning, user tutorial |
 | `docs/*/product/prd.md` | beta product definition, user stories, scope, acceptance criteria, non-goals | setup steps, API reference |
 | `docs/*/product/roadmap.md` | Now/Next/Later planning and explicit non-goals | current user instructions, detailed API contracts |
+| `docs/*/product/release-notes.md` | localized user-facing release notes and what's new | full changelog duplication, future roadmap |
 
 ## Documentation Rules
 
@@ -48,4 +50,5 @@ Follow Codex AGENTS guidance: keep this file to durable repository expectations,
 - For onboarding heading duplication, run `rg -n "^#+ .*?(Quick Start|快速开始)" README.md docs` and allow only `README.md` plus localized getting-started pages.
 - Before finishing locale docs work, verify paired paths under `docs/en` and `docs/zh`.
 - If a feature moves between beta scope and roadmap, update both locale copies of `product/prd.md` and `product/roadmap.md` together so current commitments and future plans stay consistent.
+- Before any public tag or package publish, update `CHANGELOG.md` plus both locale copies of `product/release-notes.md` from the full release delta: compare the previous public tag to the new tag with `git log` and `git diff`, not only the tag target commit.
 - For public package work, verify `uv run --extra dev pytest`, frontend build/bundle/e2e checks, `uv build`, and a clean wheel install that serves `/api/session`.

@@ -32,7 +32,7 @@ flowchart TD
 - `registry.py`: stores live Python objects and exposes safe `VariableSummary` records to the UI.
 - `models.py`: defines Pydantic request, response, error, session, validation, and FigureSpec models.
 - `style_profiles.py`: loads `.figstudio/styles.json`, reports non-fatal warnings, and resolves profile defaults without mutating `FigureSpec`.
-- `validation.py`: validates layout geometry, missing variables/columns, non-DataFrame recipe sources, missing axes, dimension mismatches, 2D requirements, and log-scale positivity.
+- `validation.py`: validates layout geometry, missing variables/columns, non-DataFrame recipe sources, missing axes, dimension mismatches, 2D requirements, and log-scale positivity, while adding field-level repair suggestions when context is available.
 - `codegen.py`: converts `FigureSpec` into plain Matplotlib OO code with no FigStudio runtime dependency.
 - `render.py`: executes generated code with the live namespace under the Agg backend and returns preview/export bytes.
 - `sync.py`: replaces one unique controlled script block and rejects unsafe marker states.
@@ -46,7 +46,7 @@ flowchart TD
 3. `FigStudioSession` resolves the project root from `project_path`, `script_path`, or current working directory.
 4. The FastAPI app serves the React editor and `/api/*` endpoints on `127.0.0.1`.
 5. The editor loads project style profiles and builds or imports a `FigureSpec`.
-6. Backend validation checks the spec against the live namespace and loaded profile ids.
+6. Backend validation checks the spec against the live namespace and loaded profile ids, then returns structured issues with optional repair suggestions.
 7. Codegen resolves effective profile values and creates Matplotlib OO code.
 8. Render/export executes the generated code with Agg.
 9. Save code either replaces a controlled script block or returns notebook replacement code.

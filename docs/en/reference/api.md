@@ -110,6 +110,8 @@ Current error codes are `validation_failed`, `render_failed`, `export_failed`, `
 
 Validation issue codes include `missing_style_profile`, `invalid_grid_size`, `duplicate_axes_id`, `invalid_axes_span`, `axes_out_of_bounds`, `axes_overlap`, `missing_axes`, `missing_variable`, `missing_column`, `unsupported_recipe_source`, `dimension_mismatch`, `requires_2d_data`, and `log_scale_non_positive`.
 
+Each validation issue may include `suggestion` for UI repair guidance. `details` can include bounded context such as `available_variables`, `available_columns`, `available_axes`, `available_profiles`, and `suggested_value`; it does not include raw DataFrame contents.
+
 ## Compatibility Notes
 
 - Generated plotting code must run without importing FigStudio.

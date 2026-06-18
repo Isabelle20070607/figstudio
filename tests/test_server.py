@@ -90,7 +90,7 @@ def test_script_writeback_failure_returns_code_and_error(tmp_path):
 
 
 def test_validate_endpoint_reports_missing_variable_before_render():
-    session = FigStudioSession(registry=VariableRegistry({}), port=8001)
+    session = FigStudioSession(registry=VariableRegistry({"values": [1, 2, 3]}), port=8001)
     client = TestClient(create_app(session))
     spec = FigureSpec(
         layers=[
@@ -108,8 +108,39 @@ def test_validate_endpoint_reports_missing_variable_before_render():
     assert validation.status_code == 200
     assert validation.json()["ok"] is False
     assert validation.json()["issues"][0]["code"] == "missing_variable"
+    assert (
+        validation.json()["issues"][0]["suggestion"]
+        == "Set dataset.variable to 'values', or reopen FigStudio with 'missing_values' in scope."
+    )
+    assert validation.json()["issues"][0]["details"]["available_variables"] == ["values"]
     assert rendered.status_code == 400
     assert rendered.json()["detail"]["error"]["code"] == "validation_failed"
+
+
+def test_validate_endpoint_reports_field_level_column_suggestions():
+    df = pd.DataFrame({"condition": ["a", "b"], "response": [1.0, 1.5]})
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="grouped_points",
+                dataset=RecipeDatasetRef(variable="df", x="condition", y="missing"),
+            )
+        ]
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    issue = validation.json()["issues"][0]
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is False
+    assert issue["code"] == "missing_column"
+    assert issue["field"] == "dataset.y"
+    assert issue["suggestion"] == "Set dataset.y to 'response', or choose another column on 'df'."
+    assert issue["details"]["available_columns"] == ["condition", "response"]
+    assert issue["details"]["suggested_value"] == "response"
 
 
 def test_validate_endpoint_reports_dimension_mismatch():

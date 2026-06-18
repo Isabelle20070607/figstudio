@@ -26,6 +26,7 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - 将 generated code 写入唯一受控脚本块，或返回 notebook replacement code。
 - 导入和导出 `.figstudio.json` session specs。
 - Specs 保存 recipe intent 和 column mappings，不保存原始 DataFrame data。
+- 当 live session 提供足够上下文时，validation issue cards 会显示 field-level repair suggestions。
 
 ## 用户故事
 
@@ -43,7 +44,7 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - 不提供 `script_path` 的 Notebook 风格会话能返回完整 replacement code。
 - Generated code 只 import Matplotlib，并能在相同用户变量下运行。
 - PNG、SVG、PDF 导出来自 Matplotlib。
-- Validation、render、export 和 writeback failures 返回可读 structured errors。
+- Validation、render、export 和 writeback failures 返回可读 structured errors，并为常见 validation issues 提供 repair suggestions。
 - Existing Figure inspection 能把受支持的 line、scatter、image 和 bar data 保留为 editable generated layers。
 - 构建后的 wheel 包含 React editor，clean install 后可从 `127.0.0.1` 提供完整 UI。
 - `figstudio.load_spec()` 和 `figstudio.save_spec()` 能往返保存 `.figstudio.json` 文件。

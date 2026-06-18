@@ -1,6 +1,23 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync, writeFileSync } from "node:fs";
 
+async function expectDesktopWorkspaceFitsViewport(page: import("@playwright/test").Page) {
+  const metrics = await page.evaluate(() => {
+    const codePanel = document.querySelector('[data-testid="code-panel"]');
+    const codeRect = codePanel?.getBoundingClientRect();
+    return {
+      clientHeight: document.documentElement.clientHeight,
+      scrollHeight: document.documentElement.scrollHeight,
+      bodyScrollHeight: document.body.scrollHeight,
+      codePanelBottom: codeRect?.bottom ?? 0
+    };
+  });
+
+  expect(metrics.scrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 1);
+  expect(metrics.bodyScrollHeight).toBeLessThanOrEqual(metrics.clientHeight + 1);
+  expect(metrics.codePanelBottom).toBeLessThanOrEqual(metrics.clientHeight + 1);
+}
+
 test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
@@ -16,11 +33,13 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   expect(previewBox).not.toBeNull();
   expect(inspectorBox).not.toBeNull();
   expect(inspectorBox!.x).toBeGreaterThan(previewBox!.x + previewBox!.width - 2);
+  await expectDesktopWorkspaceFitsViewport(page);
 
   await page.getByTestId("plot-kind-select").selectOption("line");
   await page.getByTestId("add-layer-button").click();
   await expect(page.getByTestId("figure-preview")).toBeVisible();
   await expect(page.getByTestId("status-line")).toContainText("Preview synced");
+  await expectDesktopWorkspaceFitsViewport(page);
 
   await page.getByTestId("builder-mode-select").selectOption("recipe");
   await page.getByTestId("recipe-kind-select").selectOption("mean_sem_line");
@@ -44,6 +63,7 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await expect(page.getByTestId("active-axes-select").locator("option")).toHaveCount(3);
   await expect(page.getByTestId("active-axes-select").locator("option").first()).toContainText("2x1");
   await expect(page.getByTestId("code-panel")).toContainText("add_gridspec");
+  await expectDesktopWorkspaceFitsViewport(page);
 
   await page.getByTestId("add-arrow-annotation-button").click();
   await expect(page.getByTestId("annotation-card")).toHaveCount(1);
@@ -139,7 +159,9 @@ test("validation issues select the affected editor context", async ({ page }, te
   await page.getByTestId("import-spec-input").setInputFiles(invalidSpecPath);
   await expect(page.getByTestId("validation-list")).toBeVisible();
   await expect(page.getByTestId("validation-issue")).toContainText("missing_variable");
-  await expect(page.getByTestId("validation-issue")).toContainText("Choose an available source variable");
+  await expect(page.getByTestId("validation-issue")).toContainText(
+    "Suggested fix: Set dataset.variable to 'df'"
+  );
   await page.getByTestId("validation-issue").click();
 
   await expect(page.getByTestId("status-line")).toContainText("Repair missing_variable");

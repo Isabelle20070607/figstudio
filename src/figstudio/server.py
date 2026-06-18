@@ -56,7 +56,7 @@ def _frontend_dist_path() -> Path:
 
 
 def create_app(session: "FigStudioSession") -> FastAPI:
-    app = FastAPI(title="FigStudio", version="0.3.0")
+    app = FastAPI(title="FigStudio", version="0.3.1")
 
     frontend_dist = _frontend_dist_path()
     if frontend_dist.exists():

@@ -4,7 +4,7 @@ FigStudio 会在渲染、保存或导出前校验常见问题。出现 issue car
 
 ## Validation Issues
 
-点击 issue card。只要 API 提供了足够上下文，FigStudio 会选中受影响的 layer、recipe、axes 或 field。
+点击 issue card。只要 API 提供了足够上下文，FigStudio 会显示 suggested fix，并选中受影响的 layer、recipe、axes 或 field。
 
 常见 validation 问题：
 
@@ -18,6 +18,8 @@ FigStudio 会在渲染、保存或导出前校验常见问题。出现 issue car
 | Heatmap 或 contour 缺少二维值 | 使用二维 ndarray 或 gridded value source。 |
 | Log axis 上有非正数据 | 过滤数据、修改 limits，或切回 linear scale。 |
 | 缺失 style profile | 选择可用 profile、恢复 `.figstudio/styles.json`，或接受 fallback defaults。 |
+
+Issue payloads 可能包含 `suggestion`，以及 available variables、DataFrame columns、axes ids、profile ids 或 suggested replacement value 等 details。Editor 会优先显示这条 suggestion，再 fallback 到上表中的通用修复说明。
 
 ## Error Codes
 

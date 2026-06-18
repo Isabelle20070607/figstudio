@@ -47,6 +47,7 @@ Common entry points:
 | Scientific workflows | [Workflows](docs/en/scientific-workflows.md) | [科研制图工作流](docs/zh/scientific-workflows.md) |
 | API consumers | [API Reference](docs/en/reference/api.md) | [API 参考](docs/zh/reference/api.md) |
 | Contributors | [Developer Guide](docs/en/contributing/developer-guide.md) | [开发者指南](docs/zh/contributing/developer-guide.md) |
+| Release history | [Release Notes](docs/en/product/release-notes.md) / [CHANGELOG](CHANGELOG.md) | [发布说明](docs/zh/product/release-notes.md) / [CHANGELOG](CHANGELOG.md) |
 
 ## Development
 

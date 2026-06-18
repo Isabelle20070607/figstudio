@@ -19,5 +19,6 @@ Reference and project material:
 | Development workflow | [Developer Guide](contributing/developer-guide.md) |
 | Current beta scope | [PRD](product/prd.md) |
 | Future work | [Roadmap](product/roadmap.md) |
+| Release notes and what's new | [Release Notes](product/release-notes.md) |
 
 Chinese documentation is available at [../zh/index.md](../zh/index.md).

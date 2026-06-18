@@ -68,7 +68,7 @@ jobs:
           python -m pip install --upgrade pip
           for attempt in 1 2 3; do
             python -m pip install --index-url https://pypi.org/simple/ "fastapi>=0.115" "matplotlib>=3.8" "numpy>=1.26" "pandas>=2.1" "pydantic>=2.7" "uvicorn[standard]>=0.30" &&
-            python -m pip install --no-deps --index-url https://test.pypi.org/simple/ figstudio==0.3.0 && break
+            python -m pip install --no-deps --index-url https://test.pypi.org/simple/ figstudio==0.3.1 && break
             sleep 20
           done
           figstudio --version
