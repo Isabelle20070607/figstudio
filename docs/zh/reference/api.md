@@ -86,7 +86,7 @@ CLI 会打印 session URL，并持续运行直到被中断。
 | `GET /api/variables` | 安全变量摘要。 |
 | `GET /api/style-profiles` | 已加载 project style profiles、source path 和非致命 load warnings。 |
 | `GET /api/spec` | 当前 `FigureSpec`。 |
-| `POST /api/validate` | 基于 live namespace 校验 `FigureSpec`。 |
+| `POST /api/validate` | 基于 live namespace 校验 `FigureSpec`；可接受 `context: "edit" \| "export"` 和 `export_format`，用于发表准备度预检。 |
 | `POST /api/facet-values` | 为 small-multiple panel authoring 返回 DataFrame 中按出现顺序去重的取值。 |
 | `POST /api/repeated-panel-candidates` | 为 repeated-panel authoring 返回 DataFrame values、mapping keys 或 sequence indices，以及有界 item summaries。 |
 | `POST /api/spec` | 保存当前 spec、校验，并返回 SVG render response。 |
@@ -116,6 +116,8 @@ HTTP errors 使用：
 当前 error codes 为 `validation_failed`、`render_failed`、`export_failed`、`writeback_failed`、`writeback_io_failed`、`missing_variable`、`missing_column`、`unsupported_facet_source` 和 `unsupported_repeated_panel_source`。Writeback errors 出现在 `SaveCodeResponse.error` 中；render、export、validation、facet-value 和 repeated-panel candidate failures 是 HTTP errors。
 
 Validation issue codes 包括 `missing_style_profile`、`invalid_grid_size`、`duplicate_axes_id`、`invalid_axes_span`、`axes_out_of_bounds`、`axes_overlap`、`missing_axes`、`missing_variable`、`missing_column`、`unsupported_recipe_source`、`unsupported_filter_source`、`empty_filter_result`、`unsupported_selection_source`、`unsupported_selection_key`、`missing_selection_key`、`selection_index_out_of_range`、`unsupported_selected_channel`、`unplottable_selection_value`、`dimension_mismatch`、`requires_2d_data`、`log_scale_non_positive`、`unsupported_secondary_y_layer` 和 `invalid_reference_line_value`。
+
+Export context validation 还可能返回 advisory readiness warnings：`readiness_empty_figure`、`readiness_missing_axis_label`、`readiness_missing_secondary_y_label`、`readiness_missing_legend_labels` 和 `readiness_low_png_resolution`。这些 warning 不会让 `ValidationResponse.ok` 变成 false；除非同时存在普通 validation errors，否则不会阻止 export。
 
 每个 validation issue 可能包含用于 UI repair guidance 的 `suggestion`。`details` 可以包含有界上下文，例如 `available_variables`、`available_columns`、`available_axes`、`available_profiles` 和 `suggested_value`；不会包含原始 DataFrame contents。
 

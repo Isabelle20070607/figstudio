@@ -52,6 +52,8 @@ The first beta slice supports simple overlay plot layers: `line`, `scatter`, `ba
 
 Use **Publish** mode when you are preparing manuscript or presentation output. It exposes publication-oriented controls such as font family and constrained layout while preserving the same generated-code path as **Explore** mode.
 
+In **Publish** mode and before export, FigStudio runs deterministic publication-readiness checks. These checks warn about empty data-bearing figures, missing axis labels, unlabeled secondary Y axes, missing legend labels when multiple visual items share an axes, and low-resolution PNG settings. Readiness warnings are advisory: they appear in the validation card list, but export continues unless the figure also has validation errors.
+
 The right-side polish panel covers:
 
 - figure size, DPI, title, font settings, built-in presets, and project style profile;

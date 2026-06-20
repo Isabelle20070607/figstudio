@@ -18,6 +18,8 @@ export type FigurePreset = "custom" | "journal_single" | "journal_double" | "pos
 
 export type ReferenceLineOrientation = "horizontal" | "vertical";
 export type LayerYAxis = "left" | "right";
+export type ValidationContext = "edit" | "export";
+export type ExportFormat = "png" | "svg" | "pdf";
 
 export interface DataFilterSpec {
   column: string;
@@ -238,6 +240,12 @@ export interface ValidationIssue {
   axes_id?: string | null;
   field?: string | null;
   details?: Record<string, unknown> | null;
+}
+
+export interface ValidationRequest {
+  spec: FigureSpec;
+  context: ValidationContext;
+  export_format?: ExportFormat | null;
 }
 
 export interface ValidationResponse {

@@ -30,7 +30,9 @@ from figstudio.models import (
     DataSelectionSpec,
     SaveCodeRequest,
     SaveCodeResponse,
+    ExportFormat,
     StyleProfilesResponse,
+    ValidationContext,
     ValidationRequest,
     ValidationResponse,
 )
@@ -112,7 +114,12 @@ def create_app(session: "FigStudioSession") -> FastAPI:
 
     @app.post("/api/validate")
     def validate(request: ValidationRequest) -> ValidationResponse:
-        return _validate_spec(session, request.spec)
+        return _validate_spec(
+            session,
+            request.spec,
+            context=request.context,
+            export_format=request.export_format,
+        )
 
     @app.post("/api/facet-values")
     def facet_values(request: FacetValuesRequest) -> FacetValuesResponse:
@@ -190,7 +197,13 @@ def create_app(session: "FigStudioSession") -> FastAPI:
 
     @app.post("/api/export")
     def export(request: ExportRequest) -> ExportResponse:
-        _raise_if_validation_failed(_validate_spec(session, request.spec))
+        validation = _validate_spec(
+            session,
+            request.spec,
+            context="export",
+            export_format=request.format,
+        )
+        _raise_if_validation_failed(validation)
         try:
             engine = _render_engine(session)
             data = engine.export(
@@ -240,11 +253,19 @@ def _render_engine(session: "FigStudioSession") -> RenderEngine:
     )
 
 
-def _validate_spec(session: "FigStudioSession", spec: FigureSpec) -> ValidationResponse:
+def _validate_spec(
+    session: "FigStudioSession",
+    spec: FigureSpec,
+    *,
+    context: ValidationContext = "edit",
+    export_format: ExportFormat | None = None,
+) -> ValidationResponse:
     return validate_figure_spec(
         session.registry.namespace_dict(),
         spec,
         style_profiles=profile_map(_style_profiles(session)),
+        context=context,
+        export_format=export_format,
     )
 
 

@@ -75,6 +75,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Missing figure intent, unreadable final-size typography, non-editable vector text, weak panel labels, legend or label overlap, untraceable statistics/source data, stale spec/code sync, and recipe errors are common final-mile problems. |
 | Maturity | `foundation-needed` |
 | Horizon | `near` |
+| Progress | First advisory slice covers empty data-bearing figures, missing primary and secondary axis labels, missing legend labels for multi-item axes, and low-resolution PNG export settings. |
 | Gate/Prerequisite | Checks are advisory and deterministic, with clear issue definitions and no hidden journal-specific or AI judgment. |
 
 | Field | Value |

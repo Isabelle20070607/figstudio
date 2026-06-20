@@ -177,6 +177,83 @@ def test_validate_endpoint_reports_dimension_mismatch():
     assert validation.json()["issues"][0]["code"] == "dimension_mismatch"
 
 
+def test_readiness_warnings_are_export_context_only_and_advisory():
+    session = FigStudioSession(registry=VariableRegistry({"values": [1, 2, 3]}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        width=3.0,
+        height=2.0,
+        dpi=120,
+        layers=[
+            PlotLayer(id="layer-1", kind="line", dataset=DatasetRef(variable="values")),
+            PlotLayer(id="layer-2", kind="scatter", dataset=DatasetRef(variable="values")),
+        ],
+    )
+
+    edit_validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    export_validation = client.post(
+        "/api/validate",
+        json={"spec": spec.model_dump(), "context": "export", "export_format": "png"},
+    )
+    export_response = client.post("/api/export", json={"spec": spec.model_dump(), "format": "png"})
+
+    assert edit_validation.status_code == 200
+    assert edit_validation.json()["ok"] is True
+    assert not any(issue["code"].startswith("readiness_") for issue in edit_validation.json()["issues"])
+
+    assert export_validation.status_code == 200
+    assert export_validation.json()["ok"] is True
+    issue_codes = {issue["code"] for issue in export_validation.json()["issues"]}
+    assert {
+        "readiness_missing_axis_label",
+        "readiness_missing_legend_labels",
+        "readiness_low_png_resolution",
+    } <= issue_codes
+    assert all(issue["severity"] == "warning" for issue in export_validation.json()["issues"])
+    low_resolution = next(
+        issue for issue in export_validation.json()["issues"] if issue["code"] == "readiness_low_png_resolution"
+    )
+    assert low_resolution["details"]["pixel_width"] == 360
+    assert export_response.status_code == 200
+    assert export_response.json()["format"] == "png"
+
+
+def test_export_readiness_reports_empty_figure_and_secondary_axis_label():
+    session = FigStudioSession(registry=VariableRegistry({"values": [1, 2, 3]}), port=8001)
+    client = TestClient(create_app(session))
+    empty_spec = FigureSpec(reference_lines=[ReferenceLineSpec(id="baseline", value=0.0)])
+    right_axis_spec = FigureSpec(
+        axes=[AxesSpec(id="ax0", xlabel="Time")],
+        layers=[
+            PlotLayer(
+                id="rate",
+                kind="line",
+                y_axis="right",
+                dataset=DatasetRef(variable="values"),
+            )
+        ],
+    )
+
+    empty_validation = client.post(
+        "/api/validate",
+        json={"spec": empty_spec.model_dump(), "context": "export", "export_format": "svg"},
+    )
+    right_axis_validation = client.post(
+        "/api/validate",
+        json={"spec": right_axis_spec.model_dump(), "context": "export", "export_format": "svg"},
+    )
+
+    assert empty_validation.status_code == 200
+    assert empty_validation.json()["ok"] is True
+    assert empty_validation.json()["issues"][0]["code"] == "readiness_empty_figure"
+    assert empty_validation.json()["issues"][0]["severity"] == "warning"
+
+    assert right_axis_validation.status_code == 200
+    assert right_axis_validation.json()["ok"] is True
+    issue_codes = {issue["code"] for issue in right_axis_validation.json()["issues"]}
+    assert "readiness_missing_secondary_y_label" in issue_codes
+
+
 def test_facet_values_endpoint_returns_ordered_dataframe_values():
     df = pd.DataFrame(
         {

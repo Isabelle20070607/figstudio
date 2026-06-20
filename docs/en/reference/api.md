@@ -86,7 +86,7 @@ The local FastAPI server is created per session and binds to `127.0.0.1` by defa
 | `GET /api/variables` | Safe variable summaries. |
 | `GET /api/style-profiles` | Loaded project style profiles, source path, and non-fatal load warnings. |
 | `GET /api/spec` | Current `FigureSpec`. |
-| `POST /api/validate` | Validate a `FigureSpec` against the live namespace. |
+| `POST /api/validate` | Validate a `FigureSpec` against the live namespace; accepts optional `context: "edit" \| "export"` and `export_format` for publication-readiness preflight. |
 | `POST /api/facet-values` | Return ordered unique DataFrame values for small-multiple panel authoring. |
 | `POST /api/repeated-panel-candidates` | Return DataFrame values, mapping keys, or sequence indices plus bounded item summaries for repeated-panel authoring. |
 | `POST /api/spec` | Store the current spec, validate it, and return an SVG render response. |
@@ -116,6 +116,8 @@ HTTP errors use:
 Current error codes are `validation_failed`, `render_failed`, `export_failed`, `writeback_failed`, `writeback_io_failed`, `missing_variable`, `missing_column`, `unsupported_facet_source`, and `unsupported_repeated_panel_source`. Writeback errors appear inside `SaveCodeResponse.error`; render, export, validation, facet-value, and repeated-panel candidate failures are HTTP errors.
 
 Validation issue codes include `missing_style_profile`, `invalid_grid_size`, `duplicate_axes_id`, `invalid_axes_span`, `axes_out_of_bounds`, `axes_overlap`, `missing_axes`, `missing_variable`, `missing_column`, `unsupported_recipe_source`, `unsupported_filter_source`, `empty_filter_result`, `unsupported_selection_source`, `unsupported_selection_key`, `missing_selection_key`, `selection_index_out_of_range`, `unsupported_selected_channel`, `unplottable_selection_value`, `dimension_mismatch`, `requires_2d_data`, `log_scale_non_positive`, `unsupported_secondary_y_layer`, and `invalid_reference_line_value`.
+
+Export-context validation can also return advisory readiness warnings: `readiness_empty_figure`, `readiness_missing_axis_label`, `readiness_missing_secondary_y_label`, `readiness_missing_legend_labels`, and `readiness_low_png_resolution`. These warnings do not make `ValidationResponse.ok` false and do not block export unless normal validation errors are also present.
 
 Each validation issue may include `suggestion` for UI repair guidance. `details` can include bounded context such as `available_variables`, `available_columns`, `available_axes`, `available_profiles`, and `suggested_value`; it does not include raw DataFrame contents.
 

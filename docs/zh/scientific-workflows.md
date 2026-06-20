@@ -52,6 +52,8 @@ Mapping 和 sequence repeated panels 的 v1 边界是：使用 index X 或独立
 
 准备论文或展示输出时使用 **Publish** mode。它会展示字体家族、constrained layout 等偏发表场景的控件，同时保持和 **Explore** mode 相同的 generated-code path。
 
+在 **Publish** mode 和导出前，FigStudio 会运行确定性的 publication-readiness checks。这些检查会提示没有 data-bearing 图层或 recipe、缺少 axis labels、secondary Y axis 没有 label、同一 axes 上多个 visual items 缺少 legend labels，以及 PNG 分辨率偏低。Readiness warnings 是 advisory：它们会显示在 validation card list 中，但只要没有普通 validation errors，export 仍会继续。
+
 右侧 polish panel 覆盖：
 
 - figure size、DPI、标题、字体设置、内置 presets 和项目 style profile；

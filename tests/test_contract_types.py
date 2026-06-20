@@ -10,6 +10,7 @@ from figstudio.models import (
     DataFilterSpec,
     DataSelectionSpec,
     DatasetRef,
+    ExportFormat,
     FacetValue,
     FacetValuesRequest,
     FacetValuesResponse,
@@ -37,7 +38,9 @@ from figstudio.models import (
     StyleProfile,
     StyleProfileFigureDefaults,
     StyleProfilesResponse,
+    ValidationContext,
     ValidationIssue,
+    ValidationRequest,
     ValidationResponse,
     VariableSummary,
 )
@@ -70,6 +73,8 @@ def test_frontend_plot_and_preset_literals_match_backend_contracts():
     assert _type_literals(source, "FigurePreset") == set(get_args(FigurePreset))
     assert _type_literals(source, "ReferenceLineOrientation") == set(get_args(ReferenceLineOrientation))
     assert _type_literals(source, "LayerYAxis") == set(get_args(LayerYAxis))
+    assert _type_literals(source, "ValidationContext") == set(get_args(ValidationContext))
+    assert _type_literals(source, "ExportFormat") == set(get_args(ExportFormat))
     assert _type_literals(source, "RepeatedPanelSourceKind") == set(get_args(RepeatedPanelSourceKind))
 
 
@@ -97,6 +102,7 @@ def test_frontend_interfaces_cover_backend_model_fields():
         RenderResponse: "RenderResponse",
         SaveCodeResponse: "SaveCodeResponse",
         ValidationIssue: "ValidationIssue",
+        ValidationRequest: "ValidationRequest",
         ValidationResponse: "ValidationResponse",
         FacetValuesRequest: "FacetValuesRequest",
         FacetValue: "FacetValue",

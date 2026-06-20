@@ -7,6 +7,8 @@ import type {
   SaveCodeResponse,
   SessionInfo,
   StyleProfilesResponse,
+  ExportFormat,
+  ValidationContext,
   ValidationResponse,
   VariableSummary
 } from "./types";
@@ -46,10 +48,17 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ spec, format })
     }),
-  validate: (spec: FigureSpec) =>
+  validate: (
+    spec: FigureSpec,
+    options: { context?: ValidationContext; exportFormat?: ExportFormat } = {}
+  ) =>
     request<ValidationResponse>("/api/validate", {
       method: "POST",
-      body: JSON.stringify({ spec })
+      body: JSON.stringify({
+        spec,
+        context: options.context ?? "edit",
+        export_format: options.exportFormat ?? null
+      })
     }),
   facetValues: (variable: string, column: string, maxValues = 12) =>
     request<FacetValuesResponse>("/api/facet-values", {
@@ -71,7 +80,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ spec, code })
     }),
-  exportFigure: (spec: FigureSpec, format: "svg" | "png" | "pdf") =>
+  exportFigure: (spec: FigureSpec, format: ExportFormat) =>
     request<{ data?: string; output_path?: string | null; format: string; code: string }>("/api/export", {
       method: "POST",
       body: JSON.stringify({ spec, format })

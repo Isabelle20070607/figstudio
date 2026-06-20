@@ -24,6 +24,7 @@ import type {
   DataFilterSpec,
   FacetValue,
   DatasetRef,
+  ExportFormat,
   FigurePreset,
   FigureSpec,
   LayerYAxis,
@@ -940,6 +941,10 @@ function nextStepStatus(spec: FigureSpec): string {
   return "Preview synced. Polish the figure, then save or export.";
 }
 
+function validationOptionsForSpec(spec: FigureSpec): { context: "edit" | "export" } {
+  return { context: spec.mode === "publish" ? "export" : "edit" };
+}
+
 function validationRepairText(issue: ValidationIssue): string {
   if (issue.suggestion) {
     return issue.suggestion;
@@ -976,6 +981,16 @@ function validationRepairText(issue: ValidationIssue): string {
       return "Choose a built-in panel layout or reduce rows, columns, and spans until axes no longer overlap.";
     case "missing_style_profile":
       return "Pick an existing project profile or choose No project profile.";
+    case "readiness_empty_figure":
+      return "Add a plot layer or statistics recipe before treating this export as publication-ready.";
+    case "readiness_missing_axis_label":
+      return "Add X and Y labels that describe the plotted variables and units.";
+    case "readiness_missing_secondary_y_label":
+      return "Add a right Y-axis label for secondary-axis overlays.";
+    case "readiness_missing_legend_labels":
+      return "Add labels to plotted items that should appear in the legend, or disable the legend.";
+    case "readiness_low_png_resolution":
+      return "Increase DPI and figure size for PNG, or export SVG/PDF for vector output.";
     default:
       return issue.field
         ? "Click this issue to focus the affected field, then adjust the value."
@@ -1046,7 +1061,7 @@ export function App() {
     }
     const timeout = window.setTimeout(async () => {
       try {
-        const validation = await api.validate(spec);
+        const validation = await api.validate(spec, validationOptionsForSpec(spec));
         setValidationIssues(validation.issues);
         if (!validation.ok) {
           const count = validation.issues.filter((issue) => issue.severity === "error").length;
@@ -1152,7 +1167,7 @@ export function App() {
     }
     setStatus("Rendering");
     try {
-      const validation = await api.validate(spec);
+      const validation = await api.validate(spec, validationOptionsForSpec(spec));
       setValidationIssues(validation.issues);
       if (!validation.ok) {
         setStatus("Fix validation errors: click a card to repair.");
@@ -1192,13 +1207,13 @@ export function App() {
     }
   }
 
-  async function exportFigure(format: "svg" | "png" | "pdf") {
+  async function exportFigure(format: ExportFormat) {
     if (!spec) {
       return;
     }
     setStatus(`Exporting ${format.toUpperCase()}`);
     try {
-      const validation = await api.validate(spec);
+      const validation = await api.validate(spec, { context: "export", exportFormat: format });
       setValidationIssues(validation.issues);
       if (!validation.ok) {
         setStatus("Export blocked: click a validation card to repair.");
@@ -1215,7 +1230,14 @@ export function App() {
         link.download = `figstudio-export.${format}`;
         link.click();
       }
-      setManualStatus(`${format.toUpperCase()} export ready`);
+      const warningCount = validation.issues.filter((issue) => issue.severity === "warning").length;
+      setManualStatus(
+        warningCount
+          ? `${format.toUpperCase()} export ready with ${warningCount} warning${
+              warningCount === 1 ? "" : "s"
+            }`
+          : `${format.toUpperCase()} export ready`
+      );
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Export failed");
     }

@@ -28,6 +28,8 @@ FigurePreset = Literal["custom", "journal_single", "journal_double", "poster", "
 
 ReferenceLineOrientation = Literal["horizontal", "vertical"]
 LayerYAxis = Literal["left", "right"]
+ValidationContext = Literal["edit", "export"]
+ExportFormat = Literal["png", "svg", "pdf"]
 
 
 class DataFilterSpec(BaseModel):
@@ -251,6 +253,8 @@ class ValidationIssue(BaseModel):
 
 class ValidationRequest(BaseModel):
     spec: FigureSpec
+    context: ValidationContext = "edit"
+    export_format: ExportFormat | None = None
 
 
 class ValidationResponse(BaseModel):
@@ -326,7 +330,7 @@ class SaveCodeResponse(BaseModel):
 
 class ExportRequest(BaseModel):
     spec: FigureSpec
-    format: Literal["png", "svg", "pdf"] = "svg"
+    format: ExportFormat = "svg"
     output_path: str | None = None
     dpi: int | None = None
 

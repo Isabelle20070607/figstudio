@@ -14,11 +14,13 @@ from figstudio.models import (
     DataFilterSpec,
     DatasetRef,
     FigureSpec,
+    ExportFormat,
     PlotLayer,
     RecipeDatasetRef,
     RecipeLayer,
     ReferenceLineSpec,
     StyleProfile,
+    ValidationContext,
     ValidationIssue,
     ValidationResponse,
 )
@@ -26,10 +28,13 @@ from figstudio.selection import (
     is_python_literal_key,
     normalize_mapping_key,
 )
-from figstudio.style_profiles import missing_profile_issue_details
+from figstudio.style_profiles import missing_profile_issue_details, resolved_figure_value
 
 
 MAX_REPAIR_CHOICES = 12
+PNG_READINESS_MIN_DPI = 300
+PNG_READINESS_MIN_WIDTH_PX = 1800
+PNG_READINESS_MIN_HEIGHT_PX = 1200
 SECONDARY_Y_SUPPORTED_KINDS = {
     "line",
     "scatter",
@@ -168,6 +173,9 @@ def validate_figure_spec(
     namespace: dict[str, Any],
     spec: FigureSpec,
     style_profiles: dict[str, StyleProfile] | None = None,
+    *,
+    context: ValidationContext = "edit",
+    export_format: ExportFormat | None = None,
 ) -> ValidationResponse:
     issues: list[ValidationIssue] = []
     profile_details = missing_profile_issue_details(spec, style_profiles)
@@ -254,7 +262,196 @@ def validate_figure_spec(
     for reference_line in spec.reference_lines:
         _validate_reference_line(reference_line, axes_by_id, spec.axes, issues)
 
+    if context == "export":
+        _validate_publication_readiness(
+            spec,
+            issues,
+            export_format=export_format,
+            style_profiles=style_profiles,
+        )
+
     return ValidationResponse(ok=not any(issue.severity == "error" for issue in issues), issues=issues)
+
+
+def _validate_publication_readiness(
+    spec: FigureSpec,
+    issues: list[ValidationIssue],
+    *,
+    export_format: ExportFormat | None,
+    style_profiles: dict[str, StyleProfile] | None,
+) -> None:
+    axes_by_id = {axis.id: axis for axis in spec.axes}
+    layers_by_axis: dict[str, list[PlotLayer]] = {}
+    recipes_by_axis: dict[str, list[RecipeLayer]] = {}
+    references_by_axis: dict[str, list[ReferenceLineSpec]] = {}
+
+    for layer in spec.layers:
+        if layer.axes_id in axes_by_id:
+            layers_by_axis.setdefault(layer.axes_id, []).append(layer)
+    for recipe in spec.recipes:
+        if recipe.axes_id in axes_by_id:
+            recipes_by_axis.setdefault(recipe.axes_id, []).append(recipe)
+    for reference_line in spec.reference_lines:
+        if reference_line.axes_id in axes_by_id:
+            references_by_axis.setdefault(reference_line.axes_id, []).append(reference_line)
+
+    if not spec.layers and not spec.recipes:
+        issues.append(
+            ValidationIssue(
+                severity="warning",
+                code="readiness_empty_figure",
+                message="This figure has no data-bearing plot layer or statistics recipe.",
+                suggestion=(
+                    "Add a plot layer or statistics recipe before treating this export "
+                    "as publication-ready."
+                ),
+                field="layers",
+                details={
+                    "layer_count": len(spec.layers),
+                    "recipe_count": len(spec.recipes),
+                    "reference_line_count": len(spec.reference_lines),
+                    "annotation_count": len(spec.annotations),
+                },
+            )
+        )
+
+    for axis in spec.axes:
+        axis_layers = layers_by_axis.get(axis.id, [])
+        axis_recipes = recipes_by_axis.get(axis.id, [])
+        if not axis_layers and not axis_recipes:
+            continue
+
+        missing_fields: list[str] = []
+        if not axis.xlabel.strip():
+            missing_fields.append("xlabel")
+        has_primary_y_content = axis_recipes or any(layer.y_axis == "left" for layer in axis_layers)
+        if has_primary_y_content and not axis.ylabel.strip():
+            missing_fields.append("ylabel")
+        if missing_fields:
+            issues.append(
+                ValidationIssue(
+                    severity="warning",
+                    code="readiness_missing_axis_label",
+                    message=f"Axes {axis.id!r} is missing publication-facing axis labels.",
+                    suggestion="Add X and Y labels that describe the plotted variables and units.",
+                    axes_id=axis.id,
+                    field="axes",
+                    details={
+                        "axes_id": axis.id,
+                        "missing_fields": missing_fields,
+                        "layer_ids": [layer.id for layer in axis_layers[:MAX_REPAIR_CHOICES]],
+                        "recipe_ids": [recipe.id for recipe in axis_recipes[:MAX_REPAIR_CHOICES]],
+                    },
+                )
+            )
+
+        right_axis_layers = [layer for layer in axis_layers if layer.y_axis == "right"]
+        if right_axis_layers and not axis.secondary_y.ylabel.strip():
+            issues.append(
+                ValidationIssue(
+                    severity="warning",
+                    code="readiness_missing_secondary_y_label",
+                    message=f"Axes {axis.id!r} has right-axis overlays without a right Y label.",
+                    suggestion=(
+                        "Add a secondary Y label that describes the right-axis variable "
+                        "and units."
+                    ),
+                    axes_id=axis.id,
+                    field="secondary_y.ylabel",
+                    details={
+                        "axes_id": axis.id,
+                        "layer_ids": [layer.id for layer in right_axis_layers[:MAX_REPAIR_CHOICES]],
+                    },
+                )
+            )
+
+        legend_items = _legend_items(axis_layers, axis_recipes, references_by_axis.get(axis.id, []))
+        missing_legend_labels = [item for item in legend_items if not item["label"]]
+        if axis.legend and len(legend_items) > 1 and missing_legend_labels:
+            issues.append(
+                ValidationIssue(
+                    severity="warning",
+                    code="readiness_missing_legend_labels",
+                    message=(
+                        f"Axes {axis.id!r} has multiple visual items but some legend "
+                        "labels are missing."
+                    ),
+                    suggestion=(
+                        "Add labels to plotted items that should appear in the legend, "
+                        "or disable the legend on this axes."
+                    ),
+                    axes_id=axis.id,
+                    field="style.label",
+                    details={
+                        "axes_id": axis.id,
+                        "item_count": len(legend_items),
+                        "missing_items": missing_legend_labels[:MAX_REPAIR_CHOICES],
+                    },
+                )
+            )
+
+    if export_format == "png":
+        _validate_png_readiness(spec, issues, style_profiles)
+
+
+def _legend_items(
+    layers: list[PlotLayer],
+    recipes: list[RecipeLayer],
+    reference_lines: list[ReferenceLineSpec],
+) -> list[dict[str, str | None]]:
+    return [
+        {"kind": "layer", "id": layer.id, "label": layer.style.label}
+        for layer in layers
+    ] + [
+        {"kind": "recipe", "id": recipe.id, "label": recipe.style.label}
+        for recipe in recipes
+    ] + [
+        {"kind": "reference_line", "id": reference_line.id, "label": reference_line.style.label}
+        for reference_line in reference_lines
+    ]
+
+
+def _validate_png_readiness(
+    spec: FigureSpec,
+    issues: list[ValidationIssue],
+    style_profiles: dict[str, StyleProfile] | None,
+) -> None:
+    width = float(resolved_figure_value(spec, style_profiles, "width") or spec.width)
+    height = float(resolved_figure_value(spec, style_profiles, "height") or spec.height)
+    dpi = int(resolved_figure_value(spec, style_profiles, "dpi") or spec.dpi)
+    pixel_width = int(round(width * dpi))
+    pixel_height = int(round(height * dpi))
+    if (
+        dpi >= PNG_READINESS_MIN_DPI
+        and pixel_width >= PNG_READINESS_MIN_WIDTH_PX
+        and pixel_height >= PNG_READINESS_MIN_HEIGHT_PX
+    ):
+        return
+    issues.append(
+        ValidationIssue(
+            severity="warning",
+            code="readiness_low_png_resolution",
+            message=(
+                f"PNG export is {pixel_width}x{pixel_height}px at {dpi} DPI, "
+                "below the publication-readiness guideline."
+            ),
+            suggestion=(
+                "Use at least 300 DPI and sufficient figure size for PNG, "
+                "or export SVG/PDF for vector output."
+            ),
+            field="dpi",
+            details={
+                "width": width,
+                "height": height,
+                "dpi": dpi,
+                "pixel_width": pixel_width,
+                "pixel_height": pixel_height,
+                "recommended_dpi": PNG_READINESS_MIN_DPI,
+                "recommended_min_width_px": PNG_READINESS_MIN_WIDTH_PX,
+                "recommended_min_height_px": PNG_READINESS_MIN_HEIGHT_PX,
+            },
+        )
+    )
 
 
 def _validate_axes_layout(spec: FigureSpec, issues: list[ValidationIssue]) -> None:
