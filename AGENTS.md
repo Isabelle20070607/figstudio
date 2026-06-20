@@ -7,6 +7,7 @@ Project guidance for `figstudio`.
 - Use `uv` for Python tasks: `uv run --extra dev pytest`, `uv run python -m figstudio`.
 - Use `npm` inside `frontend/` for UI tasks: `npm run build`, `npm run check:bundle`, `npm run test:e2e`, `npm run dev`.
 - Use `uv build` for release package verification; the Hatch hook builds and bundles the frontend.
+- In Codex sessions on this Windows host, run FigStudio validation commands that commonly hit sandbox temp/cache or process-spawn limits (`uv run --extra dev pytest`, `npm run build`, `npm run test:e2e`, `uv build`) with `require_escalated` first when usage is available; consider repo-local cache/temp overrides only when escalation is unavailable or rejected.
 - The `dev` extra intentionally uses `httpx2`; do not normalize it to `httpx` without revalidating FastAPI/TestClient compatibility and updating `uv.lock` deliberately.
 
 ## Product Invariants
