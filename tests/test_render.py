@@ -1,4 +1,14 @@
-from figstudio.models import AxesSpec, DatasetRef, FigureSpec, PlotLayer, SecondaryYAxisSpec
+import pandas as pd
+
+from figstudio.models import (
+    AxesSpec,
+    DatasetRef,
+    FigureSpec,
+    PlotLayer,
+    RecipeDatasetRef,
+    RecipeLayer,
+    SecondaryYAxisSpec,
+)
 from figstudio.render import RenderEngine
 
 
@@ -69,3 +79,32 @@ def test_render_svg_from_secondary_y_axis_overlay():
     assert "<svg" in svg
     assert "secondary_axes[0] = axes_flat[0].twinx()" in code
     assert "secondary_axes[0].plot(time, rate" in code
+
+
+def test_render_svg_from_mean_sem_bar_recipe():
+    df = pd.DataFrame(
+        {
+            "condition": ["control", "drug", "control", "drug"],
+            "genotype": ["wt", "wt", "mut", "mut"],
+            "response": [1.0, 1.4, 0.8, 1.1],
+        }
+    )
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="mean_sem_bar",
+                dataset=RecipeDatasetRef(
+                    variable="df",
+                    x="condition",
+                    y="response",
+                    group="genotype",
+                ),
+            )
+        ]
+    )
+
+    svg, code = RenderEngine({"df": df}).render_base64(spec, "svg")
+
+    assert "<svg" in svg
+    assert "axes_flat[0].bar(_recipe_recipe_1_positions" in code

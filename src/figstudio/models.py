@@ -22,7 +22,7 @@ PlotKind = Literal[
     "fill_between",
 ]
 
-RecipeKind = Literal["mean_sem_line", "grouped_points", "paired_before_after"]
+RecipeKind = Literal["mean_sem_line", "mean_sem_bar", "grouped_points", "paired_before_after"]
 
 FigurePreset = Literal["custom", "journal_single", "journal_double", "poster", "slide"]
 

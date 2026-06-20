@@ -36,6 +36,7 @@
 | Why it matters | 这些覆盖常见科研论文图形，同时避免扩张成泛 business dashboard。 |
 | Maturity | `foundation-needed` |
 | Horizon | `near` |
+| Progress | 首个 beta slice 增加了 `mean_sem_bar`，用于 mean-plus-error 分类柱状图和可选 grouped bars；grouped/stacked/count bar families 与 distribution overlays 仍是未来工作。 |
 | Gate/Prerequisite | Shared recipe roles 和 validation errors 清楚到足以承载多个 recipe families。 |
 
 | Field | Value |

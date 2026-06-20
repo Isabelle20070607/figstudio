@@ -21,12 +21,13 @@ Bundled recipes:
 | Recipe | Use it for |
 | --- | --- |
 | `mean_sem_line` | Group by X and optional group column, compute mean plus SEM or SD, then draw a line with error bars. |
+| `mean_sem_bar` | Group by X and optional group column, compute mean plus SEM or SD, then draw categorical bars with error caps. |
 | `grouped_points` | Preserve first-seen category order, scatter individual points by category, and overlay mean plus SEM or SD. |
 | `paired_before_after` | Group paired observations by subject, draw subject traces, and overlay condition means. |
 
 Recipes store variable names, column names, style choices, and target axes in the `FigureSpec`. They do not store raw DataFrame data. Generated code still imports Matplotlib only and computes statistics from your live DataFrame variable.
 
-Try `examples/general_stats_recipe.py` to exercise all three bundled recipes with synthetic repeated-measures data.
+Try `examples/general_stats_recipe.py` to exercise the bundled recipes with synthetic repeated-measures data.
 
 ## Faceted Panels
 

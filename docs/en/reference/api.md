@@ -68,7 +68,7 @@ Supported `PlotLayer.kind` values are `line`, `scatter`, `bar`, `barh`, `hist`, 
 
 `PlotLayer.y_axis` is `left` by default. Set it to `right` for simple secondary Y-axis overlays on the same `axes_id`; `AxesSpec.secondary_y` stores the right-side `ylabel`, `yscale`, and `ylim`. Generated code emits Matplotlib `twinx()` for panels that have at least one right-axis layer.
 
-Supported `RecipeLayer.kind` values are `mean_sem_line`, `grouped_points`, and `paired_before_after`.
+Supported `RecipeLayer.kind` values are `mean_sem_line`, `mean_sem_bar`, `grouped_points`, and `paired_before_after`.
 
 `ReferenceLineSpec.orientation` is `horizontal` or `vertical`. The `value` field is numeric and `style` uses the same label, color, line style, linewidth, and alpha fields as plot layers. Generated code emits Matplotlib `axhline` or `axvline`.
 

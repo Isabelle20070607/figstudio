@@ -577,6 +577,41 @@ def test_recipe_api_smoke_workflow():
     assert "_recipe_recipe_1_subjects" in rendered.json()["code"]
 
 
+def test_mean_sem_bar_recipe_api_smoke_workflow():
+    df = pd.DataFrame(
+        {
+            "condition": ["control", "drug", "control", "drug", "control", "drug"],
+            "genotype": ["wt", "wt", "mut", "mut", "wt", "wt"],
+            "response": [1.0, 1.4, 0.8, 1.1, 1.2, 1.6],
+        }
+    )
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="mean_sem_bar",
+                dataset=RecipeDatasetRef(
+                    variable="df",
+                    x="condition",
+                    y="response",
+                    group="genotype",
+                ),
+            )
+        ]
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    rendered = client.post("/api/render", json={"spec": spec.model_dump(), "format": "svg"})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is True
+    assert rendered.status_code == 200
+    assert "<svg" in rendered.json()["image"]
+    assert "axes_flat[0].bar(_recipe_recipe_1_positions" in rendered.json()["code"]
+
+
 def test_recipe_validation_reports_non_dataframe_source():
     session = FigStudioSession(registry=VariableRegistry({"values": [1, 2, 3]}), port=8001)
     client = TestClient(create_app(session))

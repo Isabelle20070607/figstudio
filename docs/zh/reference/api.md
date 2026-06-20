@@ -68,7 +68,7 @@ CLI 会打印 session URL，并持续运行直到被中断。
 
 `PlotLayer.y_axis` 默认是 `left`。把它设为 `right` 可在同一个 `axes_id` 上创建简单 secondary Y-axis overlay；`AxesSpec.secondary_y` 保存右侧 `ylabel`、`yscale` 和 `ylim`。当某个 panel 至少有一个 right-axis layer 时，生成代码会输出 Matplotlib `twinx()`。
 
-支持的 `RecipeLayer.kind` 值为 `mean_sem_line`、`grouped_points` 和 `paired_before_after`。
+支持的 `RecipeLayer.kind` 值为 `mean_sem_line`、`mean_sem_bar`、`grouped_points` 和 `paired_before_after`。
 
 `ReferenceLineSpec.orientation` 为 `horizontal` 或 `vertical`。`value` 是 numeric value，`style` 复用 plot layer 的 label、color、line style、linewidth 和 alpha 字段。生成代码会输出 Matplotlib `axhline` 或 `axvline`。
 

@@ -322,6 +322,8 @@ class MatplotlibCodegen:
     def _recipe_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:
         if recipe.kind == "mean_sem_line":
             return self._mean_sem_line_code(recipe, style, axis_index)
+        if recipe.kind == "mean_sem_bar":
+            return self._mean_sem_bar_code(recipe, style, axis_index)
         if recipe.kind == "grouped_points":
             return self._grouped_points_code(recipe, style, axis_index)
         if recipe.kind == "paired_before_after":
@@ -385,6 +387,69 @@ class MatplotlibCodegen:
                     ),
                 ]
             )
+        return [line.replace(", )", ")").replace("(, ", "(") for line in lines]
+
+    def _mean_sem_bar_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:
+        data = recipe.dataset
+        var = _safe_var(data.variable)
+        prefix = self._recipe_prefix(recipe)
+        ax = f"axes_flat[{axis_index}]"
+        stat = self._recipe_error_stat(recipe)
+        agg = "['mean', " + repr(stat) + "]" if stat else "['mean']"
+        yerr = f"{prefix}_summary[{stat!r}]" if stat else "None"
+        bar_kwargs = _kwargs(
+            color=style.color,
+            alpha=style.alpha if style.alpha is not None else 0.85,
+            linewidth=style.linewidth,
+        )
+
+        lines = [
+            f"{prefix}_df = {var}",
+            f"{prefix}_x_order = list(dict.fromkeys({prefix}_df[{data.x!r}].dropna().tolist()))",
+            f"{prefix}_x = list(range(len({prefix}_x_order)))",
+        ]
+        if data.group:
+            lines.extend(
+                [
+                    f"{prefix}_groups = list(dict.fromkeys({prefix}_df[{data.group!r}].dropna().tolist()))",
+                    f"{prefix}_bar_width = 0.8 / max(len({prefix}_groups), 1)",
+                    f"for {prefix}_group_index, {prefix}_group in enumerate({prefix}_groups):",
+                    f"    {prefix}_group_df = {prefix}_df[{prefix}_df[{data.group!r}] == {prefix}_group]",
+                    (
+                        f"    {prefix}_summary = {prefix}_group_df.groupby({data.x!r}, sort=False)"
+                        f"[{data.y!r}].agg({agg}).reindex({prefix}_x_order)"
+                    ),
+                    (
+                        f"    {prefix}_offset = "
+                        f"({prefix}_group_index - (len({prefix}_groups) - 1) / 2) * {prefix}_bar_width"
+                    ),
+                    f"    {prefix}_positions = [value + {prefix}_offset for value in {prefix}_x]",
+                    (
+                        f"    {ax}.bar({prefix}_positions, {prefix}_summary['mean'], yerr={yerr}, "
+                        f"width={prefix}_bar_width, label=f'{style.label or data.y} {{{prefix}_group}}', "
+                        f"capsize=4, {bar_kwargs})"
+                    ),
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    (
+                        f"{prefix}_summary = {prefix}_df.groupby({data.x!r}, sort=False)"
+                        f"[{data.y!r}].agg({agg}).reindex({prefix}_x_order)"
+                    ),
+                    (
+                        f"{ax}.bar({prefix}_x, {prefix}_summary['mean'], yerr={yerr}, width=0.72, "
+                        f"label={style.label!r}, capsize=4, {bar_kwargs})"
+                    ),
+                ]
+            )
+        lines.extend(
+            [
+                f"{ax}.set_xticks({prefix}_x)",
+                f"{ax}.set_xticklabels([str(value) for value in {prefix}_x_order])",
+            ]
+        )
         return [line.replace(", )", ")").replace("(, ", "(") for line in lines]
 
     def _grouped_points_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:

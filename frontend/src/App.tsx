@@ -59,9 +59,10 @@ const plotKinds: PlotKind[] = [
   "fill_between"
 ];
 
-const recipeKinds: RecipeKind[] = ["mean_sem_line", "grouped_points", "paired_before_after"];
+const recipeKinds: RecipeKind[] = ["mean_sem_line", "mean_sem_bar", "grouped_points", "paired_before_after"];
 const recipeLabels: Record<RecipeKind, string> = {
   mean_sem_line: "Mean +/- SEM line",
+  mean_sem_bar: "Mean +/- SEM bars",
   grouped_points: "Grouped points",
   paired_before_after: "Paired before/after"
 };
@@ -704,7 +705,7 @@ function createRecipe({
       variable: variable.name,
       x: xColumn || null,
       y: yColumn || null,
-      group: kind === "mean_sem_line" && groupColumn ? groupColumn : null,
+      group: (kind === "mean_sem_line" || kind === "mean_sem_bar") && groupColumn ? groupColumn : null,
       subject: kind === "paired_before_after" ? subjectColumn || null : null,
       filters: []
     },
@@ -714,7 +715,7 @@ function createRecipe({
       marker: kind === "grouped_points" || kind === "paired_before_after" ? "o" : null,
       linestyle: kind === "mean_sem_line" ? "-" : null,
       linewidth: kind === "mean_sem_line" || kind === "paired_before_after" ? 1.8 : null,
-      alpha: kind === "grouped_points" ? 0.78 : null
+      alpha: kind === "grouped_points" ? 0.78 : kind === "mean_sem_bar" ? 0.85 : null
     },
     error,
     readonly: false,
@@ -1887,7 +1888,7 @@ function VariablePanel({
                 </select>
               </label>
             </div>
-            {recipeKind === "mean_sem_line" ? (
+            {recipeKind === "mean_sem_line" || recipeKind === "mean_sem_bar" ? (
               <label>
                 Group column
                 <select
@@ -2961,7 +2962,7 @@ function RecipeControls({
           onChange={(value) => onChange({ ...recipe, dataset: { ...recipe.dataset, y: value || null } })}
         />
       </div>
-      {recipe.kind === "mean_sem_line" ? (
+      {recipe.kind === "mean_sem_line" || recipe.kind === "mean_sem_bar" ? (
         <TextField
           label="Group column"
           value={recipe.dataset.group ?? ""}
