@@ -19,6 +19,10 @@ Project guidance for `figstudio`.
 - Treat notebook writeback as semi-automatic: return replacement cell code, do not edit notebook files directly.
 - Runtime wheels must serve the React editor from `figstudio/static` and must not require Node/npm after install.
 
+## Completion Rules
+
+- Before reporting implementation or documentation work complete, run `git status --short` and finish with a local commit for the task's changes. If earlier agent-created dirty work is part of the same unfinished FigStudio slice, include it in the commit instead of leaving it behind; report the commit hash and clean/dirty status.
+
 ## Documentation Ownership
 
 Follow Codex AGENTS guidance: keep this file to durable repository expectations, commands, verification steps, and review expectations. Put product detail in `docs/` and link to it instead of duplicating it here.
