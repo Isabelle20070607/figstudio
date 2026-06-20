@@ -2,20 +2,29 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
+import math
 from typing import Any
 
 import numpy as np
 
 from figstudio.models import (
     AxesSpec,
+    DataFilterSpec,
     DatasetRef,
     FigureSpec,
     PlotLayer,
+    RecipeDatasetRef,
     RecipeLayer,
+    ReferenceLineSpec,
     StyleProfile,
     ValidationIssue,
     ValidationResponse,
+)
+from figstudio.selection import (
+    is_python_literal_key,
+    normalize_mapping_key,
 )
 from figstudio.style_profiles import missing_profile_issue_details
 
@@ -183,11 +192,24 @@ def validate_figure_spec(
             )
             continue
 
+        dataset_source = _resolve_dataset_source(namespace, layer, issues)
+        if dataset_source is None:
+            continue
+        if dataset_source is not None:
+            _validate_data_filters(
+                namespace,
+                layer.id,
+                layer.axes_id,
+                layer.dataset,
+                issues,
+                source_value=dataset_source.value,
+                source_label=dataset_source.label,
+            )
         axis = axes_by_id[layer.axes_id]
-        y_value = _resolve_value(namespace, layer, "y", issues)
-        x_value = _resolve_channel(namespace, layer, "x", issues)
-        z_value = _resolve_z(namespace, layer, issues)
-        yerr_value = _resolve_channel(namespace, layer, "yerr", issues)
+        y_value = _resolve_value(namespace, layer, "y", issues, dataset_source)
+        x_value = _resolve_channel(namespace, layer, "x", issues, dataset_source)
+        z_value = _resolve_z(namespace, layer, issues, dataset_source)
+        yerr_value = _resolve_channel(namespace, layer, "yerr", issues, dataset_source)
 
         if layer.kind in {"line", "scatter", "bar", "barh", "step", "fill_between", "errorbar"}:
             _check_lengths(layer, issues, x=x_value, y=y_value)
@@ -217,6 +239,9 @@ def validate_figure_spec(
             )
             continue
         _validate_recipe(namespace, recipe, issues)
+
+    for reference_line in spec.reference_lines:
+        _validate_reference_line(reference_line, axes_by_id, spec.axes, issues)
 
     return ValidationResponse(ok=not any(issue.severity == "error" for issue in issues), issues=issues)
 
@@ -396,6 +421,8 @@ def _validate_recipe(
         )
         return
 
+    _validate_data_filters(namespace, recipe.id, recipe.axes_id, data, issues)
+
     required = ["x", "y"]
     if recipe.kind == "paired_before_after":
         required.append("subject")
@@ -423,8 +450,172 @@ def _validate_recipe(
             _check_dataframe_column(value, recipe, column, field, issues)
 
 
+def _validate_reference_line(
+    reference_line: ReferenceLineSpec,
+    axes_by_id: dict[str, AxesSpec],
+    axes: list[AxesSpec],
+    issues: list[ValidationIssue],
+) -> None:
+    axis = axes_by_id.get(reference_line.axes_id)
+    if axis is None:
+        details, suggestion = _axes_repair(axes, reference_line.axes_id)
+        details["reference_line_id"] = reference_line.id
+        issues.append(
+            ValidationIssue(
+                code="missing_axes",
+                message=(
+                    f"Reference line {reference_line.id!r} targets missing axes "
+                    f"{reference_line.axes_id!r}."
+                ),
+                suggestion=suggestion,
+                axes_id=reference_line.axes_id,
+                field="reference_lines.axes_id",
+                details=details,
+            )
+        )
+        return
+
+    if not math.isfinite(reference_line.value):
+        issues.append(
+            ValidationIssue(
+                code="invalid_reference_line_value",
+                message=f"Reference line {reference_line.id!r} needs a finite numeric value.",
+                suggestion="Set the reference line value to a finite number.",
+                axes_id=reference_line.axes_id,
+                field="reference_lines.value",
+                details={"reference_line_id": reference_line.id, "value": reference_line.value},
+            )
+        )
+        return
+
+    scaled_axis = axis.yscale if reference_line.orientation == "horizontal" else axis.xscale
+    if scaled_axis == "log" and reference_line.value <= 0:
+        channel = "Y" if reference_line.orientation == "horizontal" else "X"
+        issues.append(
+            ValidationIssue(
+                code="invalid_reference_line_value",
+                message=(
+                    f"Reference line {reference_line.id!r} has a non-positive {channel} value "
+                    f"for a log-scaled axes."
+                ),
+                suggestion=f"Use a positive {channel} reference value, or switch this axes back to linear scale.",
+                axes_id=reference_line.axes_id,
+                field="reference_lines.value",
+                details={
+                    "reference_line_id": reference_line.id,
+                    "orientation": reference_line.orientation,
+                    "value": reference_line.value,
+                    "scale": scaled_axis,
+                },
+            )
+        )
+
+
 def _is_dataframe(value: Any) -> bool:
     return type(value).__module__.startswith("pandas") and type(value).__name__ == "DataFrame"
+
+
+def _validate_data_filters(
+    namespace: dict[str, Any],
+    layer_id: str,
+    axes_id: str,
+    data: DatasetRef | RecipeDatasetRef,
+    issues: list[ValidationIssue],
+    source_value: Any | None = None,
+    source_label: str | None = None,
+) -> None:
+    if not data.filters:
+        return
+    value = source_value if source_value is not None else namespace.get(data.variable)
+    if value is None:
+        return
+    variable_label = source_label or data.variable
+    if not _is_dataframe(value):
+        issues.append(
+            ValidationIssue(
+                code="unsupported_filter_source",
+                message=f"Filters on {layer_id!r} require a pandas DataFrame source.",
+                suggestion="Use filters only with DataFrame-backed layers or recipes.",
+                layer_id=layer_id,
+                axes_id=axes_id,
+                field="dataset.filters",
+                details={"variable": variable_label, "type": type(value).__name__},
+            )
+        )
+        return
+
+    valid = True
+    columns = _dataframe_columns(value)
+    for index, data_filter in enumerate(data.filters):
+        if data_filter.column not in columns:
+            details, suggestion = _column_repair(value, variable=variable_label, field="filters.column")
+            details["filter"] = _filter_details(data_filter, index)
+            issues.append(
+                ValidationIssue(
+                    code="missing_column",
+                    message=(
+                        f"Filter {index + 1} on {layer_id!r} references missing column "
+                        f"{data_filter.column!r}."
+                    ),
+                    suggestion=suggestion,
+                    layer_id=layer_id,
+                    axes_id=axes_id,
+                    field="dataset.filters.column",
+                    details=details,
+                )
+            )
+            valid = False
+    if not valid:
+        return
+
+    filtered = _apply_data_filters(value, data.filters)
+    try:
+        is_empty = len(filtered) == 0
+    except Exception:
+        is_empty = False
+    if is_empty:
+        issues.append(
+            ValidationIssue(
+                severity="warning",
+                code="empty_filter_result",
+                message=f"Filters on {layer_id!r} match no rows.",
+                suggestion="Choose another facet value, remove the filter, or check the live DataFrame data.",
+                layer_id=layer_id,
+                axes_id=axes_id,
+                field="dataset.filters",
+                details={
+                    "variable": data.variable,
+                    "filters": [_filter_details(data_filter, index) for index, data_filter in enumerate(data.filters)],
+                },
+            )
+        )
+
+
+def _filter_details(data_filter: DataFilterSpec, index: int) -> dict[str, Any]:
+    return {
+        "index": index,
+        "column": data_filter.column,
+        "op": data_filter.op,
+        "value": data_filter.value,
+        "label": data_filter.label,
+    }
+
+
+def _apply_data_filters(value: Any, filters: list[DataFilterSpec]) -> Any:
+    if not filters or not _is_dataframe(value):
+        return value
+    filtered = value
+    for data_filter in filters:
+        if data_filter.op != "eq" or data_filter.column not in _dataframe_columns(filtered):
+            continue
+        try:
+            if data_filter.value is None:
+                filtered = filtered[filtered[data_filter.column].isna()]
+            else:
+                filtered = filtered[filtered[data_filter.column] == data_filter.value]
+        except Exception:
+            return filtered
+    return filtered
 
 
 def _check_dataframe_column(
@@ -456,10 +647,17 @@ def _resolve_z(
     namespace: dict[str, Any],
     layer: PlotLayer,
     issues: list[ValidationIssue],
+    dataset_source: _ResolvedValue | None,
 ) -> _ResolvedValue | None:
     data = layer.dataset
     if data.z or data.z_variable or layer.kind in {"heatmap", "contour"}:
-        return _resolve_channel(namespace, layer, "z", issues) or _resolve_value(namespace, layer, "y", issues)
+        return _resolve_channel(namespace, layer, "z", issues, dataset_source) or _resolve_value(
+            namespace,
+            layer,
+            "y",
+            issues,
+            dataset_source,
+        )
     return None
 
 
@@ -468,11 +666,12 @@ def _resolve_value(
     layer: PlotLayer,
     channel: str,
     issues: list[ValidationIssue],
+    dataset_source: _ResolvedValue | None,
 ) -> _ResolvedValue | None:
     data = layer.dataset
     if getattr(data, channel) or getattr(data, f"{channel}_variable"):
-        return _resolve_channel(namespace, layer, channel, issues)
-    return _resolve_variable_column(namespace, layer, data, data.variable, None, channel, issues)
+        return _resolve_channel(namespace, layer, channel, issues, dataset_source)
+    return _resolve_variable_column(namespace, layer, data, data.variable, None, channel, issues, dataset_source)
 
 
 def _resolve_channel(
@@ -480,13 +679,14 @@ def _resolve_channel(
     layer: PlotLayer,
     channel: str,
     issues: list[ValidationIssue],
+    dataset_source: _ResolvedValue | None,
 ) -> _ResolvedValue | None:
     data = layer.dataset
     if channel != "y" and not getattr(data, channel) and not getattr(data, f"{channel}_variable"):
         return None
     variable_name = getattr(data, f"{channel}_variable") or data.variable
     column = getattr(data, channel)
-    return _resolve_variable_column(namespace, layer, data, variable_name, column, channel, issues)
+    return _resolve_variable_column(namespace, layer, data, variable_name, column, channel, issues, dataset_source)
 
 
 def _resolve_variable_column(
@@ -497,8 +697,12 @@ def _resolve_variable_column(
     column: str | None,
     channel: str,
     issues: list[ValidationIssue],
+    dataset_source: _ResolvedValue | None,
 ) -> _ResolvedValue | None:
-    if not variable_name or variable_name not in namespace:
+    if variable_name == data.variable and dataset_source is not None:
+        value = dataset_source.value
+        label = dataset_source.label
+    elif not variable_name or variable_name not in namespace:
         field = f"dataset.{channel}_variable" if channel != "y" else "dataset.variable"
         details, suggestion = _variable_repair(namespace, field=field, missing=variable_name)
         details["dataset"] = data.model_dump()
@@ -514,9 +718,11 @@ def _resolve_variable_column(
             )
         )
         return None
-
-    value = namespace[variable_name]
-    label = variable_name
+    else:
+        value = namespace[variable_name]
+        label = variable_name
+    if variable_name == data.variable:
+        value = _apply_data_filters(value, data.filters)
     if column:
         columns = getattr(value, "columns", None)
         if columns is not None and column not in [str(item) for item in columns]:
@@ -555,6 +761,180 @@ def _resolve_variable_column(
             return None
 
     return _ResolvedValue(value=value, label=label)
+
+
+def _resolve_dataset_source(
+    namespace: dict[str, Any],
+    layer: PlotLayer,
+    issues: list[ValidationIssue],
+) -> _ResolvedValue | None:
+    data = layer.dataset
+    if data.variable not in namespace:
+        details, suggestion = _variable_repair(namespace, field="dataset.variable", missing=data.variable)
+        details["dataset"] = data.model_dump()
+        issues.append(
+            ValidationIssue(
+                code="missing_variable",
+                message=f"Layer {layer.id!r} references missing variable {data.variable!r}.",
+                suggestion=suggestion,
+                layer_id=layer.id,
+                axes_id=layer.axes_id,
+                field="dataset.variable",
+                details=details,
+            )
+        )
+        return None
+
+    value = namespace[data.variable]
+    label = data.variable
+    selection = data.selection
+    if selection is None:
+        return _ResolvedValue(value=value, label=label)
+
+    if data.x and not data.x_variable:
+        issues.append(
+            ValidationIssue(
+                code="unsupported_selected_channel",
+                message=f"Layer {layer.id!r} uses selected source data for X, which is not supported yet.",
+                suggestion="Use index X or choose an independent X variable for repeated mapping/sequence panels.",
+                layer_id=layer.id,
+                axes_id=layer.axes_id,
+                field="dataset.x",
+                details={"dataset": data.model_dump()},
+            )
+        )
+    if data.yerr and not data.yerr_variable:
+        issues.append(
+            ValidationIssue(
+                code="unsupported_selected_channel",
+                message=f"Layer {layer.id!r} uses selected source data for Y error, which is not supported yet.",
+                suggestion="Use no error channel or choose an independent error variable for repeated mapping/sequence panels.",
+                layer_id=layer.id,
+                axes_id=layer.axes_id,
+                field="dataset.yerr",
+                details={"dataset": data.model_dump()},
+            )
+        )
+
+    if selection.kind == "mapping_key":
+        if not isinstance(value, Mapping):
+            issues.append(
+                ValidationIssue(
+                    code="unsupported_selection_source",
+                    message=f"Layer {layer.id!r} uses a mapping-key selection on non-mapping variable {data.variable!r}.",
+                    suggestion="Choose a mapping source, remove dataset.selection, or use a DataFrame facet filter instead.",
+                    layer_id=layer.id,
+                    axes_id=layer.axes_id,
+                    field="dataset.selection",
+                    details={"variable": data.variable, "type": type(value).__name__, "selection": selection.model_dump()},
+                )
+            )
+            return None
+        if not is_python_literal_key(selection.key):
+            issues.append(
+                ValidationIssue(
+                    code="unsupported_selection_key",
+                    message=f"Layer {layer.id!r} uses a mapping key that cannot be generated as a Python literal.",
+                    suggestion="Use string, number, boolean, None, or tuple keys for mapping repeated panels.",
+                    layer_id=layer.id,
+                    axes_id=layer.axes_id,
+                    field="dataset.selection.key",
+                    details={"variable": data.variable, "key": selection.key},
+                )
+            )
+            return None
+        key = normalize_mapping_key(selection.key)
+        if key not in value:
+            issues.append(
+                ValidationIssue(
+                    code="missing_selection_key",
+                    message=f"Layer {layer.id!r} references missing mapping key {selection.key!r}.",
+                    suggestion="Choose a key that still exists in the live mapping source.",
+                    layer_id=layer.id,
+                    axes_id=layer.axes_id,
+                    field="dataset.selection.key",
+                    details={"variable": data.variable, "key": selection.key},
+                )
+            )
+            return None
+        selected = value[key]
+        selected_label = selection.label or f"{data.variable}[{key!r}]"
+        _validate_selected_value(layer, selected, selected_label, issues)
+        return _ResolvedValue(value=selected, label=selected_label)
+
+    if selection.kind == "sequence_index":
+        if not isinstance(value, list | tuple):
+            issues.append(
+                ValidationIssue(
+                    code="unsupported_selection_source",
+                    message=f"Layer {layer.id!r} uses a sequence-index selection on non-sequence variable {data.variable!r}.",
+                    suggestion="Choose a list or tuple source, remove dataset.selection, or use a DataFrame facet filter instead.",
+                    layer_id=layer.id,
+                    axes_id=layer.axes_id,
+                    field="dataset.selection",
+                    details={"variable": data.variable, "type": type(value).__name__, "selection": selection.model_dump()},
+                )
+            )
+            return None
+        if selection.index is None or selection.index < 0 or selection.index >= len(value):
+            issues.append(
+                ValidationIssue(
+                    code="selection_index_out_of_range",
+                    message=f"Layer {layer.id!r} references sequence index {selection.index!r} outside {data.variable!r}.",
+                    suggestion="Choose an index that exists in the live sequence source.",
+                    layer_id=layer.id,
+                    axes_id=layer.axes_id,
+                    field="dataset.selection.index",
+                    details={"variable": data.variable, "index": selection.index, "length": len(value)},
+                )
+            )
+            return None
+        selected = value[selection.index]
+        selected_label = selection.label or f"{data.variable}[{selection.index}]"
+        _validate_selected_value(layer, selected, selected_label, issues)
+        return _ResolvedValue(value=selected, label=selected_label)
+
+    issues.append(
+        ValidationIssue(
+            code="unsupported_selection_kind",
+            message=f"Layer {layer.id!r} uses unsupported selection kind {selection.kind!r}.",
+            suggestion="Use mapping_key or sequence_index selection.",
+            layer_id=layer.id,
+            axes_id=layer.axes_id,
+            field="dataset.selection.kind",
+            details={"selection": selection.model_dump()},
+        )
+    )
+    return None
+
+
+def _validate_selected_value(
+    layer: PlotLayer,
+    value: Any,
+    label: str,
+    issues: list[ValidationIssue],
+) -> None:
+    type_name = type(value).__name__
+    module = type(value).__module__
+    if _is_dataframe(value) or (module.startswith("pandas") and type_name in {"Series", "Index"}):
+        return
+    if isinstance(value, list | tuple):
+        return
+    shape = _shape(value)
+    if type(value).__module__.startswith("numpy") and shape:
+        return
+    if _length(value) is None:
+        issues.append(
+            ValidationIssue(
+                code="unplottable_selection_value",
+                message=f"Layer {layer.id!r} selects scalar value {label!r}, which cannot be plotted as a panel.",
+                suggestion="Use mapping or sequence items that contain arrays, Series, DataFrames, or list-like values.",
+                layer_id=layer.id,
+                axes_id=layer.axes_id,
+                field="dataset.selection",
+                details={"label": label, "type": type(value).__name__},
+            )
+        )
 
 
 def _check_lengths(

@@ -1,7 +1,17 @@
 from fastapi.testclient import TestClient
 import pandas as pd
 
-from figstudio.models import AxesSpec, DatasetRef, FigureSpec, PlotLayer, RecipeDatasetRef, RecipeLayer
+from figstudio.models import (
+    AxesSpec,
+    DataFilterSpec,
+    DataSelectionSpec,
+    DatasetRef,
+    FigureSpec,
+    PlotLayer,
+    RecipeDatasetRef,
+    RecipeLayer,
+    ReferenceLineSpec,
+)
 from figstudio.registry import VariableRegistry
 from figstudio.server import create_app
 from figstudio.session import FigStudioSession
@@ -164,6 +174,250 @@ def test_validate_endpoint_reports_dimension_mismatch():
     assert validation.status_code == 200
     assert validation.json()["ok"] is False
     assert validation.json()["issues"][0]["code"] == "dimension_mismatch"
+
+
+def test_facet_values_endpoint_returns_ordered_dataframe_values():
+    df = pd.DataFrame(
+        {
+            "condition": ["control", "drug", "control", None, float("nan"), "wash"],
+            "response": [1, 2, 3, 4, 5, 6],
+        }
+    )
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8001)
+    client = TestClient(create_app(session))
+
+    response = client.post(
+        "/api/facet-values",
+        json={"variable": "df", "column": "condition", "max_values": 2},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "values": [
+            {"value": "control", "label": "control"},
+            {"value": "drug", "label": "drug"},
+        ],
+        "truncated": True,
+    }
+
+
+def test_facet_values_endpoint_reports_invalid_source():
+    session = FigStudioSession(registry=VariableRegistry({"values": [1, 2, 3]}), port=8001)
+    client = TestClient(create_app(session))
+
+    response = client.post(
+        "/api/facet-values",
+        json={"variable": "values", "column": "condition", "max_values": 12},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["error"]["code"] == "unsupported_facet_source"
+
+
+def test_repeated_panel_candidates_return_dataframe_mapping_and_sequence_items():
+    df = pd.DataFrame({"condition": ["control", "drug", "control"], "response": [1, 2, 3]})
+    unsafe_key = object()
+    mapping = {
+        ("control", 1): pd.Series([1.0, 2.0], name="signal"),
+        unsafe_key: [3.0, 4.0],
+    }
+    sequence = [[1.0, 2.0], 3.0]
+    session = FigStudioSession(
+        registry=VariableRegistry({"df": df, "signal_map": mapping, "signal_sequence": sequence}),
+        port=8001,
+    )
+    client = TestClient(create_app(session))
+
+    df_response = client.post(
+        "/api/repeated-panel-candidates",
+        json={"variable": "df", "source_kind": "dataframe_column", "column": "condition", "max_values": 2},
+    )
+    mapping_response = client.post(
+        "/api/repeated-panel-candidates",
+        json={"variable": "signal_map", "source_kind": "mapping_keys", "max_values": 12},
+    )
+    sequence_response = client.post(
+        "/api/repeated-panel-candidates",
+        json={"variable": "signal_sequence", "source_kind": "sequence_items", "max_values": 12},
+    )
+
+    assert df_response.status_code == 200
+    assert df_response.json()["source_kind"] == "dataframe_column"
+    assert [item["label"] for item in df_response.json()["candidates"]] == ["control", "drug"]
+    assert mapping_response.status_code == 200
+    mapping_payload = mapping_response.json()
+    assert mapping_payload["source_kind"] == "mapping_keys"
+    assert mapping_payload["candidates"][0]["selection"] == {
+        "kind": "mapping_key",
+        "key": ["control", 1],
+        "index": None,
+        "label": "('control', 1)",
+    }
+    assert mapping_payload["candidates"][0]["summary"]["kind"] == "series"
+    assert mapping_payload["skipped"][0]["reason"] == "Mapping key cannot be represented as a stable Python literal."
+    assert sequence_response.status_code == 200
+    sequence_payload = sequence_response.json()
+    assert sequence_payload["source_kind"] == "sequence_items"
+    assert sequence_payload["candidates"][0]["selection"]["index"] == 0
+    assert sequence_payload["candidates"][0]["summary"]["kind"] == "sequence"
+    assert sequence_payload["candidates"][1]["summary"] is None
+
+
+def test_selected_mapping_layer_validates_and_renders():
+    session = FigStudioSession(registry=VariableRegistry({"signal_map": {"control": [1, 2, 3]}}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        layers=[
+            PlotLayer(
+                id="layer-1",
+                kind="line",
+                dataset=DatasetRef(
+                    variable="signal_map",
+                    selection=DataSelectionSpec(kind="mapping_key", key="control", label="Control"),
+                ),
+            )
+        ]
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    rendered = client.post("/api/render", json={"spec": spec.model_dump(), "format": "svg"})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is True
+    assert rendered.status_code == 200
+    assert "_layer_layer_1_selected = signal_map['control']" in rendered.json()["code"]
+
+
+def test_selection_validation_reports_invalid_sources_and_items():
+    specs = [
+        (
+            VariableRegistry({"values": [1, 2, 3]}),
+            DatasetRef(
+                variable="values",
+                selection=DataSelectionSpec(kind="mapping_key", key="missing", label="Missing"),
+            ),
+            "unsupported_selection_source",
+        ),
+        (
+            VariableRegistry({"signal_map": {"control": [1, 2, 3]}}),
+            DatasetRef(
+                variable="signal_map",
+                selection=DataSelectionSpec(kind="mapping_key", key="missing", label="Missing"),
+            ),
+            "missing_selection_key",
+        ),
+        (
+            VariableRegistry({"signal_sequence": [[1, 2, 3]]}),
+            DatasetRef(
+                variable="signal_sequence",
+                selection=DataSelectionSpec(kind="sequence_index", index=3, label="3"),
+            ),
+            "selection_index_out_of_range",
+        ),
+        (
+            VariableRegistry({"signal_map": {"scalar": 1.0}}),
+            DatasetRef(
+                variable="signal_map",
+                selection=DataSelectionSpec(kind="mapping_key", key="scalar", label="Scalar"),
+            ),
+            "unplottable_selection_value",
+        ),
+        (
+            VariableRegistry({"signal_map": {"control": [1, 2, 3]}}),
+            DatasetRef(
+                variable="signal_map",
+                selection=DataSelectionSpec(kind="mapping_key", key="control", label="Control"),
+                x="time",
+            ),
+            "unsupported_selected_channel",
+        ),
+    ]
+
+    for registry, dataset, expected_code in specs:
+        session = FigStudioSession(registry=registry, port=8001)
+        client = TestClient(create_app(session))
+        spec = FigureSpec(layers=[PlotLayer(id="layer-1", kind="line", dataset=dataset)])
+
+        validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+        codes = [issue["code"] for issue in validation.json()["issues"]]
+
+        assert validation.status_code == 200
+        assert validation.json()["ok"] is False
+        assert expected_code in codes
+
+
+def test_validate_endpoint_reports_filter_column_and_empty_filter_result():
+    df = pd.DataFrame({"condition": ["control"], "response": [1.0]})
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        layers=[
+            PlotLayer(
+                id="missing-filter-column",
+                kind="line",
+                dataset=DatasetRef(
+                    variable="df",
+                    y="response",
+                    filters=[DataFilterSpec(column="missing", value="control")],
+                ),
+            ),
+            PlotLayer(
+                id="empty-filter",
+                kind="line",
+                axes_id="ax0",
+                dataset=DatasetRef(
+                    variable="df",
+                    y="response",
+                    filters=[DataFilterSpec(column="condition", value="drug")],
+                ),
+            ),
+        ]
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    issues = validation.json()["issues"]
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is False
+    assert [issue["code"] for issue in issues] == ["missing_column", "empty_filter_result"]
+    assert issues[0]["field"] == "dataset.filters.column"
+    assert issues[1]["severity"] == "warning"
+
+
+def test_reference_line_api_smoke_workflow_without_data_layer():
+    session = FigStudioSession(registry=VariableRegistry({}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(reference_lines=[ReferenceLineSpec(id="baseline", value=0.0)])
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    rendered = client.post("/api/render", json={"spec": spec.model_dump(), "format": "svg"})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is True
+    assert rendered.status_code == 200
+    assert "<svg" in rendered.json()["image"]
+    assert "axes_flat[0].axhline(0.0" in rendered.json()["code"]
+
+
+def test_validate_endpoint_reports_reference_line_errors():
+    session = FigStudioSession(registry=VariableRegistry({}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        axes=[AxesSpec(id="ax0", yscale="log")],
+        reference_lines=[
+            ReferenceLineSpec(id="missing-axis", axes_id="missing", value=1.0),
+            ReferenceLineSpec(id="bad-log-value", axes_id="ax0", value=0.0),
+        ],
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    issues = validation.json()["issues"]
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is False
+    assert [issue["code"] for issue in issues] == ["missing_axes", "invalid_reference_line_value"]
+    assert issues[0]["field"] == "reference_lines.axes_id"
+    assert issues[1]["field"] == "reference_lines.value"
 
 
 def test_validate_endpoint_reports_layout_geometry_errors():

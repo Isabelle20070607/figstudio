@@ -6,6 +6,8 @@ FigStudio is a public beta local figure workflow for turning data already presen
 
 Users install the Python package, open a local browser editor from a script or notebook, apply optional project style profiles, map variables to plot layers or supported statistics recipes, preview authoritative Matplotlib output, export files, save generated OO code, and optionally save the GUI session as a portable `FigureSpec` JSON file.
 
+Future product direction and candidate work live in the [roadmap](roadmap.md).
+
 ## Target Users
 
 - Scientific Python users who prepare data in scripts or notebooks and want faster Matplotlib figure assembly.
@@ -18,20 +20,24 @@ Users install the Python package, open a local browser editor from a script or n
 
 - Install from a Python package and run without Node/npm at runtime.
 - Launch from Python with `figstudio.open(locals(), ...)` or from `figstudio demo`.
-- Inspect safe summaries of DataFrame, Series, ndarray, list, tuple, and existing Matplotlib Figure objects.
+- Inspect safe summaries of DataFrame, Series, ndarray, mapping, list, tuple, and existing Matplotlib Figure objects.
 - Create and edit the public beta plot kinds and bundled statistics recipes.
-- Configure manuscript presets, project style profiles, panel layouts, axes settings, layer styles, and text/arrow annotations.
+- Create DataFrame-backed faceted panels from first-seen column values, plus mapping-key and sequence-index repeated panels for normal plot layers.
+- Configure manuscript presets, project style profiles, panel layouts, axes settings, layer styles, reference lines, and text/arrow annotations.
 - Load `.figstudio/styles.json` project style profiles and store profile references plus explicit override fields in `FigureSpec`.
 - Render previews and exports through Matplotlib Agg.
 - Save generated code to one unique controlled script block or return notebook replacement code.
 - Import and export `.figstudio.json` session specs.
-- Store recipe intent and column mappings in specs, not raw DataFrame data.
+- Store recipe intent, column mappings, facet equality filters, and repeated-panel selections in specs, not raw data.
 - Show validation issue cards with field-level repair suggestions when the live session provides enough context.
 
 ## User Stories
 
 - As a scientific Python user, I want to open an editor from `locals()` so I can reuse data I already prepared.
 - As a researcher, I want manuscript presets and annotation controls so I can prepare publication-style figures faster.
+- As a researcher, I want baseline and threshold reference lines so common scientific cutoffs are visible without encoding them as data layers.
+- As a researcher, I want to split a DataFrame plot or recipe into small multiples by a condition column without manually creating every axes.
+- As a researcher, I want to split normal plot layers by mapping keys or sequence items when my prepared data is already grouped outside a DataFrame.
 - As a project maintainer, I want shared style profiles so figures can inherit project defaults while still recording explicit overrides.
 - As a cautious script user, I want writeback limited to a marked block so my data-processing code is not changed.
 - As a notebook user, I want replacement cell code instead of automatic notebook mutation.
@@ -44,6 +50,9 @@ Users install the Python package, open a local browser editor from a script or n
 - A notebook-style session without `script_path` returns complete replacement code.
 - Generated code imports Matplotlib only and can run with the same user variables.
 - Export downloads PNG, SVG, and PDF produced by Matplotlib.
+- Reference lines generate Matplotlib `axhline` or `axvline` code and round-trip through `.figstudio.json`.
+- DataFrame facet panels generate filtered Matplotlib code, preserve shared-axis flags, and round-trip through `.figstudio.json`.
+- Mapping-key and sequence-index repeated panels generate selected-item Matplotlib code and round-trip through `.figstudio.json`.
 - Validation, render, export, and writeback failures return readable structured errors, including repair suggestions for common validation issues.
 - Existing Figure inspection preserves supported line, scatter, image, and bar data as editable generated layers.
 - A built wheel includes the React editor and serves it from `127.0.0.1` after clean install.

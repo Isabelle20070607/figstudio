@@ -61,11 +61,27 @@ def _demo_session(port: int | None = None, project_path: str | None = None) -> F
             "signal": np.sin(x),
             "baseline": np.cos(x) * 0.25,
             "error": np.full_like(x, 0.12),
+            "condition": np.where(x < 3.4, "control", np.where(x < 6.8, "drug", "washout")),
         }
     )
     heatmap = np.outer(np.sin(np.linspace(0, np.pi, 32)), np.cos(np.linspace(0, np.pi, 48)))
+    signal_map = {
+        condition: group["signal"].to_numpy()
+        for condition, group in df.groupby("condition", sort=False)
+    }
+    signal_sequence = [
+        df.loc[df["condition"] == condition, "signal"].to_numpy()
+        for condition in ["control", "drug", "washout"]
+    ]
     return FigStudioSession(
-        registry=VariableRegistry({"df": df, "heatmap": heatmap}),
+        registry=VariableRegistry(
+            {
+                "df": df,
+                "heatmap": heatmap,
+                "signal_map": signal_map,
+                "signal_sequence": signal_sequence,
+            }
+        ),
         port=port or DEFAULT_DEMO_PORT,
         project_path=project_path,
     )

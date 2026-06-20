@@ -56,9 +56,10 @@ CLI 会打印 session URL，并持续运行直到被中断。
 | `version` | Spec 格式标记，当前默认 `1`。 |
 | `mode` | `explore` 或 `publish`。 |
 | `width`, `height`, `dpi` | Figure size 和 render/export DPI。 |
-| `rows`, `cols`, `axes` | Panel layout grid 和 axes geometry。 |
+| `rows`, `cols`, `share_x`, `share_y`, `axes` | Panel layout grid、shared-axis flags 和 axes geometry。 |
 | `layers` | Plot layer definitions。 |
 | `recipes` | Statistics recipe definitions。 |
+| `reference_lines` | 用于 baselines、thresholds 和 cutoff labels 的 horizontal/vertical guide lines。 |
 | `annotations` | Text 和 arrow annotations。 |
 | `style` | Figure title、font、layout、built-in preset 和 project profile reference。 |
 | `show` | 生成代码是否调用 `plt.show()`。 |
@@ -67,7 +68,9 @@ CLI 会打印 session URL，并持续运行直到被中断。
 
 支持的 `RecipeLayer.kind` 值为 `mean_sem_line`、`grouped_points` 和 `paired_before_after`。
 
-`DatasetRef` 字段可通过 `x_variable`、`y_variable`、`z_variable` 和 `yerr_variable` 指向 DataFrame 列或独立变量。`RecipeDatasetRef.variable` 必须指向 pandas DataFrame，且只保存列名。
+`ReferenceLineSpec.orientation` 为 `horizontal` 或 `vertical`。`value` 是 numeric value，`style` 复用 plot layer 的 label、color、line style、linewidth 和 alpha 字段。生成代码会输出 Matplotlib `axhline` 或 `axvline`。
+
+`DatasetRef` 字段可通过 `x_variable`、`y_variable`、`z_variable` 和 `yerr_variable` 指向 DataFrame 列或独立变量。普通 plot layer 也可以设置 `DatasetRef.selection`，使用 `kind: "mapping_key"` 或 `kind: "sequence_index"` 在 repeated panels 绘图前选出一个 item。`RecipeDatasetRef.variable` 必须指向 pandas DataFrame，且只保存列名。两种 dataset ref 都可以包含 `filters`；每个 `DataFilterSpec` 保存 `column`、`op: "eq"`、`value` 和可选 `label`，用于 DataFrame-backed facet panels。
 
 `FigureStyle.profile_id` 引用项目 style profile。`FigureStyle.profile_overrides` 列出应使用 spec 显式值而不是 profile 默认值的 figure 字段：`width`、`height`、`dpi`、`font_family`、`font_size` 和 `constrained_layout`。
 
@@ -82,6 +85,8 @@ CLI 会打印 session URL，并持续运行直到被中断。
 | `GET /api/style-profiles` | 已加载 project style profiles、source path 和非致命 load warnings。 |
 | `GET /api/spec` | 当前 `FigureSpec`。 |
 | `POST /api/validate` | 基于 live namespace 校验 `FigureSpec`。 |
+| `POST /api/facet-values` | 为 small-multiple panel authoring 返回 DataFrame 中按出现顺序去重的取值。 |
+| `POST /api/repeated-panel-candidates` | 为 repeated-panel authoring 返回 DataFrame values、mapping keys 或 sequence indices，以及有界 item summaries。 |
 | `POST /api/spec` | 保存当前 spec、校验，并返回 SVG render response。 |
 | `POST /api/render` | 渲染 SVG 或 PNG preview。 |
 | `POST /api/save-code` | 写入受控脚本块，或返回 notebook replacement code。 |
@@ -106,9 +111,9 @@ HTTP errors 使用：
 }
 ```
 
-当前 error codes 为 `validation_failed`、`render_failed`、`export_failed`、`writeback_failed` 和 `writeback_io_failed`。Writeback errors 出现在 `SaveCodeResponse.error` 中；render、export 和 validation failures 是 HTTP errors。
+当前 error codes 为 `validation_failed`、`render_failed`、`export_failed`、`writeback_failed`、`writeback_io_failed`、`missing_variable`、`missing_column`、`unsupported_facet_source` 和 `unsupported_repeated_panel_source`。Writeback errors 出现在 `SaveCodeResponse.error` 中；render、export、validation、facet-value 和 repeated-panel candidate failures 是 HTTP errors。
 
-Validation issue codes 包括 `missing_style_profile`、`invalid_grid_size`、`duplicate_axes_id`、`invalid_axes_span`、`axes_out_of_bounds`、`axes_overlap`、`missing_axes`、`missing_variable`、`missing_column`、`unsupported_recipe_source`、`dimension_mismatch`、`requires_2d_data` 和 `log_scale_non_positive`。
+Validation issue codes 包括 `missing_style_profile`、`invalid_grid_size`、`duplicate_axes_id`、`invalid_axes_span`、`axes_out_of_bounds`、`axes_overlap`、`missing_axes`、`missing_variable`、`missing_column`、`unsupported_recipe_source`、`unsupported_filter_source`、`empty_filter_result`、`unsupported_selection_source`、`unsupported_selection_key`、`missing_selection_key`、`selection_index_out_of_range`、`unsupported_selected_channel`、`unplottable_selection_value`、`dimension_mismatch`、`requires_2d_data`、`log_scale_non_positive` 和 `invalid_reference_line_value`。
 
 每个 validation issue 可能包含用于 UI repair guidance 的 `suggestion`。`details` 可以包含有界上下文，例如 `available_variables`、`available_columns`、`available_axes`、`available_profiles` 和 `suggested_value`；不会包含原始 DataFrame contents。
 
@@ -116,7 +121,8 @@ Validation issue codes 包括 `missing_style_profile`、`invalid_grid_size`、`d
 
 - 生成绘图代码必须能在不 import FigStudio 的情况下运行。
 - 生成 recipe code 可以调用现有 pandas DataFrame 变量的方法，但 imports 仍限于 Matplotlib。
-- 保存的 FigureSpec 文件依赖下一次 session 中兼容的变量名、DataFrame 列和数据形状。
-- 保存的 recipe specs 只存列映射和 recipe intent，不保存原始数据。
+- 保存的 FigureSpec 文件依赖下一次 session 中兼容的变量名、mapping keys、sequence indices、DataFrame 列和数据形状。
+- 保存的 recipe、facet 和 repeated-panel specs 只存列映射、等值 filters、selections、labels 和 recipe intent，不保存原始数据。
+- 保存的 reference line specs 只存 numeric constants 和 style，不保存派生数据。
 - Runtime wheel 安装不应要求 Node/npm。
 - Notebook workflows 返回代码，不直接编辑 Notebook 文件。

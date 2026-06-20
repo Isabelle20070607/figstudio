@@ -16,6 +16,22 @@ export type RecipeKind = "mean_sem_line" | "grouped_points" | "paired_before_aft
 
 export type FigurePreset = "custom" | "journal_single" | "journal_double" | "poster" | "slide";
 
+export type ReferenceLineOrientation = "horizontal" | "vertical";
+
+export interface DataFilterSpec {
+  column: string;
+  op: "eq";
+  value?: unknown;
+  label?: string | null;
+}
+
+export interface DataSelectionSpec {
+  kind: "mapping_key" | "sequence_index";
+  key?: unknown;
+  index?: number | null;
+  label?: string | null;
+}
+
 export interface VariableSummary {
   name: string;
   kind: string;
@@ -29,6 +45,7 @@ export interface VariableSummary {
 
 export interface DatasetRef {
   variable: string;
+  selection?: DataSelectionSpec | null;
   x_variable?: string | null;
   y_variable?: string | null;
   z_variable?: string | null;
@@ -37,6 +54,7 @@ export interface DatasetRef {
   y?: string | null;
   z?: string | null;
   yerr?: string | null;
+  filters: DataFilterSpec[];
 }
 
 export interface RecipeDatasetRef {
@@ -45,6 +63,7 @@ export interface RecipeDatasetRef {
   y?: string | null;
   group?: string | null;
   subject?: string | null;
+  filters: DataFilterSpec[];
 }
 
 export interface LayerStyle {
@@ -108,6 +127,14 @@ export interface AnnotationSpec {
   xytext?: [number, number] | null;
 }
 
+export interface ReferenceLineSpec {
+  id: string;
+  axes_id: string;
+  orientation: ReferenceLineOrientation;
+  value: number;
+  style: LayerStyle;
+}
+
 export interface FigureStyle {
   preset: FigurePreset;
   profile_id?: string | null;
@@ -150,9 +177,12 @@ export interface FigureSpec {
   dpi: number;
   rows: number;
   cols: number;
+  share_x: boolean;
+  share_y: boolean;
   axes: AxesSpec[];
   layers: PlotLayer[];
   recipes: RecipeLayer[];
+  reference_lines: ReferenceLineSpec[];
   annotations: AnnotationSpec[];
   style: FigureStyle;
   show: boolean;
@@ -204,4 +234,48 @@ export interface ValidationIssue {
 export interface ValidationResponse {
   ok: boolean;
   issues: ValidationIssue[];
+}
+
+export interface FacetValuesRequest {
+  variable: string;
+  column: string;
+  max_values: number;
+}
+
+export interface FacetValue {
+  value?: unknown;
+  label: string;
+}
+
+export interface FacetValuesResponse {
+  values: FacetValue[];
+  truncated: boolean;
+}
+
+export type RepeatedPanelSourceKind = "dataframe_column" | "mapping_keys" | "sequence_items";
+
+export interface RepeatedPanelCandidatesRequest {
+  variable: string;
+  source_kind?: RepeatedPanelSourceKind | null;
+  column?: string | null;
+  max_values: number;
+}
+
+export interface RepeatedPanelCandidate {
+  label: string;
+  value?: unknown;
+  selection?: DataSelectionSpec | null;
+  summary?: VariableSummary | null;
+}
+
+export interface RepeatedPanelSkippedCandidate {
+  label: string;
+  reason: string;
+}
+
+export interface RepeatedPanelCandidatesResponse {
+  source_kind: RepeatedPanelSourceKind;
+  candidates: RepeatedPanelCandidate[];
+  skipped: RepeatedPanelSkippedCandidate[];
+  truncated: boolean;
 }

@@ -24,9 +24,17 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
 
   await expect(page.getByTestId("app-shell")).toBeVisible();
   await expect(page.getByTestId("variable-panel")).toContainText("df");
+  await expect(page.getByTestId("variable-panel")).toContainText("signal_map");
+  await expect(page.getByTestId("variable-panel")).toContainText("signal_sequence");
   await expect(page.getByTestId("inspector-panel")).toContainText("Polish");
   await expect(page.getByTestId("empty-preview")).toBeVisible();
   await expect(page.getByTestId("empty-preview-steps")).toContainText("Choose a variable");
+
+  await page.locator('[data-testid="variable-row"][data-variable-name="signal_map"]').click();
+  await expect(page.getByTestId("repeated-panel-kind-note")).toContainText("mapping keys");
+  await page.locator('[data-testid="variable-row"][data-variable-name="signal_sequence"]').click();
+  await expect(page.getByTestId("repeated-panel-kind-note")).toContainText("sequence items");
+  await page.locator('[data-testid="variable-row"][data-variable-name="df"]').click();
 
   const previewBox = await page.locator("#preview-panel").boundingBox();
   const inspectorBox = await page.getByTestId("inspector-panel").boundingBox();
@@ -46,6 +54,12 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await page.getByTestId("add-recipe-button").click();
   await expect(page.locator('[data-testid="layer-row"]').filter({ hasText: "recipe · mean_sem_line" })).toBeVisible();
   await expect(page.getByTestId("status-line")).toContainText("Preview synced");
+  await page.getByTestId("facet-column-select").selectOption("condition");
+  await page.getByTestId("facet-share-y-field-input").check();
+  await page.getByTestId("create-facet-panels-button").click();
+  await expect(page.getByTestId("active-axes-select").locator("option")).toHaveCount(2);
+  await expect(page.getByTestId("code-panel")).toContainText("filtered_df");
+  await expect(page.getByTestId("code-panel")).toContainText("sharex=True, sharey=True");
 
   await page.getByTestId("style-preset-field-select").selectOption("journal_single");
   await expect(page.getByTestId("figure-width-field-input")).toHaveValue("3.35");
@@ -69,6 +83,11 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await expect(page.getByTestId("annotation-card")).toHaveCount(1);
   await page.getByTestId("annotation-text-field-input").fill("Peak");
   await expect(page.getByTestId("annotation-text-field-input")).toHaveValue("Peak");
+  await page.getByTestId("add-horizontal-reference-line-button").click();
+  await expect(page.getByTestId("reference-line-card")).toHaveCount(1);
+  await page.getByTestId("reference-line-label-field-input").fill("Baseline");
+  await expect(page.getByTestId("reference-line-label-field-input")).toHaveValue("Baseline");
+  await expect(page.getByTestId("code-panel")).toContainText("axhline");
 
   const specDownloadPromise = page.waitForEvent("download");
   await page.getByTestId("export-spec-button").click();
@@ -79,10 +98,14 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   const exportedSpec = JSON.parse(readFileSync(exportedSpecPath, "utf-8"));
   expect(exportedSpec.style.profile_id).toBe("manuscript");
   expect(exportedSpec.style.profile_overrides).toContain("width");
+  expect(exportedSpec.reference_lines).toHaveLength(1);
+  expect(exportedSpec.reference_lines[0].style.label).toBe("Baseline");
+  expect(exportedSpec.recipes.some((recipe: any) => recipe.dataset.filters?.[0]?.column === "condition")).toBe(true);
   await page.getByTestId("import-spec-input").setInputFiles(exportedSpecPath);
   await expect(page.getByTestId("style-profile-field-select")).toHaveValue("manuscript");
   await expect(page.getByTestId("layout-preset-field-select")).toHaveValue("large_left");
   await expect(page.getByTestId("active-axes-select").locator("option")).toHaveCount(3);
+  await expect(page.getByTestId("reference-line-card")).toHaveCount(1);
 
   const figureDownloadPromise = page.waitForEvent("download");
   await page.getByTestId("export-svg-button").click();
@@ -94,6 +117,18 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await expect(page.getByTestId("status-line")).toContainText("Notebook replacement code ready");
   await expect(page.getByTestId("save-message")).toContainText("No script_path was provided");
   await expect(page.getByTestId("save-message")).toContainText("Copy the replacement cell code");
+});
+
+test("creates mapping-key repeated panels from the layer builder", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("variable-panel")).toBeVisible();
+
+  await page.locator('[data-testid="variable-row"][data-variable-name="signal_map"]').click();
+  await expect(page.getByTestId("repeated-panel-kind-note")).toContainText("mapping keys");
+  await page.getByTestId("create-facet-panels-button").click();
+
+  await expect(page.getByTestId("active-axes-select").locator("option")).toHaveCount(2);
+  await expect(page.getByTestId("code-panel")).toContainText("signal_map['baseline']");
 });
 
 test("validation issues select the affected editor context", async ({ page }, testInfo) => {

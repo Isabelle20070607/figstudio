@@ -12,7 +12,7 @@ Presets 是起点。你仍可编辑 figure width、height、DPI、font family、
 
 Panel layout presets 包括 single panel、two columns、two rows、two by two、large left 和 large top。
 
-Editor 把 layout 存成 axes geometry：`row`、`col`、`rowspan` 和 `colspan`。每个 axes 占一个 cell 的 dense grid 会生成更简单的 `plt.subplots` 代码。带 span 或非 dense layout 会生成 Matplotlib `GridSpec` 代码。
+Editor 把 layout 存成 axes geometry：`row`、`col`、`rowspan` 和 `colspan`。每个 axes 占一个 cell 的 dense grid 会生成更简单的 `plt.subplots` 代码，并可传递 shared X/Y flags。带 span 或非 dense layout 会生成 Matplotlib `GridSpec` 代码。
 
 完整 `subplot_mosaic` authoring 不属于当前 schema。
 

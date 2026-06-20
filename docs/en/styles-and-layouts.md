@@ -12,7 +12,7 @@ Presets are starting points. You can still edit figure width, height, DPI, font 
 
 Panel layout presets include single panel, two columns, two rows, two by two, large left, and large top.
 
-The editor stores layout as axes geometry: `row`, `col`, `rowspan`, and `colspan`. Dense one-cell-per-axes grids generate simpler `plt.subplots` code. Spanned or non-dense layouts generate Matplotlib `GridSpec` code.
+The editor stores layout as axes geometry: `row`, `col`, `rowspan`, and `colspan`. Dense one-cell-per-axes grids generate simpler `plt.subplots` code and can pass shared X/Y flags. Spanned or non-dense layouts generate Matplotlib `GridSpec` code.
 
 Full `subplot_mosaic` authoring is not part of the current schema.
 

@@ -7,16 +7,28 @@ from typing import get_args
 from figstudio.models import (
     AnnotationSpec,
     AxesSpec,
+    DataFilterSpec,
+    DataSelectionSpec,
     DatasetRef,
+    FacetValue,
+    FacetValuesRequest,
+    FacetValuesResponse,
     FigurePreset,
     FigureSpec,
     FigureStyle,
     LayerStyle,
     PlotKind,
     PlotLayer,
+    ReferenceLineOrientation,
+    ReferenceLineSpec,
     RecipeDatasetRef,
     RecipeKind,
     RecipeLayer,
+    RepeatedPanelCandidate,
+    RepeatedPanelCandidatesRequest,
+    RepeatedPanelCandidatesResponse,
+    RepeatedPanelSourceKind,
+    RepeatedPanelSkippedCandidate,
     RenderResponse,
     SaveCodeResponse,
     SessionInfo,
@@ -54,12 +66,16 @@ def test_frontend_plot_and_preset_literals_match_backend_contracts():
     assert _type_literals(source, "PlotKind") == set(get_args(PlotKind))
     assert _type_literals(source, "RecipeKind") == set(get_args(RecipeKind))
     assert _type_literals(source, "FigurePreset") == set(get_args(FigurePreset))
+    assert _type_literals(source, "ReferenceLineOrientation") == set(get_args(ReferenceLineOrientation))
+    assert _type_literals(source, "RepeatedPanelSourceKind") == set(get_args(RepeatedPanelSourceKind))
 
 
 def test_frontend_interfaces_cover_backend_model_fields():
     source = _typescript_source()
     model_interfaces = {
         VariableSummary: "VariableSummary",
+        DataFilterSpec: "DataFilterSpec",
+        DataSelectionSpec: "DataSelectionSpec",
         DatasetRef: "DatasetRef",
         RecipeDatasetRef: "RecipeDatasetRef",
         LayerStyle: "LayerStyle",
@@ -67,6 +83,7 @@ def test_frontend_interfaces_cover_backend_model_fields():
         RecipeLayer: "RecipeLayer",
         AxesSpec: "AxesSpec",
         AnnotationSpec: "AnnotationSpec",
+        ReferenceLineSpec: "ReferenceLineSpec",
         FigureStyle: "FigureStyle",
         FigureSpec: "FigureSpec",
         SessionInfo: "SessionInfo",
@@ -77,6 +94,13 @@ def test_frontend_interfaces_cover_backend_model_fields():
         SaveCodeResponse: "SaveCodeResponse",
         ValidationIssue: "ValidationIssue",
         ValidationResponse: "ValidationResponse",
+        FacetValuesRequest: "FacetValuesRequest",
+        FacetValue: "FacetValue",
+        FacetValuesResponse: "FacetValuesResponse",
+        RepeatedPanelCandidatesRequest: "RepeatedPanelCandidatesRequest",
+        RepeatedPanelCandidate: "RepeatedPanelCandidate",
+        RepeatedPanelSkippedCandidate: "RepeatedPanelSkippedCandidate",
+        RepeatedPanelCandidatesResponse: "RepeatedPanelCandidatesResponse",
     }
 
     for model, interface in model_interfaces.items():

@@ -36,8 +36,9 @@ Follow Codex AGENTS guidance: keep this file to durable repository expectations,
 | `docs/*/reference/api.md` | Python API, CLI, REST endpoints, FigureSpec fields, error payloads, compatibility notes | user tutorial, product backlog |
 | `docs/*/architecture/technical-design.md` | architecture, data flow, safety decisions, packaging, verification | user tutorial, product backlog |
 | `docs/*/contributing/developer-guide.md` | local development, feature-change workflow, tests, package checks, documentation sync | product positioning, user tutorial |
-| `docs/*/product/prd.md` | beta product definition, user stories, scope, acceptance criteria, non-goals | setup steps, API reference |
-| `docs/*/product/roadmap.md` | Now/Next/Later planning and explicit non-goals | current user instructions, detailed API contracts |
+| `docs/*/product/prd.md` | beta product definition, user stories, scope, acceptance criteria, non-goals | setup steps, API reference, future backlog |
+| `docs/*/product/roadmap.md` | roadmap index linking to strategy, initiatives, and deferred work | current user instructions, detailed API contracts, long backlog lists |
+| `docs/*/product/roadmap/*.md` | roadmap strategy, theme-based initiatives, deferred work, and revisit conditions | current beta commitments, user tutorials, API reference |
 | `docs/*/product/release-notes.md` | localized user-facing release notes and what's new | full changelog duplication, future roadmap |
 
 ## Documentation Rules
@@ -49,6 +50,6 @@ Follow Codex AGENTS guidance: keep this file to durable repository expectations,
 - Before finishing documentation work, scan `README.md`, `docs`, and `AGENTS.md` for stale planning labels, phase-style headings, and obsolete implementation-flow wording.
 - For onboarding heading duplication, run `rg -n "^#+ .*?(Quick Start|快速开始)" README.md docs` and allow only `README.md` plus localized getting-started pages.
 - Before finishing locale docs work, verify paired paths under `docs/en` and `docs/zh`.
-- If a feature moves between beta scope and roadmap, update both locale copies of `product/prd.md` and `product/roadmap.md` together so current commitments and future plans stay consistent.
+- If a feature moves between beta scope and roadmap, update both locale copies of `product/prd.md` and the relevant `product/roadmap.md` or `product/roadmap/*.md` pages together so current commitments and future plans stay consistent.
 - Before any public tag or package publish, update `CHANGELOG.md` plus both locale copies of `product/release-notes.md` from the full release delta: compare the previous public tag to the new tag with `git log` and `git diff`, not only the tag target commit.
 - For public package work, verify `uv run --extra dev pytest`, frontend build/bundle/e2e checks, `uv build`, and a clean wheel install that serves `/api/session`.

@@ -6,7 +6,18 @@ import keyword
 import re
 from dataclasses import dataclass
 
-from figstudio.models import AxesSpec, DatasetRef, FigureSpec, LayerStyle, PlotLayer, RecipeLayer, StyleProfile
+from figstudio.models import (
+    AxesSpec,
+    DatasetRef,
+    FigureSpec,
+    LayerStyle,
+    PlotLayer,
+    RecipeDatasetRef,
+    RecipeLayer,
+    ReferenceLineSpec,
+    StyleProfile,
+)
+from figstudio.selection import python_literal_key
 from figstudio.style_profiles import (
     resolved_figure_value,
     resolved_layer_style,
@@ -83,7 +94,8 @@ class MatplotlibCodegen:
             layout = (
                 f"fig, axes = plt.subplots({spec.rows}, {spec.cols}, "
                 f"figsize=({width!r}, {height!r}), dpi={dpi!r}, "
-                f"squeeze=False, constrained_layout={constrained_layout!r})"
+                f"squeeze=False, sharex={spec.share_x!r}, sharey={spec.share_y!r}, "
+                f"constrained_layout={constrained_layout!r})"
             )
             lines.append(layout)
             lines.append("axes_flat = axes.ravel()")
@@ -111,7 +123,9 @@ class MatplotlibCodegen:
         for layer in spec.layers:
             axis_index = axis_lookup.get(layer.axes_id, 0)
             style = resolved_layer_style(spec, layer, self.style_profiles)
-            lines.extend(self._layer_code(layer, style, axis_index, spec.axes[axis_index]))
+            filter_lines, filtered_layer = self._filtered_layer(layer)
+            lines.extend(filter_lines)
+            lines.extend(self._layer_code(filtered_layer, style, axis_index, spec.axes[axis_index]))
             if style.label and layer.kind not in {"heatmap", "contour"}:
                 legend_axes.add(axis_index)
             lines.append("")
@@ -119,8 +133,17 @@ class MatplotlibCodegen:
         for recipe in spec.recipes:
             axis_index = axis_lookup.get(recipe.axes_id, 0)
             style = resolved_recipe_style(spec, recipe, self.style_profiles)
-            lines.extend(self._recipe_code(recipe, style, axis_index))
+            filter_lines, filtered_recipe = self._filtered_recipe(recipe)
+            lines.extend(filter_lines)
+            lines.extend(self._recipe_code(filtered_recipe, style, axis_index))
             if style.label:
+                legend_axes.add(axis_index)
+            lines.append("")
+
+        for reference_line in spec.reference_lines:
+            axis_index = axis_lookup.get(reference_line.axes_id, 0)
+            lines.extend(self._reference_line_code(reference_line, axis_index))
+            if reference_line.style.label:
                 legend_axes.add(axis_index)
             lines.append("")
 
@@ -255,6 +278,19 @@ class MatplotlibCodegen:
         if recipe.kind == "paired_before_after":
             return self._paired_before_after_code(recipe, style, axis_index)
         raise ValueError(f"Unsupported recipe kind: {recipe.kind}")
+
+    def _reference_line_code(self, reference_line: ReferenceLineSpec, axis_index: int) -> list[str]:
+        ax = f"axes_flat[{axis_index}]"
+        method = "axhline" if reference_line.orientation == "horizontal" else "axvline"
+        style = reference_line.style
+        kwargs = _kwargs(
+            label=style.label,
+            color=style.color,
+            linestyle=style.linestyle,
+            linewidth=style.linewidth,
+            alpha=style.alpha,
+        )
+        return [f"{ax}.{method}({reference_line.value!r}, {kwargs})".replace(", )", ")")]
 
     def _mean_sem_line_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:
         data = recipe.dataset
@@ -404,6 +440,18 @@ class MatplotlibCodegen:
     def _recipe_prefix(self, recipe: RecipeLayer) -> str:
         return f"_recipe_{recipe.id.replace('-', '_')}"
 
+    def _filtered_layer(self, layer: PlotLayer) -> tuple[list[str], PlotLayer]:
+        lines, dataset = _filter_dataset(layer.dataset, f"_layer_{layer.id.replace('-', '_')}")
+        if not lines:
+            return [], layer
+        return lines, layer.model_copy(update={"dataset": dataset})
+
+    def _filtered_recipe(self, recipe: RecipeLayer) -> tuple[list[str], RecipeLayer]:
+        lines, dataset = _filter_dataset(recipe.dataset, self._recipe_prefix(recipe))
+        if not lines:
+            return [], recipe
+        return lines, recipe.model_copy(update={"dataset": dataset})
+
     def _recipe_error_stat(self, recipe: RecipeLayer) -> str | None:
         if recipe.error == "sem":
             return "sem"
@@ -457,6 +505,46 @@ def _uses_dense_subplots(spec: FigureSpec) -> bool:
         if axis.rowspan != 1 or axis.colspan != 1:
             return False
     return True
+
+
+def _filter_dataset(
+    data: DatasetRef | RecipeDatasetRef,
+    prefix: str,
+) -> tuple[list[str], DatasetRef | RecipeDatasetRef]:
+    source_var = _safe_var(data.variable)
+    current_var = source_var
+    lines: list[str] = []
+    update: dict[str, object] = {}
+    selection = getattr(data, "selection", None)
+    if selection is not None:
+        selected_var = f"{prefix}_selected"
+        if selection.kind == "mapping_key":
+            lines.append(f"{selected_var} = {source_var}[{python_literal_key(selection.key)}]")
+        elif selection.kind == "sequence_index":
+            lines.append(f"{selected_var} = {source_var}[{selection.index!r}]")
+        current_var = selected_var
+        update["selection"] = None
+
+    if data.filters:
+        filtered_var = f"{prefix}_filtered_df"
+        lines.append(f"{filtered_var} = {current_var}")
+        current_var = filtered_var
+        update["filters"] = []
+    for data_filter in data.filters:
+        if data_filter.op != "eq":
+            continue
+        column = data_filter.column
+        if data_filter.value is None:
+            lines.append(f"{current_var} = {current_var}[{current_var}[{column!r}].isna()]")
+        else:
+            lines.append(
+                f"{current_var} = {current_var}[{current_var}[{column!r}] == "
+                f"{data_filter.value!r}]"
+            )
+    if not lines:
+        return [], data
+    update["variable"] = current_var
+    return lines, data.model_copy(update=update)
 
 
 def _grid_slice(axis: AxesSpec) -> str:

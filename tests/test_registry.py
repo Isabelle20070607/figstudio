@@ -28,3 +28,19 @@ def test_injected_private_variables_are_hidden_from_summaries():
     summaries = registry.summaries()
 
     assert [summary.name for summary in summaries] == ["visible"]
+
+
+def test_mapping_summary_uses_sample_records():
+    pd = pytest.importorskip("pandas")
+    mapping = {
+        "control": pd.Series([1.0, 2.0], name="signal"),
+        "drug": [3.0, 4.0],
+    }
+
+    summaries = VariableRegistry({"signal_map": mapping}).summaries()
+
+    assert summaries[0].name == "signal_map"
+    assert summaries[0].kind == "mapping"
+    assert summaries[0].shape == [2]
+    assert summaries[0].sample[0]["key"] == "control"
+    assert summaries[0].sample[0]["value_summary"]["kind"] == "series"

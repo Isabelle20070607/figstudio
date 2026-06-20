@@ -1,12 +1,15 @@
 from figstudio.codegen import MatplotlibCodegen
 from figstudio.models import (
     AxesSpec,
+    DataFilterSpec,
+    DataSelectionSpec,
     DatasetRef,
     FigureSpec,
     LayerStyle,
     PlotLayer,
     RecipeDatasetRef,
     RecipeLayer,
+    ReferenceLineSpec,
 )
 
 
@@ -51,6 +54,115 @@ def test_dense_grid_keeps_subplots_codegen():
     assert "fig, axes = plt.subplots(2, 2" in code
     assert "fig.add_gridspec" not in code
     assert "axes_flat = axes.ravel()" in code
+
+
+def test_dense_grid_can_share_axes():
+    spec = FigureSpec(
+        rows=1,
+        cols=2,
+        share_x=True,
+        share_y=True,
+        axes=[
+            AxesSpec(id="ax0", row=0, col=0),
+            AxesSpec(id="ax1", row=0, col=1),
+        ],
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "sharex=True, sharey=True" in code
+
+
+def test_generates_filtered_dataframe_layer_code():
+    spec = FigureSpec(
+        layers=[
+            PlotLayer(
+                id="layer-1",
+                kind="line",
+                dataset=DatasetRef(
+                    variable="df",
+                    x="time",
+                    y="signal",
+                    filters=[DataFilterSpec(column="condition", value="drug", label="Drug")],
+                ),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "_layer_layer_1_filtered_df = df" in code
+    assert "_layer_layer_1_filtered_df[_layer_layer_1_filtered_df['condition'] == 'drug']" in code
+    assert "axes_flat[0].plot(_layer_layer_1_filtered_df['time'], _layer_layer_1_filtered_df['signal']" in code
+    assert "figstudio" not in code.lower()
+
+
+def test_generates_selected_mapping_layer_code_before_plotting():
+    spec = FigureSpec(
+        layers=[
+            PlotLayer(
+                id="layer-1",
+                kind="line",
+                dataset=DatasetRef(
+                    variable="signal_map",
+                    selection=DataSelectionSpec(kind="mapping_key", key=("control", 1), label="Control"),
+                ),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "_layer_layer_1_selected = signal_map[('control', 1)]" in code
+    assert "axes_flat[0].plot(range(len(_layer_layer_1_selected)), _layer_layer_1_selected" in code
+    assert "figstudio" not in code.lower()
+
+
+def test_generates_selected_sequence_dataframe_filter_code_before_plotting():
+    spec = FigureSpec(
+        layers=[
+            PlotLayer(
+                id="layer-1",
+                kind="line",
+                dataset=DatasetRef(
+                    variable="frames",
+                    selection=DataSelectionSpec(kind="sequence_index", index=2, label="2"),
+                    x="time",
+                    y="signal",
+                    filters=[DataFilterSpec(column="condition", value="drug", label="Drug")],
+                ),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "_layer_layer_1_selected = frames[2]" in code
+    assert "_layer_layer_1_filtered_df = _layer_layer_1_selected" in code
+    assert "axes_flat[0].plot(_layer_layer_1_filtered_df['time'], _layer_layer_1_filtered_df['signal']" in code
+
+
+def test_generates_null_filtered_recipe_code():
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="grouped_points",
+                dataset=RecipeDatasetRef(
+                    variable="df",
+                    x="condition",
+                    y="response",
+                    filters=[DataFilterSpec(column="batch", value=None, label="Missing batch")],
+                ),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "_recipe_recipe_1_filtered_df = df" in code
+    assert "_recipe_recipe_1_filtered_df[_recipe_recipe_1_filtered_df['batch'].isna()]" in code
+    assert "_recipe_recipe_1_df = _recipe_recipe_1_filtered_df" in code
 
 
 def test_spanned_layout_uses_gridspec_codegen():
@@ -156,6 +268,41 @@ def test_axis_can_disable_legend_for_labeled_layers():
 
     assert "label='Values'" in code
     assert ".legend()" not in code
+
+
+def test_generates_reference_line_code_and_legend():
+    spec = FigureSpec(
+        reference_lines=[
+            ReferenceLineSpec(
+                id="baseline",
+                orientation="horizontal",
+                value=0.0,
+                style=LayerStyle(
+                    label="Baseline",
+                    color="#6b7280",
+                    linestyle="--",
+                    linewidth=1.2,
+                    alpha=0.8,
+                ),
+            ),
+            ReferenceLineSpec(
+                id="cutoff",
+                orientation="vertical",
+                value=2.5,
+                style=LayerStyle(label="Cutoff", color="#dc2626"),
+            ),
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "axes_flat[0].axhline(0.0" in code
+    assert "axes_flat[0].axvline(2.5" in code
+    assert "label='Baseline'" in code
+    assert "linestyle='--'" in code
+    assert "label='Cutoff'" in code
+    assert code.count("axes_flat[0].legend()") == 1
+    assert "figstudio" not in code.lower()
 
 
 def test_generates_mean_sem_line_recipe_code():

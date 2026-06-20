@@ -4,7 +4,7 @@
 
 ## 架构
 
-FigStudio 是 Python 负责核心能力、本地 React 负责编辑界面的应用。Python 负责数据访问、校验、Matplotlib 渲染、代码生成、导出、受控写回和包内静态资源服务。React 负责 editor state、变量/layer/recipe 控件、annotations、preview display、validation display、FigureSpec import/export 和用户操作。
+FigStudio 是 Python 负责核心能力、本地 React 负责编辑界面的应用。Python 负责数据访问、facet value lookup、校验、Matplotlib 渲染、代码生成、导出、受控写回和包内静态资源服务。React 负责 editor state、变量/layer/recipe/facet 控件、reference lines、annotations、preview display、validation display、FigureSpec import/export 和用户操作。
 
 ```mermaid
 flowchart TD
@@ -32,11 +32,11 @@ flowchart TD
 - `registry.py`：保存 live Python objects，并向 UI 暴露安全 `VariableSummary` records。
 - `models.py`：定义 Pydantic request、response、error、session、validation 和 FigureSpec models。
 - `style_profiles.py`：加载 `.figstudio/styles.json`，报告非致命 warnings，并在不修改 `FigureSpec` 的前提下解析 profile defaults。
-- `validation.py`：校验 layout geometry、缺失变量/列、非 DataFrame recipe sources、缺失 axes、dimension mismatches、二维要求和 log-scale positivity，并在有上下文时添加 field-level repair suggestions。
+- `validation.py`：校验 layout geometry、缺失变量/列、非 DataFrame recipe 或 filter sources、缺失 axes、facet filters、dimension mismatches、二维要求和 log-scale positivity，并在有上下文时添加 field-level repair suggestions。
 - `codegen.py`：把 `FigureSpec` 转换为纯 Matplotlib OO code，不引入 FigStudio runtime dependency。
 - `render.py`：在 Agg backend 下用 live namespace 执行生成代码，并返回 preview/export bytes。
 - `sync.py`：替换唯一受控脚本块，并拒绝不安全 marker states。
-- `server.py`：暴露本地 FastAPI app，并服务打包后的 React editor。
+- `server.py`：暴露本地 FastAPI app、facet value lookup，并服务打包后的 React editor。
 - `spec_io.py`：读取和保存可移植 `.figstudio.json` FigureSpec files。
 
 ## Data Flow
@@ -55,7 +55,7 @@ flowchart TD
 
 - 本地服务默认绑定 `127.0.0.1`。
 - UI 收到的是 summaries，不是任意 Python objects 的直接序列化副本。
-- FigureSpec recipe entries 保存 recipe intent 和 column references，不保存原始 DataFrame contents。
+- FigureSpec recipe 和 facet entries 保存 intent、column references、equality filters 和 labels，不保存原始 DataFrame contents。
 - 生成绘图代码不得 import 或依赖 FigStudio。
 - 生成绘图代码必须包含已解析的 profile values 作为普通 Matplotlib arguments，不能运行时查找 profile。
 - 脚本写回只替换唯一受控 block，并拒绝缺失、重复、不匹配或嵌套 markers。

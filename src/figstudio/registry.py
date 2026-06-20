@@ -64,6 +64,8 @@ class VariableRegistry:
             return self._summarize_series(name, value)
         if module.startswith("numpy") and hasattr(value, "shape"):
             return self._summarize_array(name, value)
+        if isinstance(value, Mapping):
+            return self._summarize_mapping(name, value)
         if isinstance(value, list | tuple):
             return self._summarize_sequence(name, value)
         if type_name == "Figure" and module.startswith("matplotlib"):
@@ -128,5 +130,28 @@ class VariableRegistry:
             type_name=type(value).__name__,
             shape=[len(value)],
             sample=[_jsonable(item) for item in value[: self.sample_rows]],
+            truncated=len(value) > self.sample_rows,
+        )
+
+    def _summarize_mapping(self, name: str, value: Mapping[Any, Any]) -> VariableSummary:
+        sample = []
+        for index, (key, item) in enumerate(value.items()):
+            if index >= self.sample_rows:
+                break
+            item_summary = self._summarize("value", item)
+            sample.append(
+                {
+                    "key": _jsonable(key),
+                    "label": str(key),
+                    "value_type": type(item).__name__,
+                    "value_summary": item_summary.model_dump() if item_summary is not None else _jsonable(item),
+                }
+            )
+        return VariableSummary(
+            name=name,
+            kind="mapping",
+            type_name=type(value).__name__,
+            shape=[len(value)],
+            sample=sample,
             truncated=len(value) > self.sample_rows,
         )

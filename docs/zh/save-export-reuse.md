@@ -38,7 +38,7 @@ Notebook 风格会话返回替换 cell code，不直接修改 Notebook 文件。
 
 使用 FigureSpec import/export 按钮保存或恢复 `.figstudio.json` GUI 会话。
 
-`FigureSpec` 保存的是 editor state，不保存原始数据。复用 spec 需要新的 Python session 提供兼容的变量名、DataFrame 列和数据形状。
+`FigureSpec` 保存的是 editor state，不保存原始数据。复用 spec 需要新的 Python session 提供兼容的变量名、DataFrame 列、facet filter values 和数据形状。
 
 也可以使用 Python helper：
 

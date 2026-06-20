@@ -56,9 +56,10 @@ The CLI prints the session URL and runs until interrupted.
 | `version` | Spec format marker, currently defaulting to `1`. |
 | `mode` | `explore` or `publish`. |
 | `width`, `height`, `dpi` | Figure size and render/export DPI. |
-| `rows`, `cols`, `axes` | Panel layout grid and axes geometry. |
+| `rows`, `cols`, `share_x`, `share_y`, `axes` | Panel layout grid, shared-axis flags, and axes geometry. |
 | `layers` | Plot layer definitions. |
 | `recipes` | Statistics recipe definitions. |
+| `reference_lines` | Horizontal and vertical guide lines for baselines, thresholds, and cutoff labels. |
 | `annotations` | Text and arrow annotations. |
 | `style` | Figure title, font, layout, built-in preset, and project profile reference. |
 | `show` | Whether generated code calls `plt.show()`. |
@@ -67,7 +68,9 @@ Supported `PlotLayer.kind` values are `line`, `scatter`, `bar`, `barh`, `hist`, 
 
 Supported `RecipeLayer.kind` values are `mean_sem_line`, `grouped_points`, and `paired_before_after`.
 
-`DatasetRef` fields can point to DataFrame columns or independent variables through `x_variable`, `y_variable`, `z_variable`, and `yerr_variable`. `RecipeDatasetRef.variable` must name a pandas DataFrame and stores column names only.
+`ReferenceLineSpec.orientation` is `horizontal` or `vertical`. The `value` field is numeric and `style` uses the same label, color, line style, linewidth, and alpha fields as plot layers. Generated code emits Matplotlib `axhline` or `axvline`.
+
+`DatasetRef` fields can point to DataFrame columns or independent variables through `x_variable`, `y_variable`, `z_variable`, and `yerr_variable`. Normal plot layers can also set `DatasetRef.selection` with `kind: "mapping_key"` or `kind: "sequence_index"` so repeated panels can select an item before plotting. `RecipeDatasetRef.variable` must name a pandas DataFrame and stores column names only. Both dataset refs can include `filters`; each `DataFilterSpec` stores `column`, `op: "eq"`, `value`, and optional `label` for DataFrame-backed facet panels.
 
 `FigureStyle.profile_id` references a project style profile. `FigureStyle.profile_overrides` lists figure fields that should use explicit spec values instead of profile defaults: `width`, `height`, `dpi`, `font_family`, `font_size`, and `constrained_layout`.
 
@@ -82,6 +85,8 @@ The local FastAPI server is created per session and binds to `127.0.0.1` by defa
 | `GET /api/style-profiles` | Loaded project style profiles, source path, and non-fatal load warnings. |
 | `GET /api/spec` | Current `FigureSpec`. |
 | `POST /api/validate` | Validate a `FigureSpec` against the live namespace. |
+| `POST /api/facet-values` | Return ordered unique DataFrame values for small-multiple panel authoring. |
+| `POST /api/repeated-panel-candidates` | Return DataFrame values, mapping keys, or sequence indices plus bounded item summaries for repeated-panel authoring. |
 | `POST /api/spec` | Store the current spec, validate it, and return an SVG render response. |
 | `POST /api/render` | Render SVG or PNG preview. |
 | `POST /api/save-code` | Write a controlled script block or return notebook replacement code. |
@@ -106,9 +111,9 @@ HTTP errors use:
 }
 ```
 
-Current error codes are `validation_failed`, `render_failed`, `export_failed`, `writeback_failed`, and `writeback_io_failed`. Writeback errors appear inside `SaveCodeResponse.error`; render, export, and validation failures are HTTP errors.
+Current error codes are `validation_failed`, `render_failed`, `export_failed`, `writeback_failed`, `writeback_io_failed`, `missing_variable`, `missing_column`, `unsupported_facet_source`, and `unsupported_repeated_panel_source`. Writeback errors appear inside `SaveCodeResponse.error`; render, export, validation, facet-value, and repeated-panel candidate failures are HTTP errors.
 
-Validation issue codes include `missing_style_profile`, `invalid_grid_size`, `duplicate_axes_id`, `invalid_axes_span`, `axes_out_of_bounds`, `axes_overlap`, `missing_axes`, `missing_variable`, `missing_column`, `unsupported_recipe_source`, `dimension_mismatch`, `requires_2d_data`, and `log_scale_non_positive`.
+Validation issue codes include `missing_style_profile`, `invalid_grid_size`, `duplicate_axes_id`, `invalid_axes_span`, `axes_out_of_bounds`, `axes_overlap`, `missing_axes`, `missing_variable`, `missing_column`, `unsupported_recipe_source`, `unsupported_filter_source`, `empty_filter_result`, `unsupported_selection_source`, `unsupported_selection_key`, `missing_selection_key`, `selection_index_out_of_range`, `unsupported_selected_channel`, `unplottable_selection_value`, `dimension_mismatch`, `requires_2d_data`, `log_scale_non_positive`, and `invalid_reference_line_value`.
 
 Each validation issue may include `suggestion` for UI repair guidance. `details` can include bounded context such as `available_variables`, `available_columns`, `available_axes`, `available_profiles`, and `suggested_value`; it does not include raw DataFrame contents.
 
@@ -116,7 +121,8 @@ Each validation issue may include `suggestion` for UI repair guidance. `details`
 
 - Generated plotting code must run without importing FigStudio.
 - Generated recipe code may call methods on existing pandas DataFrame variables, but imports remain limited to Matplotlib.
-- Saved FigureSpec files depend on compatible variable names, DataFrame columns, and data shapes in the next session.
-- Saved recipe specs store column mappings and recipe intent, not raw data.
+- Saved FigureSpec files depend on compatible variable names, mapping keys, sequence indices, DataFrame columns, and data shapes in the next session.
+- Saved recipe, facet, and repeated-panel specs store column mappings, equality filters, selections, labels, and recipe intent, not raw data.
+- Saved reference line specs store numeric constants and style only, not derived data.
 - Runtime wheel installs should not require Node/npm.
 - Notebook workflows return code and do not directly edit notebook files.

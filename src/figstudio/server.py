@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from importlib.resources import files
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, HTTPException, WebSocket
 from fastapi.responses import HTMLResponse, Response
@@ -16,16 +17,27 @@ from figstudio.models import (
     ExportRequest,
     ExportResponse,
     ErrorDetail,
+    FacetValue,
+    FacetValuesRequest,
+    FacetValuesResponse,
     FigureSpec,
     RenderRequest,
     RenderResponse,
+    RepeatedPanelCandidate,
+    RepeatedPanelCandidatesRequest,
+    RepeatedPanelCandidatesResponse,
+    RepeatedPanelSkippedCandidate,
+    DataSelectionSpec,
     SaveCodeRequest,
     SaveCodeResponse,
     StyleProfilesResponse,
     ValidationRequest,
     ValidationResponse,
 )
+from figstudio.registry import _jsonable
+from figstudio.registry import VariableRegistry
 from figstudio.render import RenderEngine
+from figstudio.selection import is_python_literal_key
 from figstudio.style_profiles import load_style_profiles, profile_map
 from figstudio.sync import CodeSyncEngine, CodeSyncError
 from figstudio.validation import validate_figure_spec
@@ -101,6 +113,14 @@ def create_app(session: "FigStudioSession") -> FastAPI:
     @app.post("/api/validate")
     def validate(request: ValidationRequest) -> ValidationResponse:
         return _validate_spec(session, request.spec)
+
+    @app.post("/api/facet-values")
+    def facet_values(request: FacetValuesRequest) -> FacetValuesResponse:
+        return _facet_values(session, request)
+
+    @app.post("/api/repeated-panel-candidates")
+    def repeated_panel_candidates(request: RepeatedPanelCandidatesRequest) -> RepeatedPanelCandidatesResponse:
+        return _repeated_panel_candidates(session, request)
 
     @app.post("/api/spec")
     def update_spec(spec: FigureSpec) -> RenderResponse:
@@ -226,6 +246,215 @@ def _validate_spec(session: "FigStudioSession", spec: FigureSpec) -> ValidationR
         spec,
         style_profiles=profile_map(_style_profiles(session)),
     )
+
+
+def _facet_values(session: "FigStudioSession", request: FacetValuesRequest) -> FacetValuesResponse:
+    namespace = session.registry.namespace_dict()
+    value = namespace.get(request.variable)
+    if value is None:
+        _raise_api_error(
+            "missing_variable",
+            f"Variable {request.variable!r} is not available.",
+            details={"variable": request.variable},
+        )
+    if not _is_dataframe(value):
+        _raise_api_error(
+            "unsupported_facet_source",
+            f"Facet values require a pandas DataFrame; {request.variable!r} is {type(value).__name__}.",
+            details={"variable": request.variable, "type": type(value).__name__},
+        )
+    columns = [str(column) for column in getattr(value, "columns", [])]
+    if request.column not in columns:
+        _raise_api_error(
+            "missing_column",
+            f"Column {request.column!r} is not available on DataFrame {request.variable!r}.",
+            details={"variable": request.variable, "column": request.column, "available_columns": columns[:12]},
+        )
+
+    values, truncated = _ordered_facet_values(value, request.column, request.max_values)
+    return FacetValuesResponse(values=values, truncated=truncated)
+
+
+def _repeated_panel_candidates(
+    session: "FigStudioSession",
+    request: RepeatedPanelCandidatesRequest,
+) -> RepeatedPanelCandidatesResponse:
+    namespace = session.registry.namespace_dict()
+    value = namespace.get(request.variable)
+    if value is None:
+        _raise_api_error(
+            "missing_variable",
+            f"Variable {request.variable!r} is not available.",
+            details={"variable": request.variable},
+        )
+
+    source_kind = request.source_kind or _candidate_source_kind(value)
+    if source_kind is None:
+        _raise_api_error(
+            "unsupported_repeated_panel_source",
+            f"Repeated panels require a DataFrame, mapping, list, or tuple source; {request.variable!r} is {type(value).__name__}.",
+            details={"variable": request.variable, "type": type(value).__name__},
+        )
+
+    limit = max(1, min(100, request.max_values or 12))
+    if source_kind == "dataframe_column":
+        if not _is_dataframe(value):
+            _raise_api_error(
+                "unsupported_repeated_panel_source",
+                f"DataFrame repeated-panel candidates require a pandas DataFrame; {request.variable!r} is {type(value).__name__}.",
+                details={"variable": request.variable, "type": type(value).__name__},
+            )
+        if not request.column:
+            _raise_api_error(
+                "missing_column",
+                "DataFrame repeated-panel candidates require a column.",
+                details={"variable": request.variable, "available_columns": _dataframe_columns(value)[:12]},
+            )
+        columns = _dataframe_columns(value)
+        if request.column not in columns:
+            _raise_api_error(
+                "missing_column",
+                f"Column {request.column!r} is not available on DataFrame {request.variable!r}.",
+                details={"variable": request.variable, "column": request.column, "available_columns": columns[:12]},
+            )
+        values, truncated = _ordered_facet_values(value, request.column, limit)
+        return RepeatedPanelCandidatesResponse(
+            source_kind=source_kind,
+            candidates=[
+                RepeatedPanelCandidate(label=item.label, value=item.value)
+                for item in values
+            ],
+            truncated=truncated,
+        )
+
+    if source_kind == "mapping_keys":
+        if not isinstance(value, Mapping):
+            _raise_api_error(
+                "unsupported_repeated_panel_source",
+                f"Mapping repeated-panel candidates require a mapping; {request.variable!r} is {type(value).__name__}.",
+                details={"variable": request.variable, "type": type(value).__name__},
+            )
+        return _mapping_panel_candidates(value, limit)
+
+    if source_kind == "sequence_items":
+        if not isinstance(value, list | tuple):
+            _raise_api_error(
+                "unsupported_repeated_panel_source",
+                f"Sequence repeated-panel candidates require a list or tuple; {request.variable!r} is {type(value).__name__}.",
+                details={"variable": request.variable, "type": type(value).__name__},
+            )
+        return _sequence_panel_candidates(value, limit)
+
+    _raise_api_error(
+        "unsupported_repeated_panel_source",
+        f"Unsupported repeated-panel candidate source {source_kind!r}.",
+        details={"variable": request.variable, "source_kind": source_kind},
+    )
+
+
+def _ordered_facet_values(value: Any, column: str, max_values: int) -> tuple[list[FacetValue], bool]:
+    limit = max(1, min(100, max_values or 12))
+    values: list[FacetValue] = []
+    seen: set[str] = set()
+    truncated = False
+    for raw_value in value[column].tolist():
+        if _is_null_facet_value(raw_value):
+            continue
+        json_value = _jsonable(raw_value)
+        key = repr(json_value)
+        if key in seen:
+            continue
+        seen.add(key)
+        if len(values) >= limit:
+            truncated = True
+            break
+        values.append(FacetValue(value=json_value, label=str(json_value)))
+    return values, truncated
+
+
+def _mapping_panel_candidates(value: Mapping[Any, Any], limit: int) -> RepeatedPanelCandidatesResponse:
+    candidates: list[RepeatedPanelCandidate] = []
+    skipped: list[RepeatedPanelSkippedCandidate] = []
+    truncated = False
+    for key, item in value.items():
+        label = str(key)
+        if not is_python_literal_key(key):
+            skipped.append(
+                RepeatedPanelSkippedCandidate(
+                    label=label,
+                    reason="Mapping key cannot be represented as a stable Python literal.",
+                )
+            )
+            continue
+        if len(candidates) >= limit:
+            truncated = True
+            break
+        candidates.append(
+            RepeatedPanelCandidate(
+                label=label,
+                selection=DataSelectionSpec(kind="mapping_key", key=key, label=label),
+                summary=_candidate_summary(item),
+            )
+        )
+    return RepeatedPanelCandidatesResponse(
+        source_kind="mapping_keys",
+        candidates=candidates,
+        skipped=skipped,
+        truncated=truncated,
+    )
+
+
+def _sequence_panel_candidates(value: list[Any] | tuple[Any, ...], limit: int) -> RepeatedPanelCandidatesResponse:
+    candidates: list[RepeatedPanelCandidate] = []
+    truncated = len(value) > limit
+    for index, item in enumerate(value[:limit]):
+        label = str(index)
+        candidates.append(
+            RepeatedPanelCandidate(
+                label=label,
+                selection=DataSelectionSpec(kind="sequence_index", index=index, label=label),
+                summary=_candidate_summary(item),
+            )
+        )
+    return RepeatedPanelCandidatesResponse(
+        source_kind="sequence_items",
+        candidates=candidates,
+        truncated=truncated,
+    )
+
+
+def _candidate_summary(value: Any):
+    summaries = VariableRegistry({"selected": value}).summaries()
+    return summaries[0] if summaries else None
+
+
+def _candidate_source_kind(value: Any):
+    if _is_dataframe(value):
+        return "dataframe_column"
+    if isinstance(value, Mapping):
+        return "mapping_keys"
+    if isinstance(value, list | tuple):
+        return "sequence_items"
+    return None
+
+
+def _dataframe_columns(value: Any) -> list[str]:
+    return [str(column) for column in getattr(value, "columns", [])]
+
+
+def _is_dataframe(value: object) -> bool:
+    return type(value).__module__.startswith("pandas") and type(value).__name__ == "DataFrame"
+
+
+def _is_null_facet_value(value: object) -> bool:
+    if value is None:
+        return True
+    try:
+        import pandas as pd
+
+        return bool(pd.isna(value))
+    except Exception:
+        return False
 
 
 def _raise_if_validation_failed(response: ValidationResponse) -> None:

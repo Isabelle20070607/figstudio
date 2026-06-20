@@ -26,6 +26,22 @@ RecipeKind = Literal["mean_sem_line", "grouped_points", "paired_before_after"]
 
 FigurePreset = Literal["custom", "journal_single", "journal_double", "poster", "slide"]
 
+ReferenceLineOrientation = Literal["horizontal", "vertical"]
+
+
+class DataFilterSpec(BaseModel):
+    column: str
+    op: Literal["eq"] = "eq"
+    value: Any = None
+    label: str | None = None
+
+
+class DataSelectionSpec(BaseModel):
+    kind: Literal["mapping_key", "sequence_index"]
+    key: Any = None
+    index: int | None = None
+    label: str | None = None
+
 
 class VariableSummary(BaseModel):
     name: str
@@ -40,6 +56,7 @@ class VariableSummary(BaseModel):
 
 class DatasetRef(BaseModel):
     variable: str
+    selection: DataSelectionSpec | None = None
     x_variable: str | None = None
     y_variable: str | None = None
     z_variable: str | None = None
@@ -48,6 +65,7 @@ class DatasetRef(BaseModel):
     y: str | None = None
     z: str | None = None
     yerr: str | None = None
+    filters: list[DataFilterSpec] = Field(default_factory=list)
 
 
 class RecipeDatasetRef(BaseModel):
@@ -56,6 +74,7 @@ class RecipeDatasetRef(BaseModel):
     y: str | None = None
     group: str | None = None
     subject: str | None = None
+    filters: list[DataFilterSpec] = Field(default_factory=list)
 
 
 class LayerStyle(BaseModel):
@@ -119,6 +138,21 @@ class AnnotationSpec(BaseModel):
     xytext: tuple[float, float] | None = None
 
 
+class ReferenceLineSpec(BaseModel):
+    id: str
+    axes_id: str = "ax0"
+    orientation: ReferenceLineOrientation = "horizontal"
+    value: float = 0.0
+    style: LayerStyle = Field(
+        default_factory=lambda: LayerStyle(
+            color="#6b7280",
+            linestyle="--",
+            linewidth=1.2,
+            alpha=0.85,
+        )
+    )
+
+
 class FigureStyle(BaseModel):
     preset: FigurePreset = "custom"
     profile_id: str | None = None
@@ -161,9 +195,12 @@ class FigureSpec(BaseModel):
     dpi: int = 120
     rows: int = 1
     cols: int = 1
+    share_x: bool = False
+    share_y: bool = False
     axes: list[AxesSpec] = Field(default_factory=lambda: [AxesSpec()])
     layers: list[PlotLayer] = Field(default_factory=list)
     recipes: list[RecipeLayer] = Field(default_factory=list)
+    reference_lines: list[ReferenceLineSpec] = Field(default_factory=list)
     annotations: list[AnnotationSpec] = Field(default_factory=list)
     style: FigureStyle = Field(default_factory=FigureStyle)
     show: bool = False
@@ -210,6 +247,51 @@ class ValidationRequest(BaseModel):
 class ValidationResponse(BaseModel):
     ok: bool = True
     issues: list[ValidationIssue] = Field(default_factory=list)
+
+
+class FacetValuesRequest(BaseModel):
+    variable: str
+    column: str
+    max_values: int = 12
+
+
+class FacetValue(BaseModel):
+    value: Any = None
+    label: str
+
+
+class FacetValuesResponse(BaseModel):
+    values: list[FacetValue] = Field(default_factory=list)
+    truncated: bool = False
+
+
+RepeatedPanelSourceKind = Literal["dataframe_column", "mapping_keys", "sequence_items"]
+
+
+class RepeatedPanelCandidatesRequest(BaseModel):
+    variable: str
+    source_kind: RepeatedPanelSourceKind | None = None
+    column: str | None = None
+    max_values: int = 12
+
+
+class RepeatedPanelCandidate(BaseModel):
+    label: str
+    value: Any = None
+    selection: DataSelectionSpec | None = None
+    summary: VariableSummary | None = None
+
+
+class RepeatedPanelSkippedCandidate(BaseModel):
+    label: str
+    reason: str
+
+
+class RepeatedPanelCandidatesResponse(BaseModel):
+    source_kind: RepeatedPanelSourceKind
+    candidates: list[RepeatedPanelCandidate] = Field(default_factory=list)
+    skipped: list[RepeatedPanelSkippedCandidate] = Field(default_factory=list)
+    truncated: bool = False
 
 
 class ErrorDetail(BaseModel):

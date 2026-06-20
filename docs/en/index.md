@@ -5,7 +5,7 @@ FigStudio is for scientific Python users who already have data in a script or no
 Use this path if you are making figures:
 
 1. [Get Started](getting-started.md): install FigStudio, run the demo, open from a script or notebook, and create the first DataFrame plot.
-2. [Scientific Workflows](scientific-workflows.md): use plot layers, statistics recipes, existing Matplotlib figures, annotations, and publication polish.
+2. [Scientific Workflows](scientific-workflows.md): use plot layers, statistics recipes, faceted panels, reference lines, existing Matplotlib figures, annotations, and publication polish.
 3. [Styles And Layouts](styles-and-layouts.md): apply manuscript presets, panel layouts, GridSpec output, and project style profiles.
 4. [Save, Export, Reuse](save-export-reuse.md): save code safely, export PNG/SVG/PDF, and reuse `.figstudio.json` specs.
 5. [Troubleshooting](troubleshooting.md): recover from validation, render, export, writeback, and style profile issues.
@@ -18,7 +18,10 @@ Reference and project material:
 | Architecture and implementation baseline | [Technical Design](architecture/technical-design.md) |
 | Development workflow | [Developer Guide](contributing/developer-guide.md) |
 | Current beta scope | [PRD](product/prd.md) |
-| Future work | [Roadmap](product/roadmap.md) |
+| Roadmap overview | [Roadmap](product/roadmap.md) |
+| Roadmap strategy | [Roadmap Strategy](product/roadmap/strategy.md) |
+| Theme-based future work | [Roadmap Initiatives](product/roadmap/initiatives.md) |
+| Deferred roadmap items | [Deferred Work](product/roadmap/deferred.md) |
 | Release notes and what's new | [Release Notes](product/release-notes.md) |
 
 Chinese documentation is available at [../zh/index.md](../zh/index.md).

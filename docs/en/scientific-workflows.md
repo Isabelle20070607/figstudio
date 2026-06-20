@@ -28,6 +28,16 @@ Recipes store variable names, column names, style choices, and target axes in th
 
 Try `examples/general_stats_recipe.py` to exercise all three bundled recipes with synthetic repeated-measures data.
 
+## Faceted Panels
+
+Use **Facet panels** in the Explore builder when a plot layer or statistics recipe is backed by a pandas DataFrame. Choose a categorical DataFrame column, a panel limit, and shared-axis options; FigStudio creates one axes per first-seen value and adds filtered layers or recipes to those axes.
+
+Facet specs stay data-light. They store equality filters such as `condition == "drug"`, display labels, target axes, and shared-axis flags, not DataFrame rows. Generated code filters the live DataFrame variable with pandas expressions before calling Matplotlib.
+
+For normal plot layers, the same repeated-panel controls also work with mapping and sequence sources. A mapping source repeats by literal-safe keys, and a list or tuple repeats by item index. FigStudio stores a `DatasetRef.selection`, selects the live item before plotting, and skips candidates that are not compatible with the current layer settings.
+
+Mapping and sequence repeated panels are intentionally v1-scoped: use index X or an independent X variable, and do not use same-source selected X or Y-error channels yet. Statistics recipes remain DataFrame-only.
+
 ## Publication Polish
 
 Use **Publish** mode when you are preparing manuscript or presentation output. It exposes publication-oriented controls such as font family and constrained layout while preserving the same generated-code path as **Explore** mode.
@@ -35,10 +45,17 @@ Use **Publish** mode when you are preparing manuscript or presentation output. I
 The right-side polish panel covers:
 
 - figure size, DPI, title, font settings, built-in presets, and project style profile;
-- panel layout rows, columns, and presets;
+- panel layout rows, columns, shared-axis options, and presets;
 - axes titles, labels, scales, limits, grid, legend, and colorbar fallback;
 - layer and recipe target axes, labels, colors, markers, line styles, linewidths, alpha, colormap, histogram bins, and fill alpha;
+- horizontal and vertical reference lines for baselines, thresholds, cutoff markers, and guide labels;
 - text and arrow annotations on the active axes.
+
+## Reference Lines
+
+Use **Reference lines** to add horizontal or vertical guide lines to the active axes. They are useful for baselines, thresholds, cutoff values, and other cross-domain constants that should stay independent from the plotted data.
+
+Reference lines store an orientation, numeric value, optional legend label, color, line style, linewidth, and alpha in the `FigureSpec`. Generated code uses Matplotlib `axhline` or `axvline`, so previews, exports, and saved code stay on the same path.
 
 ## Annotations
 

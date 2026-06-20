@@ -1,5 +1,8 @@
 import type {
+  FacetValuesResponse,
   FigureSpec,
+  RepeatedPanelCandidatesRequest,
+  RepeatedPanelCandidatesResponse,
   RenderResponse,
   SaveCodeResponse,
   SessionInfo,
@@ -47,6 +50,16 @@ export const api = {
     request<ValidationResponse>("/api/validate", {
       method: "POST",
       body: JSON.stringify({ spec })
+    }),
+  facetValues: (variable: string, column: string, maxValues = 12) =>
+    request<FacetValuesResponse>("/api/facet-values", {
+      method: "POST",
+      body: JSON.stringify({ variable, column, max_values: maxValues })
+    }),
+  repeatedPanelCandidates: (payload: RepeatedPanelCandidatesRequest) =>
+    request<RepeatedPanelCandidatesResponse>("/api/repeated-panel-candidates", {
+      method: "POST",
+      body: JSON.stringify(payload)
     }),
   updateSpec: (spec: FigureSpec) =>
     request<RenderResponse>("/api/spec", {

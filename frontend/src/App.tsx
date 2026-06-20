@@ -21,14 +21,21 @@ import { useAppStore } from "./store";
 import type {
   AnnotationSpec,
   AxesSpec,
+  DataFilterSpec,
+  FacetValue,
   DatasetRef,
   FigurePreset,
   FigureSpec,
   LayerStyle,
   PlotKind,
   PlotLayer,
+  ReferenceLineOrientation,
+  ReferenceLineSpec,
   RecipeKind,
   RecipeLayer,
+  RepeatedPanelCandidate,
+  RepeatedPanelSkippedCandidate,
+  RepeatedPanelSourceKind,
   StyleProfile,
   StyleProfilesResponse,
   ValidationIssue,
@@ -57,6 +64,7 @@ const recipeLabels: Record<RecipeKind, string> = {
   paired_before_after: "Paired before/after"
 };
 const errorModes: RecipeLayer["error"][] = ["sem", "sd", "none"];
+const referenceLineOrientations: ReferenceLineOrientation[] = ["horizontal", "vertical"];
 
 const colors = ["#2563eb", "#0f766e", "#dc2626", "#9333ea", "#b45309", "#111827"];
 const markers = ["", "o", "s", "^", "D", "x"];
@@ -65,6 +73,7 @@ const cmaps = ["viridis", "magma", "plasma", "cividis", "coolwarm", "Greys"];
 const scales: AxesSpec["xscale"][] = ["linear", "log", "symlog", "logit"];
 const indexSource = "__index__";
 const noneSource = "__none__";
+const defaultFacetLimit = 12;
 
 const stylePresets: Record<
   FigurePreset,
@@ -204,6 +213,17 @@ type FigureOverrideField =
   | "font_size"
   | "constrained_layout";
 
+interface FacetBuildPayload {
+  axes: AxesSpec[];
+  rows: number;
+  cols: number;
+  shareX: boolean;
+  shareY: boolean;
+  layers?: PlotLayer[];
+  recipes?: RecipeLayer[];
+  message?: string;
+}
+
 function createId(prefix: string): string {
   if ("randomUUID" in crypto) {
     return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
@@ -319,6 +339,94 @@ function secondColumn(variable?: VariableSummary): string {
   return variable?.columns[1] ?? variable?.columns[0] ?? "";
 }
 
+function isNumericDtype(dtype?: string): boolean {
+  return Boolean(dtype && /int|float|double|decimal|number|bool/i.test(dtype));
+}
+
+function defaultFacetColumn(variable?: VariableSummary): string {
+  return variable?.columns.find((column) => !isNumericDtype(variable.dtypes[column])) ?? firstColumn(variable);
+}
+
+function facetDisplayLabel(value: FacetValue): string {
+  return value.label || String(value.value ?? "");
+}
+
+function facetFilter(column: string, value: FacetValue): DataFilterSpec {
+  return {
+    column,
+    op: "eq",
+    value: value.value ?? null,
+    label: facetDisplayLabel(value)
+  };
+}
+
+function facetLayout(count: number): { rows: number; cols: number } {
+  const cols = Math.max(1, Math.min(3, count));
+  return {
+    rows: Math.max(1, Math.ceil(count / cols)),
+    cols
+  };
+}
+
+function createFacetAxes(values: FacetValue[], column: string, cols: number): AxesSpec[] {
+  return values.map((value, index) => ({
+    id: `ax${index}`,
+    row: Math.floor(index / cols),
+    col: index % cols,
+    rowspan: 1,
+    colspan: 1,
+    title: `${column}: ${facetDisplayLabel(value)}`,
+    xlabel: "",
+    ylabel: "",
+    xscale: "linear",
+    yscale: "linear",
+    xlim: null,
+    ylim: null,
+    grid: false,
+    legend: true,
+    colorbar: false
+  }));
+}
+
+function repeatedPanelLabel(candidate: RepeatedPanelCandidate): string {
+  return candidate.label || String(candidate.value ?? "");
+}
+
+function createRepeatedPanelAxes(candidates: RepeatedPanelCandidate[], titlePrefix: string, cols: number): AxesSpec[] {
+  return candidates.map((candidate, index) => ({
+    id: `ax${index}`,
+    row: Math.floor(index / cols),
+    col: index % cols,
+    rowspan: 1,
+    colspan: 1,
+    title: `${titlePrefix}: ${repeatedPanelLabel(candidate)}`,
+    xlabel: "",
+    ylabel: "",
+    xscale: "linear",
+    yscale: "linear",
+    xlim: null,
+    ylim: null,
+    grid: false,
+    legend: true,
+    colorbar: false
+  }));
+}
+
+function normalizeDatasetRef(dataset: DatasetRef): DatasetRef {
+  return {
+    ...dataset,
+    selection: dataset.selection ?? null,
+    filters: dataset.filters ?? []
+  };
+}
+
+function normalizeRecipeDatasetRef(dataset: RecipeLayer["dataset"]): RecipeLayer["dataset"] {
+  return {
+    ...dataset,
+    filters: dataset.filters ?? []
+  };
+}
+
 function createAxis(
   index: number,
   row: number,
@@ -397,6 +505,10 @@ function withValidAxesTargets(spec: FigureSpec, axes: AxesSpec[]): FigureSpec {
       ...recipe,
       axes_id: validIds.has(recipe.axes_id) ? recipe.axes_id : fallbackId
     })),
+    reference_lines: (spec.reference_lines ?? []).map((referenceLine) => ({
+      ...referenceLine,
+      axes_id: validIds.has(referenceLine.axes_id) ? referenceLine.axes_id : fallbackId
+    })),
     annotations: spec.annotations.map((annotation) => ({
       ...annotation,
       axes_id: validIds.has(annotation.axes_id) ? annotation.axes_id : fallbackId
@@ -453,7 +565,8 @@ function buildDatasetRef({
   const xVar = findVariable(variables, xVariable);
   const yerrVar = findVariable(variables, yerrVariable);
   const dataset: DatasetRef = {
-    variable: yVar.name
+    variable: yVar.name,
+    filters: []
   };
 
   if (kind === "heatmap" || kind === "contour") {
@@ -560,7 +673,8 @@ function createRecipe({
       x: xColumn || null,
       y: yColumn || null,
       group: kind === "mean_sem_line" && groupColumn ? groupColumn : null,
-      subject: kind === "paired_before_after" ? subjectColumn || null : null
+      subject: kind === "paired_before_after" ? subjectColumn || null : null,
+      filters: []
     },
     style: {
       label,
@@ -574,6 +688,104 @@ function createRecipe({
     readonly: false,
     source: "recipe"
   };
+}
+
+function createFacetedLayers(baseLayer: PlotLayer, values: FacetValue[], facetColumn: string): PlotLayer[] {
+  return values.map((value, index) => {
+    const label = facetDisplayLabel(value);
+    return {
+      ...structuredClone(baseLayer),
+      id: createId("layer"),
+      axes_id: `ax${index}`,
+      dataset: {
+        ...baseLayer.dataset,
+        filters: [...(baseLayer.dataset.filters ?? []), facetFilter(facetColumn, value)]
+      },
+      style: {
+        ...baseLayer.style,
+        label: baseLayer.style.label ? `${baseLayer.style.label} (${label})` : label
+      }
+    };
+  });
+}
+
+function createFacetedRecipes(baseRecipe: RecipeLayer, values: FacetValue[], facetColumn: string): RecipeLayer[] {
+  return values.map((value, index) => {
+    const label = facetDisplayLabel(value);
+    return {
+      ...structuredClone(baseRecipe),
+      id: createId("recipe"),
+      axes_id: `ax${index}`,
+      dataset: {
+        ...baseRecipe.dataset,
+        filters: [...(baseRecipe.dataset.filters ?? []), facetFilter(facetColumn, value)]
+      },
+      style: {
+        ...baseRecipe.style,
+        label: baseRecipe.style.label ? `${baseRecipe.style.label} (${label})` : label
+      }
+    };
+  });
+}
+
+function createSelectedPanelLayers(baseLayer: PlotLayer, candidates: RepeatedPanelCandidate[]): PlotLayer[] {
+  return candidates.map((candidate, index) => {
+    const label = repeatedPanelLabel(candidate);
+    return {
+      ...structuredClone(baseLayer),
+      id: createId("layer"),
+      axes_id: `ax${index}`,
+      dataset: {
+        ...baseLayer.dataset,
+        selection: candidate.selection ?? null,
+        filters: baseLayer.dataset.filters ?? []
+      },
+      style: {
+        ...baseLayer.style,
+        label: baseLayer.style.label ? `${baseLayer.style.label} (${label})` : label
+      }
+    };
+  });
+}
+
+function repeatedPanelSourceKind(variable?: VariableSummary): RepeatedPanelSourceKind | null {
+  if (variable?.kind === "dataframe") {
+    return "dataframe_column";
+  }
+  if (variable?.kind === "mapping") {
+    return "mapping_keys";
+  }
+  if (variable?.kind === "sequence") {
+    return "sequence_items";
+  }
+  return null;
+}
+
+function candidateIsLayerCompatible(candidate: RepeatedPanelCandidate, kind: PlotKind): boolean {
+  const summary = candidate.summary;
+  if (!summary) {
+    return false;
+  }
+  if (kind === "heatmap" || kind === "contour") {
+    return summary.kind === "dataframe" || summary.shape.length >= 2;
+  }
+  if (summary.kind === "ndarray" && summary.shape.length === 0) {
+    return false;
+  }
+  return ["dataframe", "series", "ndarray", "sequence"].includes(summary.kind);
+}
+
+function panelSkipMessage(
+  createdCount: number,
+  skipped: RepeatedPanelSkippedCandidate[],
+  incompatible: RepeatedPanelCandidate[]
+): string {
+  const skippedCount = skipped.length + incompatible.length;
+  if (!skippedCount) {
+    return `Created ${createdCount} repeated panel${createdCount === 1 ? "" : "s"}.`;
+  }
+  const firstReason = skipped[0]?.reason ?? "Candidate item is not compatible with the current layer settings.";
+  return `Created ${createdCount} repeated panel${createdCount === 1 ? "" : "s"}; skipped ${skippedCount}: ${firstReason}`;
 }
 
 function cloneLayer(layer: PlotLayer): PlotLayer {
@@ -629,12 +841,32 @@ function createAnnotation(axesId: string, withArrow: boolean): AnnotationSpec {
   };
 }
 
+function createReferenceLine(axesId: string, orientation: ReferenceLineOrientation): ReferenceLineSpec {
+  return {
+    id: createId("refline"),
+    axes_id: axesId,
+    orientation,
+    value: 0,
+    style: {
+      label: orientation === "horizontal" ? "Baseline" : "Cutoff",
+      color: "#6b7280",
+      linestyle: "--",
+      linewidth: 1.2,
+      alpha: 0.85
+    }
+  };
+}
+
 function escapeAttributeValue(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
 function hasFigureContent(spec: FigureSpec): boolean {
-  return spec.layers.length > 0 || (spec.recipes?.length ?? 0) > 0;
+  return (
+    spec.layers.length > 0 ||
+    (spec.recipes?.length ?? 0) > 0 ||
+    (spec.reference_lines?.length ?? 0) > 0
+  );
 }
 
 function nextStepStatus(spec: FigureSpec): string {
@@ -655,6 +887,10 @@ function validationRepairText(issue: ValidationIssue): string {
       return "Open the affected layer or recipe and choose a column that exists on the selected DataFrame.";
     case "unsupported_recipe_source":
       return "Stats recipes need a pandas DataFrame source. Switch the source or create a normal plot layer.";
+    case "unsupported_filter_source":
+      return "Filters need a pandas DataFrame source. Remove the filter or switch to a DataFrame-backed layer.";
+    case "empty_filter_result":
+      return "This filter currently matches no rows. Choose another facet value or check the live DataFrame.";
     case "missing_axes":
       return "Select a valid target axes for the layer, recipe, or annotation.";
     case "dimension_mismatch":
@@ -663,6 +899,8 @@ function validationRepairText(issue: ValidationIssue): string {
       return "Use a 2D ndarray or gridded value column for heatmap and contour layers.";
     case "log_scale_non_positive":
       return "Remove non-positive data or switch the affected axis back to a linear scale.";
+    case "invalid_reference_line_value":
+      return "Use a finite reference value that is valid for the selected axes scale.";
     case "invalid_grid_size":
       return "Set figure rows and columns to positive values in the Figure controls.";
     case "duplicate_axes_id":
@@ -840,7 +1078,7 @@ export function App() {
     const timeout = window.setTimeout(focusTarget, 80);
     pendingIssueFocusRef.current = null;
     return () => window.clearTimeout(timeout);
-  }, [selectedAxisId, selectedLayerId, spec?.axes, spec?.layers, spec?.recipes]);
+  }, [selectedAxisId, selectedLayerId, spec?.axes, spec?.layers, spec?.recipes, spec?.reference_lines]);
 
   async function renderNow() {
     if (!spec) {
@@ -939,11 +1177,22 @@ export function App() {
       const axes = raw.axes?.map((axis, index) => normalizeAxis(axis as AxesSpec, index)) ?? [
         createAxis(0, 0, 0)
       ];
+      const layers = (raw.layers ?? []).map((layer) => ({
+        ...layer,
+        dataset: normalizeDatasetRef(layer.dataset)
+      }));
+      const recipes = (raw.recipes ?? []).map((recipe) => ({
+        ...recipe,
+        dataset: normalizeRecipeDatasetRef(recipe.dataset)
+      }));
       const imported = {
         ...raw,
+        share_x: raw.share_x ?? false,
+        share_y: raw.share_y ?? false,
         axes,
-        layers: raw.layers ?? [],
-        recipes: raw.recipes ?? [],
+        layers,
+        recipes,
+        reference_lines: raw.reference_lines ?? [],
         annotations: raw.annotations ?? [],
         style: {
           preset: "custom",
@@ -999,6 +1248,30 @@ export function App() {
       recipes: [...(draft.recipes ?? []), next]
     }));
     setSelectedLayerId(next.id);
+  }
+
+  function applyFacetBuild(payload: FacetBuildPayload) {
+    updateSpec((draft) => {
+      const adjusted = withValidAxesTargets(
+        {
+          ...draft,
+          rows: payload.rows,
+          cols: payload.cols,
+          share_x: payload.shareX,
+          share_y: payload.shareY
+        },
+        payload.axes
+      );
+      return {
+        ...adjusted,
+        layers: [...adjusted.layers, ...(payload.layers ?? [])],
+        recipes: [...(adjusted.recipes ?? []), ...(payload.recipes ?? [])]
+      };
+    });
+    const firstItem = payload.layers?.[0]?.id ?? payload.recipes?.[0]?.id ?? "";
+    setSelectedLayerId(firstItem);
+    setSelectedAxisId(payload.axes[0]?.id ?? "ax0");
+    setManualStatus(payload.message ?? `Created ${payload.axes.length} faceted panel${payload.axes.length === 1 ? "" : "s"}.`);
   }
 
   return (
@@ -1103,6 +1376,8 @@ export function App() {
             }));
             setSelectedLayerId(recipe.id);
           }}
+          onApplyFacetBuild={applyFacetBuild}
+          onStatus={setManualStatus}
         />
 
         <section className="canvas-column" id="preview-panel">
@@ -1153,9 +1428,19 @@ interface VariablePanelProps {
   onSelect: (name: string) => void;
   onAddLayer: (layer: PlotLayer) => void;
   onAddRecipe: (recipe: RecipeLayer) => void;
+  onApplyFacetBuild: (payload: FacetBuildPayload) => void;
+  onStatus: (message: string) => void;
 }
 
-function VariablePanel({ variables, selected, onSelect, onAddLayer, onAddRecipe }: VariablePanelProps) {
+function VariablePanel({
+  variables,
+  selected,
+  onSelect,
+  onAddLayer,
+  onAddRecipe,
+  onApplyFacetBuild,
+  onStatus
+}: VariablePanelProps) {
   const variable = variables.find((item) => item.name === selected) ?? variables[0];
   const dataframeVariables = variables.filter((item) => item.kind === "dataframe");
   const [builderMode, setBuilderMode] = useState<"layer" | "recipe">("layer");
@@ -1173,6 +1458,11 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer, onAddRecipe 
   const [recipeGroupColumn, setRecipeGroupColumn] = useState("");
   const [recipeSubjectColumn, setRecipeSubjectColumn] = useState("");
   const [recipeError, setRecipeError] = useState<RecipeLayer["error"]>("sem");
+  const [facetColumn, setFacetColumn] = useState("");
+  const [facetLimit, setFacetLimit] = useState(defaultFacetLimit);
+  const [facetShareX, setFacetShareX] = useState(true);
+  const [facetShareY, setFacetShareY] = useState(false);
+  const [facetBusy, setFacetBusy] = useState(false);
 
   const xVar = findVariable(variables, xVariable);
   const yVar = findVariable(variables, yVariable) ?? variable;
@@ -1181,6 +1471,22 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer, onAddRecipe 
     dataframeVariables.find((item) => item.name === recipeVariableName) ??
     (variable?.kind === "dataframe" ? variable : dataframeVariables[0]);
   const compatibility = compatibilityText(kind, yVar, xVar);
+  const facetSource = builderMode === "layer" ? yVar : recipeVariable;
+  const facetSourceKind = repeatedPanelSourceKind(facetSource);
+  const isSelectedPanelSource = builderMode === "layer" && (facetSourceKind === "mapping_keys" || facetSourceKind === "sequence_items");
+  const layerCanFacet =
+    builderMode === "layer" &&
+    yVar?.kind === "dataframe" &&
+    (xVariable === indexSource || xVariable === yVar.name) &&
+    (kind !== "errorbar" || yerrVariable === noneSource || yerrVariable === yVar.name);
+  const layerCanSelectPanels =
+    Boolean(isSelectedPanelSource && yVar) &&
+    xVariable !== yVar?.name &&
+    (kind !== "errorbar" || yerrVariable === noneSource || yerrVariable !== yVar?.name);
+  const recipeCanFacet = builderMode === "recipe" && Boolean(recipeVariable);
+  const canFacet = Boolean(
+    facetSourceKind === "dataframe_column" ? layerCanFacet || recipeCanFacet : layerCanSelectPanels
+  );
 
   useEffect(() => {
     if (!variable) {
@@ -1207,6 +1513,115 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer, onAddRecipe 
     setRecipeGroupColumn("");
     setRecipeSubjectColumn(subjectColumn);
   }, [recipeVariable?.name, recipeKind]);
+
+  useEffect(() => {
+    setFacetColumn(facetSource?.kind === "dataframe" ? defaultFacetColumn(facetSource) : "");
+  }, [facetSource?.name, facetSource?.kind, builderMode]);
+
+  async function applyFacets() {
+    if (!facetSource || !facetSourceKind || !canFacet) {
+      return;
+    }
+    if (facetSourceKind === "dataframe_column" && !facetColumn) {
+      return;
+    }
+    setFacetBusy(true);
+    onStatus("Reading repeated-panel candidates");
+    try {
+      const response = await api.repeatedPanelCandidates({
+        variable: facetSource.name,
+        source_kind: facetSourceKind,
+        column: facetSourceKind === "dataframe_column" ? facetColumn : null,
+        max_values: facetLimit
+      });
+      if (!response.candidates.length) {
+        onStatus(`No repeated-panel candidates found for ${facetSource.name}.`);
+        return;
+      }
+      if (response.source_kind === "dataframe_column") {
+        const values = response.candidates.map((candidate) => ({
+          value: candidate.value,
+          label: candidate.label
+        }));
+        const { rows, cols } = facetLayout(values.length);
+        const axes = createFacetAxes(values, facetColumn, cols);
+        if (builderMode === "layer") {
+          const baseLayer = createLayer(
+            kind,
+            variables,
+            yVar?.name ?? facetSource.name,
+            yColumn,
+            xVariable,
+            xColumn,
+            yerrVariable,
+            yerrColumn
+          );
+          onApplyFacetBuild({
+            axes,
+            rows,
+            cols,
+            shareX: facetShareX,
+            shareY: facetShareY,
+            layers: createFacetedLayers(baseLayer, values, facetColumn)
+          });
+        } else if (recipeVariable) {
+          const baseRecipe = createRecipe({
+            kind: recipeKind,
+            variable: recipeVariable,
+            xColumn: recipeXColumn,
+            yColumn: recipeYColumn,
+            groupColumn: recipeGroupColumn,
+            subjectColumn: recipeSubjectColumn,
+            error: recipeError
+          });
+          onApplyFacetBuild({
+            axes,
+            rows,
+            cols,
+            shareX: facetShareX,
+            shareY: facetShareY,
+            recipes: createFacetedRecipes(baseRecipe, values, facetColumn)
+          });
+        }
+      } else if (builderMode === "layer") {
+        const compatible = response.candidates.filter((candidate) => candidateIsLayerCompatible(candidate, kind));
+        const incompatible = response.candidates.filter((candidate) => !candidateIsLayerCompatible(candidate, kind));
+        if (!compatible.length) {
+          onStatus("No compatible mapping/sequence items for the current layer settings.");
+          return;
+        }
+        const { rows, cols } = facetLayout(compatible.length);
+        const titlePrefix = response.source_kind === "mapping_keys" ? "mapping key" : "sequence item";
+        const axes = createRepeatedPanelAxes(compatible, titlePrefix, cols);
+        const baseLayer = createLayer(
+          kind,
+          variables,
+          yVar?.name ?? facetSource.name,
+          yColumn,
+          xVariable,
+          xColumn,
+          yerrVariable,
+          yerrColumn
+        );
+        onApplyFacetBuild({
+          axes,
+          rows,
+          cols,
+          shareX: facetShareX,
+          shareY: facetShareY,
+          layers: createSelectedPanelLayers(baseLayer, compatible),
+          message: panelSkipMessage(compatible.length, response.skipped, incompatible)
+        });
+      }
+      if (response.truncated) {
+        onStatus(`Created first ${response.candidates.length} panels; more candidates were available.`);
+      }
+    } catch (error) {
+      onStatus(error instanceof Error ? error.message : "Repeated-panel build failed");
+    } finally {
+      setFacetBusy(false);
+    }
+  }
 
   return (
     <aside className="side-panel variables-panel" id="variables-panel" data-testid="variable-panel">
@@ -1515,6 +1930,74 @@ function VariablePanel({ variables, selected, onSelect, onAddLayer, onAddRecipe 
             </button>
           </>
         )}
+
+        {facetSourceKind ? (
+          <div className="facet-builder">
+            <h2>{facetSourceKind === "dataframe_column" ? "Facet panels" : "Repeated panels"}</h2>
+            {facetSourceKind === "dataframe_column" ? (
+              <label>
+                Facet by DataFrame column
+                <select
+                  data-testid="facet-column-select"
+                  value={facetColumn}
+                  onChange={(event) => setFacetColumn(event.target.value)}
+                >
+                  {facetSource?.columns.map((column) => (
+                    <option key={column} value={column}>
+                      {column}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <p className="compatibility-note" data-testid="repeated-panel-kind-note">
+                Repeat by {facetSourceKind === "mapping_keys" ? "mapping keys" : "sequence items"}.
+              </p>
+            )}
+            <div className="split-row">
+              <NumberField
+                label="Max panels"
+                value={facetLimit}
+                step={1}
+                min={1}
+                max={12}
+                testId="facet-limit-field"
+                field="facet.max_values"
+                onChange={(value) => setFacetLimit(Math.max(1, Math.min(12, Math.round(value || 1))))}
+              />
+              <ToggleField
+                label="Share X"
+                value={facetShareX}
+                testId="facet-share-x-field"
+                field="share_x"
+                onChange={setFacetShareX}
+              />
+            </div>
+            <ToggleField
+              label="Share Y"
+              value={facetShareY}
+              testId="facet-share-y-field"
+              field="share_y"
+              onChange={setFacetShareY}
+            />
+            {!canFacet ? (
+              <p className="compatibility-note">
+                {facetSourceKind === "dataframe_column"
+                  ? "Facets require the main DataFrame with index or same-DataFrame X/error sources."
+                  : "Mapping and sequence panels require index X or an independent X/error source."}
+              </p>
+            ) : null}
+            <button
+              className="primary-button"
+              data-testid="create-facet-panels-button"
+              disabled={!canFacet || (facetSourceKind === "dataframe_column" && !facetColumn) || facetBusy}
+              onClick={applyFacets}
+            >
+              <Layers3 size={16} />
+              {facetSourceKind === "dataframe_column" ? "Create facet panels" : "Create panels"}
+            </button>
+          </div>
+        ) : null}
       </div>
     </aside>
   );
@@ -1608,6 +2091,175 @@ function ValidationList({
         </button>
       ))}
     </div>
+  );
+}
+
+function ReferenceLineControls({
+  referenceLines,
+  selectedAxisId,
+  onUpdateSpec
+}: {
+  referenceLines: ReferenceLineSpec[];
+  selectedAxisId: string;
+  onUpdateSpec: (updater: (spec: FigureSpec) => FigureSpec) => void;
+}) {
+  function addReferenceLine(orientation: ReferenceLineOrientation) {
+    const referenceLine = createReferenceLine(selectedAxisId, orientation);
+    onUpdateSpec((draft) => ({
+      ...draft,
+      reference_lines: [...(draft.reference_lines ?? []), referenceLine]
+    }));
+  }
+
+  function updateReferenceLine(id: string, patch: Partial<ReferenceLineSpec>) {
+    onUpdateSpec((draft) => ({
+      ...draft,
+      reference_lines: (draft.reference_lines ?? []).map((referenceLine) =>
+        referenceLine.id === id ? { ...referenceLine, ...patch } : referenceLine
+      )
+    }));
+  }
+
+  function deleteReferenceLine(id: string) {
+    onUpdateSpec((draft) => ({
+      ...draft,
+      reference_lines: (draft.reference_lines ?? []).filter((referenceLine) => referenceLine.id !== id)
+    }));
+  }
+
+  return (
+    <section className="control-group" data-testid="reference-line-controls">
+      <h2>Reference lines</h2>
+      <div className="layer-actions">
+        <button
+          className="mini-button"
+          data-testid="add-horizontal-reference-line-button"
+          onClick={() => addReferenceLine("horizontal")}
+        >
+          Horizontal
+        </button>
+        <button
+          className="mini-button"
+          data-testid="add-vertical-reference-line-button"
+          onClick={() => addReferenceLine("vertical")}
+        >
+          Vertical
+        </button>
+      </div>
+      {referenceLines.length ? (
+        <div className="annotation-list" data-testid="reference-line-list">
+          {referenceLines.map((referenceLine) => {
+            const style = referenceLine.style ?? {};
+            return (
+              <div key={referenceLine.id} className="annotation-card" data-testid="reference-line-card">
+                <div className="split-row">
+                  <SelectField
+                    label="Direction"
+                    value={referenceLine.orientation}
+                    options={referenceLineOrientations}
+                    testId="reference-line-orientation-field"
+                    field="reference_lines.orientation"
+                    onChange={(value) =>
+                      updateReferenceLine(referenceLine.id, {
+                        orientation: value as ReferenceLineOrientation
+                      })
+                    }
+                  />
+                  <NumberField
+                    label="Value"
+                    value={referenceLine.value}
+                    testId="reference-line-value-field"
+                    field="reference_lines.value"
+                    onChange={(value) => updateReferenceLine(referenceLine.id, { value })}
+                  />
+                </div>
+                <TextField
+                  label="Legend label"
+                  value={style.label ?? ""}
+                  testId="reference-line-label-field"
+                  field="reference_lines.style.label"
+                  onChange={(value) =>
+                    updateReferenceLine(referenceLine.id, {
+                      style: { ...style, label: value || null }
+                    })
+                  }
+                />
+                <label data-testid="reference-line-color-field" data-field="reference_lines.style.color">
+                  Color
+                  <div className="swatches">
+                    {colors.map((swatch) => (
+                      <button
+                        key={swatch}
+                        className={swatch === style.color ? "selected" : ""}
+                        style={{ background: swatch }}
+                        aria-label={swatch}
+                        data-testid="reference-line-color-swatch"
+                        onClick={() =>
+                          updateReferenceLine(referenceLine.id, {
+                            style: { ...style, color: swatch }
+                          })
+                        }
+                      />
+                    ))}
+                  </div>
+                </label>
+                <div className="split-row">
+                  <SelectField
+                    label="Line style"
+                    value={style.linestyle ?? "--"}
+                    options={linestyles}
+                    testId="reference-line-linestyle-field"
+                    field="reference_lines.style.linestyle"
+                    onChange={(value) =>
+                      updateReferenceLine(referenceLine.id, {
+                        style: { ...style, linestyle: value || null }
+                      })
+                    }
+                  />
+                  <NumberField
+                    label="Line width"
+                    value={Number(style.linewidth ?? 1.2)}
+                    step={0.1}
+                    min={0}
+                    testId="reference-line-linewidth-field"
+                    field="reference_lines.style.linewidth"
+                    onChange={(value) =>
+                      updateReferenceLine(referenceLine.id, {
+                        style: { ...style, linewidth: value }
+                      })
+                    }
+                  />
+                </div>
+                <NumberField
+                  label="Alpha"
+                  value={Number(style.alpha ?? 0.85)}
+                  step={0.05}
+                  min={0}
+                  max={1}
+                  testId="reference-line-alpha-field"
+                  field="reference_lines.style.alpha"
+                  onChange={(value) =>
+                    updateReferenceLine(referenceLine.id, {
+                      style: { ...style, alpha: value }
+                    })
+                  }
+                />
+                <button
+                  className="mini-button danger-button"
+                  data-testid="delete-reference-line-button"
+                  onClick={() => deleteReferenceLine(referenceLine.id)}
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="muted">No reference lines on this axes.</p>
+      )}
+    </section>
   );
 }
 
@@ -1877,6 +2529,22 @@ function Inspector({
                 onChange={(value) => onUpdateSpec((draft) => resizeAxes(draft, draft.rows, value))}
               />
             </div>
+            <div className="split-row">
+              <ToggleField
+                label="Share X"
+                value={spec.share_x}
+                testId="share-x-field"
+                field="share_x"
+                onChange={(value) => onUpdateSpec((draft) => ({ ...draft, share_x: value }))}
+              />
+              <ToggleField
+                label="Share Y"
+                value={spec.share_y}
+                testId="share-y-field"
+                field="share_y"
+                onChange={(value) => onUpdateSpec((draft) => ({ ...draft, share_y: value }))}
+              />
+            </div>
             <TextField
               label="Suptitle"
               value={spec.style.title}
@@ -2005,6 +2673,14 @@ function Inspector({
               onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { colorbar: value })}
             />
           </section>
+
+          <ReferenceLineControls
+            referenceLines={(spec.reference_lines ?? []).filter(
+              (referenceLine) => referenceLine.axes_id === selectedAxis.id
+            )}
+            selectedAxisId={selectedAxis.id}
+            onUpdateSpec={onUpdateSpec}
+          />
 
           <AnnotationControls
             annotations={spec.annotations.filter((annotation) => annotation.axes_id === selectedAxis.id)}

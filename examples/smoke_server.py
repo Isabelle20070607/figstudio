@@ -31,8 +31,22 @@ def main() -> None:
             "subject": subject,
         }
     )
+    signal_map = {
+        condition_value: group["signal"].to_numpy()
+        for condition_value, group in df.groupby("condition", sort=False)
+    }
+    signal_sequence = [
+        df.loc[df["subject"] == subject_id, "signal"].to_numpy()
+        for subject_id in sorted(df["subject"].unique())
+    ]
     session = FigStudioSession(
-        registry=VariableRegistry({"df": df}),
+        registry=VariableRegistry(
+            {
+                "df": df,
+                "signal_map": signal_map,
+                "signal_sequence": signal_sequence,
+            }
+        ),
         port=port,
         project_path=SMOKE_PROJECT_PATH,
     )

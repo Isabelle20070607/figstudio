@@ -28,6 +28,16 @@ Recipes 会把变量名、列名、样式选择和目标 axes 存进 `FigureSpec
 
 可以运行 `examples/general_stats_recipe.py`，用 synthetic repeated-measures 数据试用三种内置 recipes。
 
+## Faceted Panels
+
+当 plot layer 或 statistics recipe 基于 pandas DataFrame 时，可以在 Explore builder 中使用 **Facet panels**。选择 categorical DataFrame 列、panel 上限和 shared-axis options 后，FigStudio 会按首次出现的取值创建一个 axes，并把带 filter 的 layers 或 recipes 放到对应 axes 上。
+
+Facet specs 仍保持 data-light。它们保存 `condition == "drug"` 这样的等值 filters、显示 labels、target axes 和 shared-axis flags，不保存 DataFrame rows。生成代码会先用 pandas 表达式过滤 live DataFrame 变量，再调用 Matplotlib。
+
+对于普通 plot layer，同一组 repeated-panel controls 也支持 mapping 和 sequence source。Mapping source 会按可安全写成 Python literal 的 key 拆 panel，list 或 tuple 会按 item index 拆 panel。FigStudio 会保存 `DatasetRef.selection`，在绘图前从 live object 选出对应 item，并跳过与当前 layer 设置不兼容的候选。
+
+Mapping 和 sequence repeated panels 的 v1 边界是：使用 index X 或独立 X variable，暂不支持 same-source selected X 或 Y-error channel。Statistics recipes 仍保持 DataFrame-only。
+
 ## 发表级精修
 
 准备论文或展示输出时使用 **Publish** mode。它会展示字体家族、constrained layout 等偏发表场景的控件，同时保持和 **Explore** mode 相同的 generated-code path。
@@ -35,10 +45,17 @@ Recipes 会把变量名、列名、样式选择和目标 axes 存进 `FigureSpec
 右侧 polish panel 覆盖：
 
 - figure size、DPI、标题、字体设置、内置 presets 和项目 style profile；
-- panel layout rows、columns 和 presets；
+- panel layout rows、columns、shared-axis options 和 presets；
 - axes titles、labels、scales、limits、grid、legend 和 colorbar fallback；
 - layer 和 recipe 的 target axes、labels、colors、markers、line styles、linewidths、alpha、colormap、histogram bins 和 fill alpha；
+- 用于 baselines、thresholds、cutoff markers 和 guide labels 的 horizontal/vertical reference lines；
 - 当前 axes 上的 text 和 arrow annotations。
+
+## Reference Lines
+
+使用 **Reference lines** 在当前 axes 上添加 horizontal 或 vertical guide line。它适用于 baselines、thresholds、cutoff values，以及其他应独立于 plotted data 的跨领域常量。
+
+Reference line 会把 orientation、numeric value、可选 legend label、color、line style、linewidth 和 alpha 存进 `FigureSpec`。生成代码使用 Matplotlib `axhline` 或 `axvline`，因此 previews、exports 和 saved code 走同一条路径。
 
 ## Annotations
 

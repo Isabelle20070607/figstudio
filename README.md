@@ -2,7 +2,7 @@
 
 FigStudio is a local-first figure workflow for scientific Python users who want to turn data already present in a script or notebook into polished, reproducible Matplotlib panels.
 
-It opens a browser editor from your Python process, lets you map live variables to plot layers or statistics recipes, previews through Matplotlib, exports publication files, and saves plain Matplotlib OO code back to a controlled script block or notebook cell.
+It opens a browser editor from your Python process, lets you map live variables to plot layers or statistics recipes, create faceted DataFrame panels, add reference lines and annotations, previews through Matplotlib, exports publication files, and saves plain Matplotlib OO code back to a controlled script block or notebook cell.
 
 ## Install
 
@@ -47,6 +47,11 @@ Common entry points:
 | Scientific workflows | [Workflows](docs/en/scientific-workflows.md) | [科研制图工作流](docs/zh/scientific-workflows.md) |
 | API consumers | [API Reference](docs/en/reference/api.md) | [API 参考](docs/zh/reference/api.md) |
 | Contributors | [Developer Guide](docs/en/contributing/developer-guide.md) | [开发者指南](docs/zh/contributing/developer-guide.md) |
+| Product scope | [PRD](docs/en/product/prd.md) | [产品需求](docs/zh/product/prd.md) |
+| Roadmap overview | [Roadmap](docs/en/product/roadmap.md) | [路线图](docs/zh/product/roadmap.md) |
+| Roadmap strategy | [Strategy](docs/en/product/roadmap/strategy.md) | [路线图策略](docs/zh/product/roadmap/strategy.md) |
+| Roadmap initiatives | [Initiatives](docs/en/product/roadmap/initiatives.md) | [路线图 Initiatives](docs/zh/product/roadmap/initiatives.md) |
+| Deferred roadmap items | [Deferred Work](docs/en/product/roadmap/deferred.md) | [暂缓事项](docs/zh/product/roadmap/deferred.md) |
 | Release history | [Release Notes](docs/en/product/release-notes.md) / [CHANGELOG](CHANGELOG.md) | [发布说明](docs/zh/product/release-notes.md) / [CHANGELOG](CHANGELOG.md) |
 
 ## Development

@@ -290,8 +290,15 @@ button:disabled {
   border-top: 1px solid var(--border);
 }
 
+.facet-builder {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
 .builder h2,
-.control-group h2 {
+.control-group h2,
+.facet-builder h2 {
   margin: 0 0 12px;
   font-size: 12px;
   text-transform: uppercase;

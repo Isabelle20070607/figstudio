@@ -38,7 +38,7 @@ If export fails, fix validation issues first. If validation passes and export st
 
 Use the FigureSpec import/export buttons to save or restore a `.figstudio.json` GUI session.
 
-A `FigureSpec` stores editor state, not raw data. Reusing a spec requires a new Python session with compatible variable names, DataFrame columns, and data shapes.
+A `FigureSpec` stores editor state, not raw data. Reusing a spec requires a new Python session with compatible variable names, DataFrame columns, facet filter values, and data shapes.
 
 Python helpers are also available:
 
