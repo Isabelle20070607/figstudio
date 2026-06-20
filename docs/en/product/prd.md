@@ -23,7 +23,7 @@ Future product direction and candidate work live in the [roadmap](roadmap.md).
 - Inspect safe summaries of DataFrame, Series, ndarray, mapping, list, tuple, and existing Matplotlib Figure objects.
 - Create and edit the public beta plot kinds and bundled statistics recipes.
 - Create DataFrame-backed faceted panels from first-seen column values, plus mapping-key and sequence-index repeated panels for normal plot layers.
-- Configure manuscript presets, project style profiles, panel layouts, axes settings, layer styles, reference lines, and text/arrow annotations.
+- Configure manuscript presets, project style profiles, panel layouts, axes settings, secondary Y-axis overlays, layer styles, reference lines, and text/arrow annotations.
 - Load `.figstudio/styles.json` project style profiles and store profile references plus explicit override fields in `FigureSpec`.
 - Render previews and exports through Matplotlib Agg.
 - Save generated code to one unique controlled script block or return notebook replacement code.
@@ -36,6 +36,7 @@ Future product direction and candidate work live in the [roadmap](roadmap.md).
 - As a scientific Python user, I want to open an editor from `locals()` so I can reuse data I already prepared.
 - As a researcher, I want manuscript presets and annotation controls so I can prepare publication-style figures faster.
 - As a researcher, I want baseline and threshold reference lines so common scientific cutoffs are visible without encoding them as data layers.
+- As a researcher, I want to overlay related measures on a shared X axis with a right-side Y axis without hand-editing generated code.
 - As a researcher, I want to split a DataFrame plot or recipe into small multiples by a condition column without manually creating every axes.
 - As a researcher, I want to split normal plot layers by mapping keys or sequence items when my prepared data is already grouped outside a DataFrame.
 - As a project maintainer, I want shared style profiles so figures can inherit project defaults while still recording explicit overrides.
@@ -51,6 +52,7 @@ Future product direction and candidate work live in the [roadmap](roadmap.md).
 - Generated code imports Matplotlib only and can run with the same user variables.
 - Export downloads PNG, SVG, and PDF produced by Matplotlib.
 - Reference lines generate Matplotlib `axhline` or `axvline` code and round-trip through `.figstudio.json`.
+- Secondary Y-axis overlays generate Matplotlib `twinx()` code, preserve right-side axis settings, and round-trip through `.figstudio.json`.
 - DataFrame facet panels generate filtered Matplotlib code, preserve shared-axis flags, and round-trip through `.figstudio.json`.
 - Mapping-key and sequence-index repeated panels generate selected-item Matplotlib code and round-trip through `.figstudio.json`.
 - Validation, render, export, and writeback failures return readable structured errors, including repair suggestions for common validation issues.

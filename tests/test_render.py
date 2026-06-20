@@ -1,4 +1,4 @@
-from figstudio.models import AxesSpec, DatasetRef, FigureSpec, PlotLayer
+from figstudio.models import AxesSpec, DatasetRef, FigureSpec, PlotLayer, SecondaryYAxisSpec
 from figstudio.render import RenderEngine
 
 
@@ -42,3 +42,30 @@ def test_render_svg_from_spanned_layout():
 
     assert "<svg" in svg
     assert "fig.add_gridspec(2, 2)" in code
+
+
+def test_render_svg_from_secondary_y_axis_overlay():
+    spec = FigureSpec(
+        axes=[AxesSpec(id="ax0", secondary_y=SecondaryYAxisSpec(ylabel="Rate"))],
+        layers=[
+            PlotLayer(
+                id="signal",
+                kind="line",
+                dataset=DatasetRef(variable="signal", x_variable="time", y_variable="signal"),
+            ),
+            PlotLayer(
+                id="rate",
+                kind="line",
+                y_axis="right",
+                dataset=DatasetRef(variable="rate", x_variable="time", y_variable="rate"),
+            ),
+        ],
+    )
+
+    svg, code = RenderEngine(
+        {"time": [0, 1, 2], "signal": [0.1, 0.3, 0.2], "rate": [8.0, 10.0, 12.0]}
+    ).render_base64(spec, "svg")
+
+    assert "<svg" in svg
+    assert "secondary_axes[0] = axes_flat[0].twinx()" in code
+    assert "secondary_axes[0].plot(time, rate" in code

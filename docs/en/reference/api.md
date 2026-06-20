@@ -56,7 +56,7 @@ The CLI prints the session URL and runs until interrupted.
 | `version` | Spec format marker, currently defaulting to `1`. |
 | `mode` | `explore` or `publish`. |
 | `width`, `height`, `dpi` | Figure size and render/export DPI. |
-| `rows`, `cols`, `share_x`, `share_y`, `axes` | Panel layout grid, shared-axis flags, and axes geometry. |
+| `rows`, `cols`, `share_x`, `share_y`, `axes` | Panel layout grid, shared-axis flags, axes geometry, and primary/secondary axis metadata. |
 | `layers` | Plot layer definitions. |
 | `recipes` | Statistics recipe definitions. |
 | `reference_lines` | Horizontal and vertical guide lines for baselines, thresholds, and cutoff labels. |
@@ -65,6 +65,8 @@ The CLI prints the session URL and runs until interrupted.
 | `show` | Whether generated code calls `plt.show()`. |
 
 Supported `PlotLayer.kind` values are `line`, `scatter`, `bar`, `barh`, `hist`, `boxplot`, `violin`, `errorbar`, `heatmap`, `contour`, `step`, and `fill_between`.
+
+`PlotLayer.y_axis` is `left` by default. Set it to `right` for simple secondary Y-axis overlays on the same `axes_id`; `AxesSpec.secondary_y` stores the right-side `ylabel`, `yscale`, and `ylim`. Generated code emits Matplotlib `twinx()` for panels that have at least one right-axis layer.
 
 Supported `RecipeLayer.kind` values are `mean_sem_line`, `grouped_points`, and `paired_before_after`.
 
@@ -113,7 +115,7 @@ HTTP errors use:
 
 Current error codes are `validation_failed`, `render_failed`, `export_failed`, `writeback_failed`, `writeback_io_failed`, `missing_variable`, `missing_column`, `unsupported_facet_source`, and `unsupported_repeated_panel_source`. Writeback errors appear inside `SaveCodeResponse.error`; render, export, validation, facet-value, and repeated-panel candidate failures are HTTP errors.
 
-Validation issue codes include `missing_style_profile`, `invalid_grid_size`, `duplicate_axes_id`, `invalid_axes_span`, `axes_out_of_bounds`, `axes_overlap`, `missing_axes`, `missing_variable`, `missing_column`, `unsupported_recipe_source`, `unsupported_filter_source`, `empty_filter_result`, `unsupported_selection_source`, `unsupported_selection_key`, `missing_selection_key`, `selection_index_out_of_range`, `unsupported_selected_channel`, `unplottable_selection_value`, `dimension_mismatch`, `requires_2d_data`, `log_scale_non_positive`, and `invalid_reference_line_value`.
+Validation issue codes include `missing_style_profile`, `invalid_grid_size`, `duplicate_axes_id`, `invalid_axes_span`, `axes_out_of_bounds`, `axes_overlap`, `missing_axes`, `missing_variable`, `missing_column`, `unsupported_recipe_source`, `unsupported_filter_source`, `empty_filter_result`, `unsupported_selection_source`, `unsupported_selection_key`, `missing_selection_key`, `selection_index_out_of_range`, `unsupported_selected_channel`, `unplottable_selection_value`, `dimension_mismatch`, `requires_2d_data`, `log_scale_non_positive`, `unsupported_secondary_y_layer`, and `invalid_reference_line_value`.
 
 Each validation issue may include `suggestion` for UI repair guidance. `details` can include bounded context such as `available_variables`, `available_columns`, `available_axes`, `available_profiles`, and `suggested_value`; it does not include raw DataFrame contents.
 
@@ -122,7 +124,7 @@ Each validation issue may include `suggestion` for UI repair guidance. `details`
 - Generated plotting code must run without importing FigStudio.
 - Generated recipe code may call methods on existing pandas DataFrame variables, but imports remain limited to Matplotlib.
 - Saved FigureSpec files depend on compatible variable names, mapping keys, sequence indices, DataFrame columns, and data shapes in the next session.
-- Saved recipe, facet, and repeated-panel specs store column mappings, equality filters, selections, labels, and recipe intent, not raw data.
+- Saved recipe, facet, repeated-panel, and secondary-axis specs store column mappings, equality filters, selections, labels, axis settings, and recipe intent, not raw data.
 - Saved reference line specs store numeric constants and style only, not derived data.
 - Runtime wheel installs should not require Node/npm.
 - Notebook workflows return code and do not directly edit notebook files.

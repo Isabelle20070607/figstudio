@@ -17,6 +17,7 @@ export type RecipeKind = "mean_sem_line" | "grouped_points" | "paired_before_aft
 export type FigurePreset = "custom" | "journal_single" | "journal_double" | "poster" | "slide";
 
 export type ReferenceLineOrientation = "horizontal" | "vertical";
+export type LayerYAxis = "left" | "right";
 
 export interface DataFilterSpec {
   column: string;
@@ -83,6 +84,7 @@ export interface PlotLayer {
   id: string;
   kind: PlotKind;
   axes_id: string;
+  y_axis: LayerYAxis;
   dataset: DatasetRef;
   style: LayerStyle;
   readonly: boolean;
@@ -100,6 +102,12 @@ export interface RecipeLayer {
   source: string;
 }
 
+export interface SecondaryYAxisSpec {
+  ylabel: string;
+  yscale: "linear" | "log" | "symlog" | "logit";
+  ylim?: [number | null, number | null] | null;
+}
+
 export interface AxesSpec {
   id: string;
   row: number;
@@ -113,6 +121,7 @@ export interface AxesSpec {
   yscale: "linear" | "log" | "symlog" | "logit";
   xlim?: [number | null, number | null] | null;
   ylim?: [number | null, number | null] | null;
+  secondary_y: SecondaryYAxisSpec;
   grid: boolean;
   legend: boolean;
   colorbar: boolean;

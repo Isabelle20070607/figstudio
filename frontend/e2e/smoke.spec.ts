@@ -49,6 +49,12 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await expect(page.getByTestId("status-line")).toContainText("Preview synced");
   await expectDesktopWorkspaceFitsViewport(page);
 
+  await page.getByTestId("y-column-select").selectOption("rate");
+  await page.getByTestId("add-layer-button").click();
+  await page.getByTestId("layer-y-axis-field-select").selectOption("right");
+  await expect(page.getByTestId("code-panel")).toContainText("twinx()");
+  await expect(page.getByTestId("code-panel")).toContainText("secondary_axes[0].plot");
+
   await page.getByTestId("builder-mode-select").selectOption("recipe");
   await page.getByTestId("recipe-kind-select").selectOption("mean_sem_line");
   await page.getByTestId("add-recipe-button").click();
@@ -76,6 +82,8 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await expect(page.getByTestId("layout-preset-field-select")).toHaveValue("large_left");
   await expect(page.getByTestId("active-axes-select").locator("option")).toHaveCount(3);
   await expect(page.getByTestId("active-axes-select").locator("option").first()).toContainText("2x1");
+  await page.getByTestId("axis-secondary-ylabel-field-input").fill("Rate");
+  await expect(page.getByTestId("code-panel")).toContainText("set_ylabel('Rate')");
   await expect(page.getByTestId("code-panel")).toContainText("add_gridspec");
   await expectDesktopWorkspaceFitsViewport(page);
 
@@ -100,6 +108,8 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   expect(exportedSpec.style.profile_overrides).toContain("width");
   expect(exportedSpec.reference_lines).toHaveLength(1);
   expect(exportedSpec.reference_lines[0].style.label).toBe("Baseline");
+  expect(exportedSpec.layers.some((layer: any) => layer.y_axis === "right")).toBe(true);
+  expect(exportedSpec.axes[0].secondary_y.ylabel).toBe("Rate");
   expect(exportedSpec.recipes.some((recipe: any) => recipe.dataset.filters?.[0]?.column === "condition")).toBe(true);
   await page.getByTestId("import-spec-input").setInputFiles(exportedSpecPath);
   await expect(page.getByTestId("style-profile-field-select")).toHaveValue("manuscript");
@@ -159,6 +169,11 @@ test("validation issues select the affected editor context", async ({ page }, te
             yscale: "linear",
             xlim: null,
             ylim: null,
+            secondary_y: {
+              ylabel: "",
+              yscale: "linear",
+              ylim: null
+            },
             grid: false,
             legend: true,
             colorbar: false
@@ -169,6 +184,7 @@ test("validation issues select the affected editor context", async ({ page }, te
             id: "bad-layer",
             kind: "line",
             axes_id: "ax0",
+            y_axis: "left",
             dataset: { variable: "missing_values" },
             style: { label: "Missing" },
             readonly: false,

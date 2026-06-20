@@ -27,6 +27,7 @@ RecipeKind = Literal["mean_sem_line", "grouped_points", "paired_before_after"]
 FigurePreset = Literal["custom", "journal_single", "journal_double", "poster", "slide"]
 
 ReferenceLineOrientation = Literal["horizontal", "vertical"]
+LayerYAxis = Literal["left", "right"]
 
 
 class DataFilterSpec(BaseModel):
@@ -94,6 +95,7 @@ class PlotLayer(BaseModel):
     id: str
     kind: PlotKind = "line"
     axes_id: str = "ax0"
+    y_axis: LayerYAxis = "left"
     dataset: DatasetRef
     style: LayerStyle = Field(default_factory=LayerStyle)
     readonly: bool = False
@@ -111,6 +113,12 @@ class RecipeLayer(BaseModel):
     source: str = "recipe"
 
 
+class SecondaryYAxisSpec(BaseModel):
+    ylabel: str = ""
+    yscale: Literal["linear", "log", "symlog", "logit"] = "linear"
+    ylim: tuple[float | None, float | None] | None = None
+
+
 class AxesSpec(BaseModel):
     id: str = "ax0"
     row: int = 0
@@ -124,6 +132,7 @@ class AxesSpec(BaseModel):
     yscale: Literal["linear", "log", "symlog", "logit"] = "linear"
     xlim: tuple[float | None, float | None] | None = None
     ylim: tuple[float | None, float | None] | None = None
+    secondary_y: SecondaryYAxisSpec = Field(default_factory=SecondaryYAxisSpec)
     grid: bool = False
     legend: bool = True
     colorbar: bool = False

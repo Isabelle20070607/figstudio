@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "mode": "publish",
+  "width": 7.2,
+  "height": 2.6,
+  "dpi": 160,
+  "rows": 1,
+  "cols": 3,
+  "share_x": true,
+  "share_y": true,
+  "axes": [
+    {
+      "id": "ax_control",
+      "row": 0,
+      "col": 0,
+      "title": "Control",
+      "xlabel": "Time (h)",
+      "ylabel": "Response (a.u.)",
+      "grid": true,
+      "legend": true
+    },
+    {
+      "id": "ax_low",
+      "row": 0,
+      "col": 1,
+      "title": "Low dose",
+      "xlabel": "Time (h)",
+      "grid": true,
+      "legend": true
+    },
+    {
+      "id": "ax_high",
+      "row": 0,
+      "col": 2,
+      "title": "High dose",
+      "xlabel": "Time (h)",
+      "grid": true,
+      "legend": true
+    }
+  ],
+  "layers": [],
+  "recipes": [
+    {
+      "id": "control-response",
+      "kind": "mean_sem_line",
+      "axes_id": "ax_control",
+      "dataset": {
+        "variable": "df",
+        "x": "time",
+        "y": "response",
+        "filters": [
+          {
+            "column": "condition",
+            "op": "eq",
+            "value": "control",
+            "label": "Control"
+          }
+        ]
+      },
+      "style": {
+        "label": "Mean +/- SEM",
+        "color": "#2563eb",
+        "marker": "o",
+        "linewidth": 1.8
+      },
+      "error": "sem"
+    },
+    {
+      "id": "low-dose-response",
+      "kind": "mean_sem_line",
+      "axes_id": "ax_low",
+      "dataset": {
+        "variable": "df",
+        "x": "time",
+        "y": "response",
+        "filters": [
+          {
+            "column": "condition",
+            "op": "eq",
+            "value": "low_dose",
+            "label": "Low dose"
+          }
+        ]
+      },
+      "style": {
+        "label": "Mean +/- SEM",
+        "color": "#0f766e",
+        "marker": "o",
+        "linewidth": 1.8
+      },
+      "error": "sem"
+    },
+    {
+      "id": "high-dose-response",
+      "kind": "mean_sem_line",
+      "axes_id": "ax_high",
+      "dataset": {
+        "variable": "df",
+        "x": "time",
+        "y": "response",
+        "filters": [
+          {
+            "column": "condition",
+            "op": "eq",
+            "value": "high_dose",
+            "label": "High dose"
+          }
+        ]
+      },
+      "style": {
+        "label": "Mean +/- SEM",
+        "color": "#dc2626",
+        "marker": "o",
+        "linewidth": 1.8
+      },
+      "error": "sem"
+    }
+  ],
+  "reference_lines": [
+    {
+      "id": "control-baseline",
+      "axes_id": "ax_control",
+      "orientation": "horizontal",
+      "value": 1.0,
+      "style": {
+        "label": "Baseline",
+        "color": "#6b7280",
+        "linestyle": "--",
+        "linewidth": 1.0,
+        "alpha": 0.75
+      }
+    },
+    {
+      "id": "low-baseline",
+      "axes_id": "ax_low",
+      "orientation": "horizontal",
+      "value": 1.0,
+      "style": {
+        "label": "Baseline",
+        "color": "#6b7280",
+        "linestyle": "--",
+        "linewidth": 1.0,
+        "alpha": 0.75
+      }
+    },
+    {
+      "id": "high-baseline",
+      "axes_id": "ax_high",
+      "orientation": "horizontal",
+      "value": 1.0,
+      "style": {
+        "label": "Baseline",
+        "color": "#6b7280",
+        "linestyle": "--",
+        "linewidth": 1.0,
+        "alpha": 0.75
+      }
+    }
+  ],
+  "annotations": [],
+  "style": {
+    "preset": "journal_double",
+    "title": "Dose-response trend by condition",
+    "font_family": "Arial",
+    "font_size": 8,
+    "constrained_layout": true
+  },
+  "show": false
+}

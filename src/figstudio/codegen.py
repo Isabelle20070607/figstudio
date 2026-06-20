@@ -119,13 +119,21 @@ class MatplotlibCodegen:
             lines.extend(self._axis_setup(axis, index))
             lines.append("")
 
+        secondary_axis_indices = self._secondary_axis_indices(spec, axis_lookup)
+        if secondary_axis_indices:
+            lines.append("secondary_axes = {}")
+            for axis_index in sorted(secondary_axis_indices):
+                lines.extend(self._secondary_axis_setup(spec.axes[axis_index], axis_index))
+            lines.append("")
+
         legend_axes: set[int] = set()
         for layer in spec.layers:
             axis_index = axis_lookup.get(layer.axes_id, 0)
             style = resolved_layer_style(spec, layer, self.style_profiles)
             filter_lines, filtered_layer = self._filtered_layer(layer)
             lines.extend(filter_lines)
-            lines.extend(self._layer_code(filtered_layer, style, axis_index, spec.axes[axis_index]))
+            axis_expr = self._layer_axis_expr(filtered_layer, axis_index)
+            lines.extend(self._layer_code(filtered_layer, style, axis_expr, spec.axes[axis_index]))
             if style.label and layer.kind not in {"heatmap", "contour"}:
                 legend_axes.add(axis_index)
             lines.append("")
@@ -149,7 +157,10 @@ class MatplotlibCodegen:
 
         for axis_index in sorted(legend_axes):
             if spec.axes[axis_index].legend:
-                lines.append(f"axes_flat[{axis_index}].legend()")
+                if axis_index in secondary_axis_indices:
+                    lines.extend(self._combined_legend_code(axis_index))
+                else:
+                    lines.append(f"axes_flat[{axis_index}].legend()")
         if legend_axes:
             lines.append("")
 
@@ -196,9 +207,47 @@ class MatplotlibCodegen:
             lines.append(f"{prefix}.grid(True, alpha=0.25)")
         return [line for line in lines if line]
 
-    def _layer_code(self, layer: PlotLayer, style: LayerStyle, axis_index: int, axis: AxesSpec) -> list[str]:
+    def _secondary_axis_indices(self, spec: FigureSpec, axis_lookup: dict[str, int]) -> set[int]:
+        if not spec.axes:
+            return set()
+        return {
+            axis_lookup.get(layer.axes_id, 0)
+            for layer in spec.layers
+            if layer.y_axis == "right" and axis_lookup.get(layer.axes_id, 0) < len(spec.axes)
+        }
+
+    def _secondary_axis_setup(self, axis: AxesSpec, index: int) -> list[str]:
+        prefix = f"secondary_axes[{index}]"
+        secondary = axis.secondary_y
+        lines = [f"{prefix} = axes_flat[{index}].twinx()"]
+        if secondary.ylabel:
+            lines.append(f"{prefix}.set_ylabel({secondary.ylabel!r})")
+        if secondary.yscale != "linear":
+            lines.append(f"{prefix}.set_yscale({secondary.yscale!r})")
+        if secondary.ylim:
+            lines.append(f"{prefix}.set_ylim({secondary.ylim!r})")
+        return lines
+
+    def _layer_axis_expr(self, layer: PlotLayer, axis_index: int) -> str:
+        if layer.y_axis == "right":
+            return f"secondary_axes[{axis_index}]"
+        return f"axes_flat[{axis_index}]"
+
+    def _combined_legend_code(self, axis_index: int) -> list[str]:
+        return [
+            f"primary_handles_{axis_index}, primary_labels_{axis_index} = "
+            f"axes_flat[{axis_index}].get_legend_handles_labels()",
+            f"secondary_handles_{axis_index}, secondary_labels_{axis_index} = "
+            f"secondary_axes[{axis_index}].get_legend_handles_labels()",
+            (
+                f"axes_flat[{axis_index}].legend("
+                f"primary_handles_{axis_index} + secondary_handles_{axis_index}, "
+                f"primary_labels_{axis_index} + secondary_labels_{axis_index})"
+            ),
+        ]
+
+    def _layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
         data = layer.dataset
-        ax = f"axes_flat[{axis_index}]"
         label = style.label
         common = {
             "label": label,

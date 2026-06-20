@@ -16,6 +16,7 @@ from figstudio.models import (
     FigurePreset,
     FigureSpec,
     FigureStyle,
+    LayerYAxis,
     LayerStyle,
     PlotKind,
     PlotLayer,
@@ -31,6 +32,7 @@ from figstudio.models import (
     RepeatedPanelSkippedCandidate,
     RenderResponse,
     SaveCodeResponse,
+    SecondaryYAxisSpec,
     SessionInfo,
     StyleProfile,
     StyleProfileFigureDefaults,
@@ -67,6 +69,7 @@ def test_frontend_plot_and_preset_literals_match_backend_contracts():
     assert _type_literals(source, "RecipeKind") == set(get_args(RecipeKind))
     assert _type_literals(source, "FigurePreset") == set(get_args(FigurePreset))
     assert _type_literals(source, "ReferenceLineOrientation") == set(get_args(ReferenceLineOrientation))
+    assert _type_literals(source, "LayerYAxis") == set(get_args(LayerYAxis))
     assert _type_literals(source, "RepeatedPanelSourceKind") == set(get_args(RepeatedPanelSourceKind))
 
 
@@ -81,6 +84,7 @@ def test_frontend_interfaces_cover_backend_model_fields():
         LayerStyle: "LayerStyle",
         PlotLayer: "PlotLayer",
         RecipeLayer: "RecipeLayer",
+        SecondaryYAxisSpec: "SecondaryYAxisSpec",
         AxesSpec: "AxesSpec",
         AnnotationSpec: "AnnotationSpec",
         ReferenceLineSpec: "ReferenceLineSpec",

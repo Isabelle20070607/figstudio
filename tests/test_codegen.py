@@ -10,6 +10,7 @@ from figstudio.models import (
     RecipeDatasetRef,
     RecipeLayer,
     ReferenceLineSpec,
+    SecondaryYAxisSpec,
 )
 
 
@@ -249,6 +250,45 @@ def test_generates_code_for_independent_x_and_y_variables():
 
     assert "axes_flat[0].plot(time, signal" in code
     assert code.count("axes_flat[0].legend()") == 1
+
+
+def test_generates_secondary_y_axis_overlay_code():
+    spec = FigureSpec(
+        axes=[
+            AxesSpec(
+                id="ax0",
+                ylabel="Signal",
+                secondary_y=SecondaryYAxisSpec(ylabel="Rate", yscale="log", ylim=(1.0, None)),
+            )
+        ],
+        layers=[
+            PlotLayer(
+                id="signal-layer",
+                kind="line",
+                dataset=DatasetRef(variable="df", x="time", y="signal"),
+                style=LayerStyle(label="Signal", color="#2563eb"),
+            ),
+            PlotLayer(
+                id="rate-layer",
+                kind="line",
+                y_axis="right",
+                dataset=DatasetRef(variable="df", x="time", y="rate"),
+                style=LayerStyle(label="Rate", color="#dc2626"),
+            ),
+        ],
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "secondary_axes = {}" in code
+    assert "secondary_axes[0] = axes_flat[0].twinx()" in code
+    assert "secondary_axes[0].set_ylabel('Rate')" in code
+    assert "secondary_axes[0].set_yscale('log')" in code
+    assert "secondary_axes[0].set_ylim((1.0, None))" in code
+    assert "axes_flat[0].plot(df['time'], df['signal']" in code
+    assert "secondary_axes[0].plot(df['time'], df['rate']" in code
+    assert "axes_flat[0].legend(primary_handles_0 + secondary_handles_0" in code
+    assert "figstudio" not in code.lower()
 
 
 def test_axis_can_disable_legend_for_labeled_layers():

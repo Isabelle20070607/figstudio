@@ -15,10 +15,8 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | --- | --- |
 | Theme | Scientific authoring primitives |
 | Initiative | Add secondary y-axis support for overlays such as raw events plus summary rates. |
-| Why it matters | Many scientific figures need related measures on shared panels without hand-editing generated code. |
-| Maturity | `foundation-needed` |
-| Horizon | `near` |
-| Gate/Prerequisite | Reference lines and repeated panels stay stable enough to avoid ambiguous axes targeting. |
+| Status | Completed in beta. |
+| Completion note | Plot layers can target the left or right Y axis on the same panel; the right axis supports label, scale, limits, validation, Matplotlib `twinx()` codegen, and JSON round-trip. Recipes and reference lines remain primary-axis scoped. |
 
 | Field | Value |
 | --- | --- |
@@ -64,19 +62,19 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | --- | --- |
 | Theme | Publication workflow |
 | Initiative | Build a real example gallery, README screenshots, and short workflow GIFs. |
-| Why it matters | Users need visible proof of plot layers, statistics recipes, existing Figure inspection, notebook-style output, and package install flows. |
+| Why it matters | Users need production-like proof of plot layers, statistics recipes, existing Figure inspection, notebook-style output, and package install flows from source data through visible preview and export artifacts. |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Gate/Prerequisite | Each example shows input data, user intent, preview, generated code, and export result. |
+| Gate/Prerequisite | Each example shows input data, user intent or figure contract, preview screenshot, generated Matplotlib code, FigureSpec/export artifact, and the publication workflow it demonstrates. |
 
 | Field | Value |
 | --- | --- |
 | Theme | Publication workflow |
 | Initiative | Add publication-readiness checks for export. |
-| Why it matters | Readable font size, DPI/export format, axes and colorbar labels, legend overlap, panel labels, saved specs, generated-code sync, and recipe errors are common final-mile problems. |
+| Why it matters | Missing figure intent, unreadable final-size typography, non-editable vector text, weak panel labels, legend or label overlap, untraceable statistics/source data, stale spec/code sync, and recipe errors are common final-mile problems. |
 | Maturity | `foundation-needed` |
 | Horizon | `near` |
-| Gate/Prerequisite | Checks are advisory and deterministic, with clear issue definitions. |
+| Gate/Prerequisite | Checks are advisory and deterministic, with clear issue definitions and no hidden journal-specific or AI judgment. |
 
 | Field | Value |
 | --- | --- |
@@ -93,7 +91,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | --- | --- |
 | Theme | AI-compatible handoff and provenance |
 | Initiative | Add deterministic AI-compatible handoff without built-in model calls. |
-| Why it matters | Agents can propose figure changes while FigStudio remains the deterministic validator, previewer, differ, and applier. |
+| Why it matters | External agents can propose `FigureSpec` or patch changes from figure-contract-style reasoning while FigStudio remains the deterministic validator, previewer, differ, and applier. |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
 | Gate/Prerequisite | Import a `FigureSpec` or patch, show the spec diff, validate, preview, and let the user apply or reject the change. |
@@ -102,10 +100,10 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | --- | --- |
 | Theme | AI-compatible handoff and provenance |
 | Initiative | Add figure manifests and provenance records. |
-| Why it matters | Reproducibility improves when specs record FigStudio version, source script, data summaries, recipe semantics, export format, and generated-code hash. |
+| Why it matters | Reproducibility improves when manifests record figure intent, FigStudio version, source script, data summaries, recipe semantics, export formats, generated-code hash, and readiness-check results. |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
-| Gate/Prerequisite | `FigureSpec` versioning and generated-code hashing are stable. |
+| Gate/Prerequisite | `FigureSpec` versioning, generated-code hashing, and advisory readiness-check definitions are stable. |
 
 | Field | Value |
 | --- | --- |
@@ -122,10 +120,10 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | --- | --- |
 | Theme | Ecosystem and templates |
 | Initiative | Prepare the recipe/template pack substrate. |
-| Why it matters | Namespaced recipe IDs, shared role schemas, validation hooks, generated-code templates, style defaults, gallery fixtures, and import/export compatibility should exist before external distribution. |
+| Why it matters | Namespaced recipe IDs, reusable chart-family roles, shared role schemas, validation hooks, generated-code templates, style defaults, gallery fixtures, and import/export compatibility should exist before external or domain-specific packs. |
 | Maturity | `foundation-needed` |
 | Horizon | `near` |
-| Gate/Prerequisite | Bundled recipes share enough structure to avoid freezing a weak extension contract. |
+| Gate/Prerequisite | Bundled recipes and gallery fixtures share enough structure to avoid freezing a weak extension contract. |
 
 | Field | Value |
 | --- | --- |

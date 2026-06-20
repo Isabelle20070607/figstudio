@@ -17,6 +17,7 @@ Common validation problems:
 | Dimension mismatch | Make X, Y, and optional Y error sources compatible. |
 | Heatmap or contour lacks 2D values | Use a 2D ndarray or gridded value source. |
 | Non-positive data on a log axis | Filter data, change limits, or switch back to linear scale. |
+| Unsupported right Y-axis layer kind | Use the right Y axis for simple overlay layer kinds, or switch the layer back to the left Y axis. |
 | Missing style profile | Select an available profile, restore `.figstudio/styles.json`, or accept fallback defaults. |
 
 Issue payloads may include a `suggestion` plus details such as available variables, DataFrame columns, axes ids, profile ids, or a suggested replacement value. The editor displays that suggestion before falling back to the generic repair text above.
@@ -25,7 +26,7 @@ Issue payloads may include a `suggestion` plus details such as available variabl
 
 | Code | Meaning |
 | --- | --- |
-| `validation_failed` | The spec references missing data, invalid layout, incompatible dimensions, invalid 2D data, or non-positive log-scale data. |
+| `validation_failed` | The spec references missing data, invalid layout, incompatible dimensions, invalid 2D data, unsupported secondary-axis layers, or non-positive log-scale data. |
 | `render_failed` | Generated Matplotlib code could not run after validation. |
 | `export_failed` | Export rendering failed or an explicit output path could not be written. |
 | `writeback_failed` | The controlled block was missing, duplicated, nested, had unmatched markers, or used a different `block_id`. |

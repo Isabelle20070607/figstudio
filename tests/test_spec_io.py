@@ -7,6 +7,7 @@ from figstudio.models import (
     FigureSpec,
     PlotLayer,
     ReferenceLineSpec,
+    SecondaryYAxisSpec,
 )
 
 
@@ -67,6 +68,27 @@ def test_filtered_faceted_spec_round_trip_json(tmp_path):
     assert loaded.share_y is False
     assert loaded.layers[0].dataset.filters[0].column == "condition"
     assert loaded.layers[0].dataset.filters[0].label == "Control"
+
+
+def test_secondary_y_axis_spec_round_trip_json(tmp_path):
+    spec = FigureSpec(
+        axes=[AxesSpec(id="ax0", secondary_y=SecondaryYAxisSpec(ylabel="Rate", yscale="log"))],
+        layers=[
+            PlotLayer(
+                id="rate",
+                kind="line",
+                y_axis="right",
+                dataset=DatasetRef(variable="df", x="time", y="rate"),
+            )
+        ],
+    )
+    path = tmp_path / "secondary-y.figstudio.json"
+
+    loaded = figstudio.load_spec(figstudio.save_spec(spec, path))
+
+    assert loaded.axes[0].secondary_y.ylabel == "Rate"
+    assert loaded.axes[0].secondary_y.yscale == "log"
+    assert loaded.layers[0].y_axis == "right"
 
 
 def test_selected_panel_spec_round_trip_json(tmp_path):

@@ -27,6 +27,7 @@ def main() -> None:
         {
             "time": time,
             "signal": np.sin(time / 2) + np.repeat(np.linspace(-0.2, 0.2, 8), 5),
+            "rate": 8 + time * 1.5 + np.repeat(np.linspace(0.0, 1.4, 8), 5),
             "condition": condition,
             "subject": subject,
         }

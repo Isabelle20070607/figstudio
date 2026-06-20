@@ -30,6 +30,15 @@ from figstudio.style_profiles import missing_profile_issue_details
 
 
 MAX_REPAIR_CHOICES = 12
+SECONDARY_Y_SUPPORTED_KINDS = {
+    "line",
+    "scatter",
+    "bar",
+    "hist",
+    "errorbar",
+    "step",
+    "fill_between",
+}
 
 
 @dataclass
@@ -192,6 +201,8 @@ def validate_figure_spec(
             )
             continue
 
+        axis = axes_by_id[layer.axes_id]
+        _validate_layer_y_axis(layer, axis, issues)
         dataset_source = _resolve_dataset_source(namespace, layer, issues)
         if dataset_source is None:
             continue
@@ -205,7 +216,6 @@ def validate_figure_spec(
                 source_value=dataset_source.value,
                 source_label=dataset_source.label,
             )
-        axis = axes_by_id[layer.axes_id]
         y_value = _resolve_value(namespace, layer, "y", issues, dataset_source)
         x_value = _resolve_channel(namespace, layer, "x", issues, dataset_source)
         z_value = _resolve_z(namespace, layer, issues, dataset_source)
@@ -220,7 +230,8 @@ def validate_figure_spec(
 
         if axis.xscale == "log" and x_value is not None:
             _check_positive(layer, issues, x_value, "x")
-        if axis.yscale == "log" and y_value is not None and layer.kind not in {"heatmap", "contour"}:
+        yscale = _layer_yscale(layer, axis)
+        if yscale == "log" and y_value is not None and layer.kind not in {"heatmap", "contour"}:
             _check_positive(layer, issues, y_value, "y")
 
     for recipe in spec.recipes:
@@ -448,6 +459,40 @@ def _validate_recipe(
         column = getattr(data, field)
         if column:
             _check_dataframe_column(value, recipe, column, field, issues)
+
+
+def _validate_layer_y_axis(layer: PlotLayer, axis: AxesSpec, issues: list[ValidationIssue]) -> None:
+    if layer.y_axis != "right":
+        return
+    if layer.kind in SECONDARY_Y_SUPPORTED_KINDS:
+        return
+    issues.append(
+        ValidationIssue(
+            code="unsupported_secondary_y_layer",
+            message=(
+                f"Layer {layer.id!r} uses the right y-axis, but {layer.kind!r} "
+                "is not supported for secondary-axis overlays yet."
+            ),
+            suggestion=(
+                "Switch this layer back to the left y-axis, or use a line, scatter, "
+                "bar, histogram, errorbar, step, or fill_between layer."
+            ),
+            layer_id=layer.id,
+            axes_id=axis.id,
+            field="y_axis",
+            details={
+                "kind": layer.kind,
+                "y_axis": layer.y_axis,
+                "supported_kinds": sorted(SECONDARY_Y_SUPPORTED_KINDS),
+            },
+        )
+    )
+
+
+def _layer_yscale(layer: PlotLayer, axis: AxesSpec) -> str:
+    if layer.y_axis == "right":
+        return axis.secondary_y.yscale
+    return axis.yscale
 
 
 def _validate_reference_line(

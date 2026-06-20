@@ -23,7 +23,7 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - 检查 DataFrame、Series、ndarray、mapping、list、tuple 和已有 Matplotlib Figure 的安全 summaries。
 - 创建和编辑 public beta plot kinds 和内置 statistics recipes。
 - 基于 DataFrame 列首次出现的取值创建 faceted panels，并为普通 plot layers 支持 mapping-key 和 sequence-index repeated panels。
-- 配置 manuscript presets、project style profiles、panel layouts、axes settings、layer styles、reference lines 和 text/arrow annotations。
+- 配置 manuscript presets、project style profiles、panel layouts、axes settings、secondary Y-axis overlays、layer styles、reference lines 和 text/arrow annotations。
 - 加载 `.figstudio/styles.json` project style profiles，并在 `FigureSpec` 中保存 profile references 和 explicit override fields。
 - 用 Matplotlib Agg 生成 previews 和 exports。
 - 将 generated code 写入唯一受控脚本块，或返回 notebook replacement code。
@@ -36,6 +36,7 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - 作为 Scientific Python 用户，我希望从 `locals()` 打开 editor，以复用已经准备好的数据。
 - 作为研究者，我希望使用 manuscript presets 和 annotation controls，更快准备发表风格图形。
 - 作为研究者，我希望添加 baseline 和 threshold reference lines，让常见科学 cutoffs 可见，而不需要把它们伪装成 data layers。
+- 作为研究者，我希望用右侧 Y axis 在共享 X axis 的 panel 上叠加相关指标，而不需要手工修改 generated code。
 - 作为研究者，我希望按 condition 列把 DataFrame plot 或 recipe 拆成 small multiples，而不需要手动创建每个 axes。
 - 作为研究者，我希望在准备好的数据已经按 mapping 或 sequence 分组时，也能按 keys 或 items 拆分普通 plot layers。
 - 作为项目维护者，我希望共享 style profiles，让图形继承项目 defaults，同时记录 explicit overrides。
@@ -51,6 +52,7 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - Generated code 只 import Matplotlib，并能在相同用户变量下运行。
 - PNG、SVG、PDF 导出来自 Matplotlib。
 - Reference lines 会生成 Matplotlib `axhline` 或 `axvline` 代码，并能通过 `.figstudio.json` 往返保存。
+- Secondary Y-axis overlays 会生成 Matplotlib `twinx()` 代码，保留右侧 axis settings，并能通过 `.figstudio.json` 往返保存。
 - DataFrame facet panels 会生成带过滤的 Matplotlib code，保留 shared-axis flags，并能通过 `.figstudio.json` 往返保存。
 - Mapping-key 和 sequence-index repeated panels 会生成 selected-item Matplotlib code，并能通过 `.figstudio.json` 往返保存。
 - Validation、render、export 和 writeback failures 返回可读 structured errors，并为常见 validation issues 提供 repair suggestions。

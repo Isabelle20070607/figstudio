@@ -11,6 +11,7 @@ from figstudio.models import (
     RecipeDatasetRef,
     RecipeLayer,
     ReferenceLineSpec,
+    SecondaryYAxisSpec,
 )
 from figstudio.registry import VariableRegistry
 from figstudio.server import create_app
@@ -397,6 +398,81 @@ def test_reference_line_api_smoke_workflow_without_data_layer():
     assert rendered.status_code == 200
     assert "<svg" in rendered.json()["image"]
     assert "axes_flat[0].axhline(0.0" in rendered.json()["code"]
+
+
+def test_secondary_y_axis_api_smoke_workflow():
+    df = pd.DataFrame(
+        {
+            "time": [0, 1, 2],
+            "signal": [0.1, 0.4, 0.2],
+            "rate": [8.0, 12.0, 9.5],
+        }
+    )
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        axes=[AxesSpec(id="ax0", secondary_y=SecondaryYAxisSpec(ylabel="Rate"))],
+        layers=[
+            PlotLayer(
+                id="signal",
+                kind="line",
+                dataset=DatasetRef(variable="df", x="time", y="signal"),
+            ),
+            PlotLayer(
+                id="rate",
+                kind="line",
+                y_axis="right",
+                dataset=DatasetRef(variable="df", x="time", y="rate"),
+            ),
+        ],
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    rendered = client.post("/api/render", json={"spec": spec.model_dump(), "format": "svg"})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is True
+    assert rendered.status_code == 200
+    assert "<svg" in rendered.json()["image"]
+    assert "secondary_axes[0] = axes_flat[0].twinx()" in rendered.json()["code"]
+    assert "secondary_axes[0].plot(df['time'], df['rate']" in rendered.json()["code"]
+
+
+def test_secondary_y_axis_validation_reports_unsupported_layer_kind_and_log_data():
+    session = FigStudioSession(
+        registry=VariableRegistry({"matrix": [[1, 2], [3, 4]], "rate": [0.0, 1.0]}),
+        port=8001,
+    )
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        axes=[AxesSpec(id="ax0", secondary_y=SecondaryYAxisSpec(yscale="log"))],
+        layers=[
+            PlotLayer(
+                id="field",
+                kind="heatmap",
+                y_axis="right",
+                dataset=DatasetRef(variable="matrix"),
+            ),
+            PlotLayer(
+                id="rate",
+                kind="line",
+                y_axis="right",
+                dataset=DatasetRef(variable="rate"),
+            ),
+        ],
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    issues = validation.json()["issues"]
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is False
+    assert [issue["code"] for issue in issues] == [
+        "unsupported_secondary_y_layer",
+        "log_scale_non_positive",
+    ]
+    assert issues[0]["field"] == "y_axis"
+    assert issues[1]["field"] == "dataset.y"
 
 
 def test_validate_endpoint_reports_reference_line_errors():

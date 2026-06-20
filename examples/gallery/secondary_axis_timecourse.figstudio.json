@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "mode": "publish",
+  "width": 6.2,
+  "height": 3.4,
+  "dpi": 160,
+  "rows": 1,
+  "cols": 1,
+  "axes": [
+    {
+      "id": "ax0",
+      "row": 0,
+      "col": 0,
+      "title": "Signal and event rate after stimulation",
+      "xlabel": "Time (s)",
+      "ylabel": "Fluorescence (a.u.)",
+      "grid": true,
+      "legend": true,
+      "secondary_y": {
+        "ylabel": "Events / min",
+        "yscale": "linear",
+        "ylim": [
+          0.0,
+          null
+        ]
+      }
+    }
+  ],
+  "layers": [
+    {
+      "id": "fluorescence",
+      "kind": "line",
+      "axes_id": "ax0",
+      "dataset": {
+        "variable": "df",
+        "x": "time",
+        "y": "fluorescence"
+      },
+      "style": {
+        "label": "Fluorescence",
+        "color": "#2563eb",
+        "linewidth": 1.8
+      }
+    },
+    {
+      "id": "event-rate",
+      "kind": "line",
+      "axes_id": "ax0",
+      "y_axis": "right",
+      "dataset": {
+        "variable": "df",
+        "x": "time",
+        "y": "event_rate"
+      },
+      "style": {
+        "label": "Event rate",
+        "color": "#dc2626",
+        "linestyle": "--",
+        "linewidth": 1.6
+      }
+    }
+  ],
+  "recipes": [],
+  "reference_lines": [
+    {
+      "id": "stimulus-on",
+      "axes_id": "ax0",
+      "orientation": "vertical",
+      "value": 24.0,
+      "style": {
+        "label": "Stimulus on",
+        "color": "#111827",
+        "linestyle": ":",
+        "linewidth": 1.2,
+        "alpha": 0.85
+      }
+    },
+    {
+      "id": "stimulus-off",
+      "axes_id": "ax0",
+      "orientation": "vertical",
+      "value": 36.0,
+      "style": {
+        "label": "Stimulus off",
+        "color": "#374151",
+        "linestyle": ":",
+        "linewidth": 1.2,
+        "alpha": 0.85
+      }
+    }
+  ],
+  "annotations": [
+    {
+      "id": "peak-response",
+      "axes_id": "ax0",
+      "text": "peak response",
+      "x": 30.0,
+      "y": 2.0,
+      "xytext": [
+        39.0,
+        2.25
+      ]
+    }
+  ],
+  "style": {
+    "preset": "journal_single",
+    "title": "",
+    "font_family": "Arial",
+    "font_size": 9,
+    "constrained_layout": true
+  },
+  "show": false
+}

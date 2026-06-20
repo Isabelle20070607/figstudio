@@ -15,10 +15,8 @@
 | --- | --- |
 | Theme | Scientific authoring primitives |
 | Initiative | 增加 secondary y-axis 支持，用于 raw events 加 summary rates 这类 overlay。 |
-| Why it matters | 许多科研图需要在共享 panel 上呈现相关指标，而不是手工修改 generated code。 |
-| Maturity | `foundation-needed` |
-| Horizon | `near` |
-| Gate/Prerequisite | Reference lines 和 repeated panels 足够稳定，不会造成 axes targeting 歧义。 |
+| Status | 已在 beta 中完成。 |
+| Completion note | Plot layers 可以在同一 panel 上选择 left 或 right Y axis；右侧 axis 支持 label、scale、limits、validation、Matplotlib `twinx()` codegen 和 JSON round-trip。Recipes 和 reference lines 仍保持 primary-axis scope。 |
 
 | Field | Value |
 | --- | --- |
@@ -64,19 +62,19 @@
 | --- | --- |
 | Theme | Publication workflow |
 | Initiative | 建立真实 example gallery、README screenshots 和短 workflow GIFs。 |
-| Why it matters | 用户需要看到 plot layers、statistics recipes、existing Figure inspection、notebook-style output 和 package install flows 的可见证据。 |
+| Why it matters | 用户需要接近真实生产场景的证据，展示 plot layers、statistics recipes、existing Figure inspection、notebook-style output 和 package install flows 如何从 source data 走到可见 preview 与 export artifacts。 |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Gate/Prerequisite | 每个例子展示 input data、user intent、preview、generated code 和 export result。 |
+| Gate/Prerequisite | 每个例子展示 input data、user intent 或 figure contract、preview screenshot、generated Matplotlib code、FigureSpec/export artifact，以及它证明的 publication workflow。 |
 
 | Field | Value |
 | --- | --- |
 | Theme | Publication workflow |
 | Initiative | 增加 publication-readiness export checks。 |
-| Why it matters | Readable font size、DPI/export format、axes 和 colorbar labels、legend overlap、panel labels、saved specs、generated-code sync 和 recipe errors 都是常见最后一公里问题。 |
+| Why it matters | 缺少 figure intent、final-size typography 不可读、vector text 不可编辑、panel labels 薄弱、legend 或 label overlap、statistics/source data 不可追踪、spec/code sync 过期和 recipe errors 都是常见最后一公里问题。 |
 | Maturity | `foundation-needed` |
 | Horizon | `near` |
-| Gate/Prerequisite | Checks 是 advisory 且 deterministic，并有清楚的 issue definitions。 |
+| Gate/Prerequisite | Checks 是 advisory 且 deterministic，并有清楚的 issue definitions，不引入隐藏的 journal-specific 或 AI judgment。 |
 
 | Field | Value |
 | --- | --- |
@@ -93,7 +91,7 @@
 | --- | --- |
 | Theme | AI-compatible handoff and provenance |
 | Initiative | 增加不内置模型调用的 deterministic AI-compatible handoff。 |
-| Why it matters | Agent 可以提出图形修改，但 FigStudio 仍然是确定性的 validator、previewer、differ 和 applier。 |
+| Why it matters | 外部 agent 可以基于 figure-contract-style reasoning 提出 `FigureSpec` 或 patch changes，但 FigStudio 仍然是确定性的 validator、previewer、differ 和 applier。 |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
 | Gate/Prerequisite | 导入 `FigureSpec` 或 patch，显示 spec diff，validate，preview，并让用户 apply 或 reject 修改。 |
@@ -102,10 +100,10 @@
 | --- | --- |
 | Theme | AI-compatible handoff and provenance |
 | Initiative | 增加 figure manifests 和 provenance records。 |
-| Why it matters | 当 specs 记录 FigStudio version、source script、data summaries、recipe semantics、export format 和 generated-code hash 时，可复现性更强。 |
+| Why it matters | 当 manifests 记录 figure intent、FigStudio version、source script、data summaries、recipe semantics、export formats、generated-code hash 和 readiness-check results 时，可复现性更强。 |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
-| Gate/Prerequisite | `FigureSpec` versioning 和 generated-code hashing 稳定。 |
+| Gate/Prerequisite | `FigureSpec` versioning、generated-code hashing 和 advisory readiness-check definitions 稳定。 |
 
 | Field | Value |
 | --- | --- |
@@ -122,10 +120,10 @@
 | --- | --- |
 | Theme | Ecosystem and templates |
 | Initiative | 准备 recipe/template pack substrate。 |
-| Why it matters | Namespaced recipe IDs、shared role schemas、validation hooks、generated-code templates、style defaults、gallery fixtures 和 import/export compatibility 应该在外部分发前存在。 |
+| Why it matters | Namespaced recipe IDs、reusable chart-family roles、shared role schemas、validation hooks、generated-code templates、style defaults、gallery fixtures 和 import/export compatibility 应该在外部或领域专用 packs 前存在。 |
 | Maturity | `foundation-needed` |
 | Horizon | `near` |
-| Gate/Prerequisite | Bundled recipes 有足够共享结构，避免过早冻结脆弱 extension contract。 |
+| Gate/Prerequisite | Bundled recipes 和 gallery fixtures 有足够共享结构，避免过早冻结脆弱 extension contract。 |
 
 | Field | Value |
 | --- | --- |

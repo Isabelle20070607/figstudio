@@ -1,0 +1,143 @@
+{
+  "version": 1,
+  "mode": "publish",
+  "width": 7.1,
+  "height": 4.2,
+  "dpi": 160,
+  "rows": 2,
+  "cols": 2,
+  "axes": [
+    {
+      "id": "ax_heatmap",
+      "row": 0,
+      "col": 0,
+      "rowspan": 2,
+      "colspan": 1,
+      "title": "Spectral power",
+      "xlabel": "Time bin",
+      "ylabel": "Frequency bin",
+      "colorbar": true
+    },
+    {
+      "id": "ax_control",
+      "row": 0,
+      "col": 1,
+      "title": "Control trace",
+      "ylabel": "Signal",
+      "grid": true,
+      "legend": true
+    },
+    {
+      "id": "ax_treated",
+      "row": 1,
+      "col": 1,
+      "title": "Treated trace",
+      "xlabel": "Time (s)",
+      "ylabel": "Signal",
+      "grid": true,
+      "legend": true
+    }
+  ],
+  "layers": [
+    {
+      "id": "spectral-power",
+      "kind": "heatmap",
+      "axes_id": "ax_heatmap",
+      "dataset": {
+        "variable": "spectral_power"
+      },
+      "style": {
+        "cmap": "magma",
+        "colorbar": true
+      }
+    },
+    {
+      "id": "control-trace",
+      "kind": "line",
+      "axes_id": "ax_control",
+      "dataset": {
+        "variable": "signal_map",
+        "selection": {
+          "kind": "mapping_key",
+          "key": "control",
+          "label": "Control"
+        },
+        "x_variable": "time"
+      },
+      "style": {
+        "label": "Control",
+        "color": "#2563eb",
+        "linewidth": 1.4
+      }
+    },
+    {
+      "id": "treated-trace",
+      "kind": "line",
+      "axes_id": "ax_treated",
+      "dataset": {
+        "variable": "signal_map",
+        "selection": {
+          "kind": "mapping_key",
+          "key": "treated",
+          "label": "Treated"
+        },
+        "x_variable": "time"
+      },
+      "style": {
+        "label": "Treated",
+        "color": "#0f766e",
+        "linewidth": 1.4
+      }
+    }
+  ],
+  "recipes": [],
+  "reference_lines": [
+    {
+      "id": "control-zero",
+      "axes_id": "ax_control",
+      "orientation": "horizontal",
+      "value": 0.0,
+      "style": {
+        "label": "Zero",
+        "color": "#6b7280",
+        "linestyle": "--",
+        "linewidth": 1.0,
+        "alpha": 0.75
+      }
+    },
+    {
+      "id": "treated-zero",
+      "axes_id": "ax_treated",
+      "orientation": "horizontal",
+      "value": 0.0,
+      "style": {
+        "label": "Zero",
+        "color": "#6b7280",
+        "linestyle": "--",
+        "linewidth": 1.0,
+        "alpha": 0.75
+      }
+    }
+  ],
+  "annotations": [
+    {
+      "id": "treated-note",
+      "axes_id": "ax_treated",
+      "text": "lower amplitude",
+      "x": 33.0,
+      "y": 0.55,
+      "xytext": [
+        42.0,
+        0.9
+      ]
+    }
+  ],
+  "style": {
+    "preset": "journal_double",
+    "title": "Spectral summary with selected traces",
+    "font_family": "Arial",
+    "font_size": 8,
+    "constrained_layout": true
+  },
+  "show": false
+}

@@ -4,7 +4,7 @@ This document is the implementation baseline for the public beta. User tutorials
 
 ## Architecture
 
-FigStudio is a Python-owned local application with a React editor. Python owns data access, facet value lookup, validation, Matplotlib rendering, code generation, export, controlled writeback, and packaged static serving. React owns editor state, variable/layer/recipe/facet controls, reference lines, annotations, preview display, validation display, FigureSpec import/export, and user actions.
+FigStudio is a Python-owned local application with a React editor. Python owns data access, facet value lookup, validation, Matplotlib rendering, code generation, export, controlled writeback, and packaged static serving. React owns editor state, variable/layer/recipe/facet controls, secondary-axis controls, reference lines, annotations, preview display, validation display, FigureSpec import/export, and user actions.
 
 ```mermaid
 flowchart TD
@@ -32,7 +32,7 @@ flowchart TD
 - `registry.py`: stores live Python objects and exposes safe `VariableSummary` records to the UI.
 - `models.py`: defines Pydantic request, response, error, session, validation, and FigureSpec models.
 - `style_profiles.py`: loads `.figstudio/styles.json`, reports non-fatal warnings, and resolves profile defaults without mutating `FigureSpec`.
-- `validation.py`: validates layout geometry, missing variables/columns, non-DataFrame recipe or filter sources, missing axes, facet filters, dimension mismatches, 2D requirements, and log-scale positivity, while adding field-level repair suggestions when context is available.
+- `validation.py`: validates layout geometry, missing variables/columns, non-DataFrame recipe or filter sources, missing axes, facet filters, secondary Y-axis layer compatibility, dimension mismatches, 2D requirements, and primary or secondary log-scale positivity, while adding field-level repair suggestions when context is available.
 - `codegen.py`: converts `FigureSpec` into plain Matplotlib OO code with no FigStudio runtime dependency.
 - `render.py`: executes generated code with the live namespace under the Agg backend and returns preview/export bytes.
 - `sync.py`: replaces one unique controlled script block and rejects unsafe marker states.
@@ -55,7 +55,7 @@ flowchart TD
 
 - The local server binds to `127.0.0.1` by default.
 - The UI receives summaries, not direct serialized copies of arbitrary Python objects.
-- FigureSpec recipe and facet entries store intent, column references, equality filters, and labels, not raw DataFrame contents.
+- FigureSpec recipe, facet, repeated-panel, and secondary-axis entries store intent, column references, equality filters, selections, labels, and axis settings, not raw DataFrame contents.
 - Generated plotting code must not import or require FigStudio.
 - Generated plotting code must contain resolved profile values as plain Matplotlib arguments, not runtime profile lookups.
 - Script writeback replaces only one unique controlled block and rejects missing, duplicate, unmatched, or nested markers.

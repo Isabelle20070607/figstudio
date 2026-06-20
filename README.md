@@ -45,6 +45,7 @@ Common entry points:
 | --- | --- | --- |
 | Figure users | [Get Started](docs/en/getting-started.md) | [快速开始](docs/zh/getting-started.md) |
 | Scientific workflows | [Workflows](docs/en/scientific-workflows.md) | [科研制图工作流](docs/zh/scientific-workflows.md) |
+| Example gallery | [Gallery](docs/en/gallery.md) | [Gallery](docs/zh/gallery.md) |
 | API consumers | [API Reference](docs/en/reference/api.md) | [API 参考](docs/zh/reference/api.md) |
 | Contributors | [Developer Guide](docs/en/contributing/developer-guide.md) | [开发者指南](docs/zh/contributing/developer-guide.md) |
 | Product scope | [PRD](docs/en/product/prd.md) | [产品需求](docs/zh/product/prd.md) |

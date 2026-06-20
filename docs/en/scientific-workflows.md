@@ -38,6 +38,14 @@ For normal plot layers, the same repeated-panel controls also work with mapping 
 
 Mapping and sequence repeated panels are intentionally v1-scoped: use index X or an independent X variable, and do not use same-source selected X or Y-error channels yet. Statistics recipes remain DataFrame-only.
 
+## Secondary Y-Axis Overlays
+
+Use a secondary Y axis when two related measures need to share one panel and X scale, such as signal amplitude plus event rate. Add the primary plot layer normally, add the overlay layer, then set that layer's **Y axis** control to **Right** in the polish panel.
+
+The active axes exposes right-side label, scale, and limit controls. FigStudio stores `PlotLayer.y_axis: "right"` on the overlay layer and `AxesSpec.secondary_y` for the right-side axis settings. Generated code creates one Matplotlib `twinx()` axes for that panel and combines primary plus secondary legend entries when the panel legend is enabled.
+
+The first beta slice supports simple overlay plot layers: `line`, `scatter`, `bar`, `hist`, `errorbar`, `step`, and `fill_between`. Statistics recipes, reference lines, heatmaps, contours, horizontal bars, boxplots, and violins stay on the primary Y axis for now.
+
 ## Publication Polish
 
 Use **Publish** mode when you are preparing manuscript or presentation output. It exposes publication-oriented controls such as font family and constrained layout while preserving the same generated-code path as **Explore** mode.
@@ -46,8 +54,8 @@ The right-side polish panel covers:
 
 - figure size, DPI, title, font settings, built-in presets, and project style profile;
 - panel layout rows, columns, shared-axis options, and presets;
-- axes titles, labels, scales, limits, grid, legend, and colorbar fallback;
-- layer and recipe target axes, labels, colors, markers, line styles, linewidths, alpha, colormap, histogram bins, and fill alpha;
+- axes titles, labels, scales, limits, secondary Y-axis settings, grid, legend, and colorbar fallback;
+- layer and recipe target axes, layer left/right Y-axis target, labels, colors, markers, line styles, linewidths, alpha, colormap, histogram bins, and fill alpha;
 - horizontal and vertical reference lines for baselines, thresholds, cutoff markers, and guide labels;
 - text and arrow annotations on the active axes.
 

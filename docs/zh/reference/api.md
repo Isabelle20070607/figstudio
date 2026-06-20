@@ -56,7 +56,7 @@ CLI 会打印 session URL，并持续运行直到被中断。
 | `version` | Spec 格式标记，当前默认 `1`。 |
 | `mode` | `explore` 或 `publish`。 |
 | `width`, `height`, `dpi` | Figure size 和 render/export DPI。 |
-| `rows`, `cols`, `share_x`, `share_y`, `axes` | Panel layout grid、shared-axis flags 和 axes geometry。 |
+| `rows`, `cols`, `share_x`, `share_y`, `axes` | Panel layout grid、shared-axis flags、axes geometry，以及 primary/secondary axis metadata。 |
 | `layers` | Plot layer definitions。 |
 | `recipes` | Statistics recipe definitions。 |
 | `reference_lines` | 用于 baselines、thresholds 和 cutoff labels 的 horizontal/vertical guide lines。 |
@@ -65,6 +65,8 @@ CLI 会打印 session URL，并持续运行直到被中断。
 | `show` | 生成代码是否调用 `plt.show()`。 |
 
 支持的 `PlotLayer.kind` 值为 `line`、`scatter`、`bar`、`barh`、`hist`、`boxplot`、`violin`、`errorbar`、`heatmap`、`contour`、`step` 和 `fill_between`。
+
+`PlotLayer.y_axis` 默认是 `left`。把它设为 `right` 可在同一个 `axes_id` 上创建简单 secondary Y-axis overlay；`AxesSpec.secondary_y` 保存右侧 `ylabel`、`yscale` 和 `ylim`。当某个 panel 至少有一个 right-axis layer 时，生成代码会输出 Matplotlib `twinx()`。
 
 支持的 `RecipeLayer.kind` 值为 `mean_sem_line`、`grouped_points` 和 `paired_before_after`。
 
@@ -113,7 +115,7 @@ HTTP errors 使用：
 
 当前 error codes 为 `validation_failed`、`render_failed`、`export_failed`、`writeback_failed`、`writeback_io_failed`、`missing_variable`、`missing_column`、`unsupported_facet_source` 和 `unsupported_repeated_panel_source`。Writeback errors 出现在 `SaveCodeResponse.error` 中；render、export、validation、facet-value 和 repeated-panel candidate failures 是 HTTP errors。
 
-Validation issue codes 包括 `missing_style_profile`、`invalid_grid_size`、`duplicate_axes_id`、`invalid_axes_span`、`axes_out_of_bounds`、`axes_overlap`、`missing_axes`、`missing_variable`、`missing_column`、`unsupported_recipe_source`、`unsupported_filter_source`、`empty_filter_result`、`unsupported_selection_source`、`unsupported_selection_key`、`missing_selection_key`、`selection_index_out_of_range`、`unsupported_selected_channel`、`unplottable_selection_value`、`dimension_mismatch`、`requires_2d_data`、`log_scale_non_positive` 和 `invalid_reference_line_value`。
+Validation issue codes 包括 `missing_style_profile`、`invalid_grid_size`、`duplicate_axes_id`、`invalid_axes_span`、`axes_out_of_bounds`、`axes_overlap`、`missing_axes`、`missing_variable`、`missing_column`、`unsupported_recipe_source`、`unsupported_filter_source`、`empty_filter_result`、`unsupported_selection_source`、`unsupported_selection_key`、`missing_selection_key`、`selection_index_out_of_range`、`unsupported_selected_channel`、`unplottable_selection_value`、`dimension_mismatch`、`requires_2d_data`、`log_scale_non_positive`、`unsupported_secondary_y_layer` 和 `invalid_reference_line_value`。
 
 每个 validation issue 可能包含用于 UI repair guidance 的 `suggestion`。`details` 可以包含有界上下文，例如 `available_variables`、`available_columns`、`available_axes`、`available_profiles` 和 `suggested_value`；不会包含原始 DataFrame contents。
 
@@ -122,7 +124,7 @@ Validation issue codes 包括 `missing_style_profile`、`invalid_grid_size`、`d
 - 生成绘图代码必须能在不 import FigStudio 的情况下运行。
 - 生成 recipe code 可以调用现有 pandas DataFrame 变量的方法，但 imports 仍限于 Matplotlib。
 - 保存的 FigureSpec 文件依赖下一次 session 中兼容的变量名、mapping keys、sequence indices、DataFrame 列和数据形状。
-- 保存的 recipe、facet 和 repeated-panel specs 只存列映射、等值 filters、selections、labels 和 recipe intent，不保存原始数据。
+- 保存的 recipe、facet、repeated-panel 和 secondary-axis specs 只存列映射、等值 filters、selections、labels、axis settings 和 recipe intent，不保存原始数据。
 - 保存的 reference line specs 只存 numeric constants 和 style，不保存派生数据。
 - Runtime wheel 安装不应要求 Node/npm。
 - Notebook workflows 返回代码，不直接编辑 Notebook 文件。

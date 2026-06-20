@@ -26,6 +26,7 @@ import type {
   DatasetRef,
   FigurePreset,
   FigureSpec,
+  LayerYAxis,
   LayerStyle,
   PlotKind,
   PlotLayer,
@@ -36,6 +37,7 @@ import type {
   RepeatedPanelCandidate,
   RepeatedPanelSkippedCandidate,
   RepeatedPanelSourceKind,
+  SecondaryYAxisSpec,
   StyleProfile,
   StyleProfilesResponse,
   ValidationIssue,
@@ -71,6 +73,16 @@ const markers = ["", "o", "s", "^", "D", "x"];
 const linestyles = ["-", "--", "-.", ":"];
 const cmaps = ["viridis", "magma", "plasma", "cividis", "coolwarm", "Greys"];
 const scales: AxesSpec["xscale"][] = ["linear", "log", "symlog", "logit"];
+const yAxisTargets: LayerYAxis[] = ["left", "right"];
+const secondaryYAxisLayerKinds = new Set<PlotKind>([
+  "line",
+  "scatter",
+  "bar",
+  "hist",
+  "errorbar",
+  "step",
+  "fill_between"
+]);
 const indexSource = "__index__";
 const noneSource = "__none__";
 const defaultFacetLimit = 12;
@@ -368,6 +380,14 @@ function facetLayout(count: number): { rows: number; cols: number } {
   };
 }
 
+function createSecondaryYAxis(existing?: Partial<SecondaryYAxisSpec> | null): SecondaryYAxisSpec {
+  return {
+    ylabel: existing?.ylabel ?? "",
+    yscale: existing?.yscale ?? "linear",
+    ylim: existing?.ylim ?? null
+  };
+}
+
 function createFacetAxes(values: FacetValue[], column: string, cols: number): AxesSpec[] {
   return values.map((value, index) => ({
     id: `ax${index}`,
@@ -382,6 +402,7 @@ function createFacetAxes(values: FacetValue[], column: string, cols: number): Ax
     yscale: "linear",
     xlim: null,
     ylim: null,
+    secondary_y: createSecondaryYAxis(),
     grid: false,
     legend: true,
     colorbar: false
@@ -406,6 +427,7 @@ function createRepeatedPanelAxes(candidates: RepeatedPanelCandidate[], titlePref
     yscale: "linear",
     xlim: null,
     ylim: null,
+    secondary_y: createSecondaryYAxis(),
     grid: false,
     legend: true,
     colorbar: false
@@ -417,6 +439,14 @@ function normalizeDatasetRef(dataset: DatasetRef): DatasetRef {
     ...dataset,
     selection: dataset.selection ?? null,
     filters: dataset.filters ?? []
+  };
+}
+
+function normalizeLayer(layer: PlotLayer): PlotLayer {
+  return {
+    ...layer,
+    y_axis: layer.y_axis ?? "left",
+    dataset: normalizeDatasetRef(layer.dataset)
   };
 }
 
@@ -447,6 +477,7 @@ function createAxis(
     yscale: existing?.yscale ?? "linear",
     xlim: existing?.xlim ?? null,
     ylim: existing?.ylim ?? null,
+    secondary_y: createSecondaryYAxis(existing?.secondary_y),
     grid: existing?.grid ?? false,
     legend: existing?.legend ?? true,
     colorbar: existing?.colorbar ?? false
@@ -639,6 +670,7 @@ function createLayer(
     id: createId("layer"),
     kind,
     axes_id: "ax0",
+    y_axis: "left",
     dataset,
     style,
     readonly: false,
@@ -901,6 +933,8 @@ function validationRepairText(issue: ValidationIssue): string {
       return "Remove non-positive data or switch the affected axis back to a linear scale.";
     case "invalid_reference_line_value":
       return "Use a finite reference value that is valid for the selected axes scale.";
+    case "unsupported_secondary_y_layer":
+      return "Use the right Y axis only for simple overlay layer kinds, or switch this layer back to the left Y axis.";
     case "invalid_grid_size":
       return "Set figure rows and columns to positive values in the Figure controls.";
     case "duplicate_axes_id":
@@ -1177,10 +1211,7 @@ export function App() {
       const axes = raw.axes?.map((axis, index) => normalizeAxis(axis as AxesSpec, index)) ?? [
         createAxis(0, 0, 0)
       ];
-      const layers = (raw.layers ?? []).map((layer) => ({
-        ...layer,
-        dataset: normalizeDatasetRef(layer.dataset)
-      }));
+      const layers = (raw.layers ?? []).map((layer) => normalizeLayer(layer));
       const recipes = (raw.recipes ?? []).map((recipe) => ({
         ...recipe,
         dataset: normalizeRecipeDatasetRef(recipe.dataset)
@@ -2019,6 +2050,10 @@ function compatibilityText(kind: PlotKind, yVar?: VariableSummary, xVar?: Variab
   return "";
 }
 
+function supportsSecondaryYAxis(kind: PlotKind): boolean {
+  return secondaryYAxisLayerKinds.has(kind);
+}
+
 function Preview({
   render,
   issues,
@@ -2619,6 +2654,13 @@ function Inspector({
               field="axes.ylabel"
               onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { ylabel: value })}
             />
+            <TextField
+              label="Right Y label"
+              value={selectedAxis.secondary_y?.ylabel ?? ""}
+              testId="axis-secondary-ylabel-field"
+              field="axes.secondary_y.ylabel"
+              onChange={(value) => updateSecondaryAxis(onUpdateSpec, selectedAxis.id, { ylabel: value })}
+            />
             <div className="split-row">
               <SelectField
                 label="X scale"
@@ -2637,6 +2679,18 @@ function Inspector({
                 onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { yscale: value as AxesSpec["yscale"] })}
               />
             </div>
+            <SelectField
+              label="Right Y scale"
+              value={selectedAxis.secondary_y?.yscale ?? "linear"}
+              options={scales}
+              testId="axis-secondary-yscale-field"
+              field="axes.secondary_y.yscale"
+              onChange={(value) =>
+                updateSecondaryAxis(onUpdateSpec, selectedAxis.id, {
+                  yscale: value as SecondaryYAxisSpec["yscale"]
+                })
+              }
+            />
             <LimitField
               label="X limits"
               value={selectedAxis.xlim ?? null}
@@ -2650,6 +2704,13 @@ function Inspector({
               testId="axis-ylim-field"
               field="axes.ylim"
               onChange={(value) => updateAxis(onUpdateSpec, selectedAxis.id, { ylim: value })}
+            />
+            <LimitField
+              label="Right Y limits"
+              value={selectedAxis.secondary_y?.ylim ?? null}
+              testId="axis-secondary-ylim-field"
+              field="axes.secondary_y.ylim"
+              onChange={(value) => updateSecondaryAxis(onUpdateSpec, selectedAxis.id, { ylim: value })}
             />
             <ToggleField
               label="Grid"
@@ -2711,6 +2772,7 @@ function Inspector({
                     <span>{label}</span>
                     <small>
                       {layer.kind} · {layer.axes_id}
+                      {layer.y_axis === "right" ? " · right Y" : ""}
                     </small>
                   </button>
                 );
@@ -2821,6 +2883,21 @@ function updateAxis(
   onUpdateSpec((draft) => ({
     ...draft,
     axes: draft.axes.map((axis) => (axis.id === axisId ? { ...axis, ...patch } : axis))
+  }));
+}
+
+function updateSecondaryAxis(
+  onUpdateSpec: (updater: (spec: FigureSpec) => FigureSpec) => void,
+  axisId: string,
+  patch: Partial<SecondaryYAxisSpec>
+) {
+  onUpdateSpec((draft) => ({
+    ...draft,
+    axes: draft.axes.map((axis) =>
+      axis.id === axisId
+        ? { ...axis, secondary_y: { ...createSecondaryYAxis(axis.secondary_y), ...patch } }
+        : axis
+    )
   }));
 }
 
@@ -3001,22 +3078,43 @@ function LayerControls({
   return (
     <div className="layer-controls">
       {defaults ? <p className="profile-note">Layer defaults inherited from project profile.</p> : null}
-      <SelectField
-        label="Axes"
-        value={layer.axes_id}
-        options={axes.map((axis) => axis.id)}
-        testId="layer-axes-field"
-        field="axes_id"
-        onChange={(value) => onChange({ ...layer, axes_id: value })}
-      />
+      <div className="split-row">
+        <SelectField
+          label="Axes"
+          value={layer.axes_id}
+          options={axes.map((axis) => axis.id)}
+          testId="layer-axes-field"
+          field="axes_id"
+          onChange={(value) => onChange({ ...layer, axes_id: value })}
+        />
+        <SelectField
+          label="Y axis"
+          value={layer.y_axis ?? "left"}
+          options={yAxisTargets}
+          testId="layer-y-axis-field"
+          field="y_axis"
+          optionLabel={(value) => (value === "right" ? "Right" : "Left")}
+          onChange={(value) => onChange({ ...layer, y_axis: value as LayerYAxis })}
+        />
+      </div>
       <SelectField
         label="Plot type"
         value={layer.kind}
         options={plotKinds}
         testId="layer-kind-field"
         field="kind"
-        onChange={(value) => onChange({ ...layer, kind: value as PlotKind })}
+        onChange={(value) => {
+          const nextKind = value as PlotKind;
+          onChange({
+            ...layer,
+            kind: nextKind,
+            y_axis: supportsSecondaryYAxis(nextKind) ? (layer.y_axis ?? "left") : "left"
+          });
+        }}
       />
+      {layer.y_axis === "right" && !supportsSecondaryYAxis(layer.kind) ? (
+        <p className="compatibility-note">Right Y axis supports simple overlay layer kinds in this beta slice.</p>
+      ) : null}
       <TextField
         label="Label"
         value={String(label)}

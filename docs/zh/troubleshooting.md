@@ -17,6 +17,7 @@ FigStudio 会在渲染、保存或导出前校验常见问题。出现 issue car
 | 维度不匹配 | 让 X、Y 和可选 Y error source 维度兼容。 |
 | Heatmap 或 contour 缺少二维值 | 使用二维 ndarray 或 gridded value source。 |
 | Log axis 上有非正数据 | 过滤数据、修改 limits，或切回 linear scale。 |
+| 不支持 right Y-axis 的 layer kind | 将 right Y axis 用于简单 overlay layer kind，或把该 layer 切回 left Y axis。 |
 | 缺失 style profile | 选择可用 profile、恢复 `.figstudio/styles.json`，或接受 fallback defaults。 |
 
 Issue payloads 可能包含 `suggestion`，以及 available variables、DataFrame columns、axes ids、profile ids 或 suggested replacement value 等 details。Editor 会优先显示这条 suggestion，再 fallback 到上表中的通用修复说明。
@@ -25,7 +26,7 @@ Issue payloads 可能包含 `suggestion`，以及 available variables、DataFram
 
 | Code | 含义 |
 | --- | --- |
-| `validation_failed` | Spec 引用了缺失数据、无效 layout、不兼容维度、无效二维数据或 log-scale 非正数据。 |
+| `validation_failed` | Spec 引用了缺失数据、无效 layout、不兼容维度、无效二维数据、不支持的 secondary-axis layer 或 log-scale 非正数据。 |
 | `render_failed` | 通过 validation 后，生成的 Matplotlib code 仍无法运行。 |
 | `export_failed` | Export rendering 失败，或明确 output path 无法写入。 |
 | `writeback_failed` | 受控 block 缺失、重复、嵌套、marker 不匹配，或使用了不同的 `block_id`。 |
