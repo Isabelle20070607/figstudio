@@ -390,6 +390,51 @@ def test_generates_mean_sem_bar_recipe_code():
     assert "figstudio" not in code.lower()
 
 
+def test_generates_count_bar_recipe_code():
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="count_bar",
+                dataset=RecipeDatasetRef(variable="df", x="condition"),
+                style=LayerStyle(label="Cells", color="#0f766e"),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "_recipe_recipe_1_x_order = list(dict.fromkeys" in code
+    assert "groupby('condition', sort=False).size().reindex(_recipe_recipe_1_x_order, fill_value=0)" in code
+    assert "axes_flat[0].bar(_recipe_recipe_1_x, _recipe_recipe_1_counts" in code
+    assert "label='Cells'" in code
+    assert "set_xticklabels([str(value) for value in _recipe_recipe_1_x_order])" in code
+    assert "figstudio" not in code.lower()
+
+
+def test_generates_grouped_count_bar_recipe_code():
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="count_bar",
+                dataset=RecipeDatasetRef(variable="df", x="condition", group="genotype"),
+                style=LayerStyle(label="Cells", color="#0f766e"),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "groupby(['condition', 'genotype'], sort=False).size().unstack(fill_value=0)" in code
+    assert "_recipe_recipe_1_counts = _recipe_recipe_1_counts.reindex(index=_recipe_recipe_1_x_order" in code
+    assert "_recipe_recipe_1_counts = _recipe_recipe_1_counts.reindex(columns=_recipe_recipe_1_groups" in code
+    assert "_recipe_recipe_1_bar_width = 0.8 / max(len(_recipe_recipe_1_groups), 1)" in code
+    assert "axes_flat[0].bar(_recipe_recipe_1_positions, _recipe_recipe_1_counts[_recipe_recipe_1_group]" in code
+    assert "label=f'Cells {_recipe_recipe_1_group}'" in code
+    assert "figstudio" not in code.lower()
+
+
 def test_generates_grouped_points_recipe_code():
     spec = FigureSpec(
         recipes=[

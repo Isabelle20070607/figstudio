@@ -434,7 +434,7 @@ def _validate_recipe(
 
     _validate_data_filters(namespace, recipe.id, recipe.axes_id, data, issues)
 
-    required = ["x", "y"]
+    required = ["x"] if recipe.kind == "count_bar" else ["x", "y"]
     if recipe.kind == "paired_before_after":
         required.append("subject")
 
@@ -455,7 +455,8 @@ def _validate_recipe(
                 )
             )
 
-    for field in ["x", "y", "group", "subject"]:
+    fields_to_check = ["x", "group"] if recipe.kind == "count_bar" else ["x", "y", "group", "subject"]
+    for field in fields_to_check:
         column = getattr(data, field)
         if column:
             _check_dataframe_column(value, recipe, column, field, issues)

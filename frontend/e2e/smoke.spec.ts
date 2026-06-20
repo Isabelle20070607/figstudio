@@ -60,6 +60,12 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await page.getByTestId("add-recipe-button").click();
   await expect(page.locator('[data-testid="layer-row"]').filter({ hasText: "recipe · mean_sem_line" })).toBeVisible();
   await expect(page.getByTestId("status-line")).toContainText("Preview synced");
+  await page.getByTestId("recipe-kind-select").selectOption("count_bar");
+  await expect(page.getByTestId("recipe-y-column-select")).toHaveCount(0);
+  await expect(page.getByTestId("recipe-error-select")).toHaveCount(0);
+  await page.getByTestId("add-recipe-button").click();
+  await expect(page.locator('[data-testid="layer-row"]').filter({ hasText: "recipe · count_bar" })).toBeVisible();
+  await expect(page.getByTestId("code-panel")).toContainText(".size().reindex");
   await page.getByTestId("facet-column-select").selectOption("condition");
   await page.getByTestId("facet-share-y-field-input").check();
   await page.getByTestId("create-facet-panels-button").click();
@@ -111,6 +117,10 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   expect(exportedSpec.layers.some((layer: any) => layer.y_axis === "right")).toBe(true);
   expect(exportedSpec.axes[0].secondary_y.ylabel).toBe("Rate");
   expect(exportedSpec.recipes.some((recipe: any) => recipe.dataset.filters?.[0]?.column === "condition")).toBe(true);
+  const countRecipe = exportedSpec.recipes.find((recipe: any) => recipe.kind === "count_bar");
+  expect(countRecipe).toBeTruthy();
+  expect(countRecipe.dataset.y).toBeNull();
+  expect(countRecipe.error).toBe("none");
   await page.getByTestId("import-spec-input").setInputFiles(exportedSpecPath);
   await expect(page.getByTestId("style-profile-field-select")).toHaveValue("manuscript");
   await expect(page.getByTestId("layout-preset-field-select")).toHaveValue("large_left");

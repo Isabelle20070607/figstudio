@@ -59,10 +59,11 @@ const plotKinds: PlotKind[] = [
   "fill_between"
 ];
 
-const recipeKinds: RecipeKind[] = ["mean_sem_line", "mean_sem_bar", "grouped_points", "paired_before_after"];
+const recipeKinds: RecipeKind[] = ["mean_sem_line", "mean_sem_bar", "count_bar", "grouped_points", "paired_before_after"];
 const recipeLabels: Record<RecipeKind, string> = {
   mean_sem_line: "Mean +/- SEM line",
   mean_sem_bar: "Mean +/- SEM bars",
+  count_bar: "Count bars",
   grouped_points: "Grouped points",
   paired_before_after: "Paired before/after"
 };
@@ -87,6 +88,22 @@ const secondaryYAxisLayerKinds = new Set<PlotKind>([
 const indexSource = "__index__";
 const noneSource = "__none__";
 const defaultFacetLimit = 12;
+
+function recipeRequiresY(kind: RecipeKind) {
+  return kind !== "count_bar";
+}
+
+function recipeSupportsGroup(kind: RecipeKind) {
+  return kind === "mean_sem_line" || kind === "mean_sem_bar" || kind === "count_bar";
+}
+
+function recipeUsesError(kind: RecipeKind) {
+  return kind !== "count_bar";
+}
+
+function recipeUsesSubject(kind: RecipeKind) {
+  return kind === "paired_before_after";
+}
 
 const stylePresets: Record<
   FigurePreset,
@@ -696,7 +713,7 @@ function createRecipe({
   subjectColumn: string;
   error: RecipeLayer["error"];
 }): RecipeLayer {
-  const label = yColumn || variable.name;
+  const label = kind === "count_bar" ? "Count" : yColumn || variable.name;
   return {
     id: createId("recipe"),
     kind,
@@ -704,9 +721,9 @@ function createRecipe({
     dataset: {
       variable: variable.name,
       x: xColumn || null,
-      y: yColumn || null,
-      group: (kind === "mean_sem_line" || kind === "mean_sem_bar") && groupColumn ? groupColumn : null,
-      subject: kind === "paired_before_after" ? subjectColumn || null : null,
+      y: recipeRequiresY(kind) ? yColumn || null : null,
+      group: recipeSupportsGroup(kind) && groupColumn ? groupColumn : null,
+      subject: recipeUsesSubject(kind) ? subjectColumn || null : null,
       filters: []
     },
     style: {
@@ -715,11 +732,25 @@ function createRecipe({
       marker: kind === "grouped_points" || kind === "paired_before_after" ? "o" : null,
       linestyle: kind === "mean_sem_line" ? "-" : null,
       linewidth: kind === "mean_sem_line" || kind === "paired_before_after" ? 1.8 : null,
-      alpha: kind === "grouped_points" ? 0.78 : kind === "mean_sem_bar" ? 0.85 : null
+      alpha: kind === "grouped_points" ? 0.78 : kind === "mean_sem_bar" || kind === "count_bar" ? 0.85 : null
     },
-    error,
+    error: recipeUsesError(kind) ? error : "none",
     readonly: false,
     source: "recipe"
+  };
+}
+
+function withRecipeKind(recipe: RecipeLayer, kind: RecipeKind): RecipeLayer {
+  return {
+    ...recipe,
+    kind,
+    dataset: {
+      ...recipe.dataset,
+      y: recipeRequiresY(kind) ? recipe.dataset.y ?? null : null,
+      group: recipeSupportsGroup(kind) ? recipe.dataset.group ?? null : null,
+      subject: recipeUsesSubject(kind) ? recipe.dataset.subject ?? null : null
+    },
+    error: recipeUsesError(kind) ? recipe.error : "none"
   };
 }
 
@@ -1519,6 +1550,10 @@ function VariablePanel({
   const canFacet = Boolean(
     facetSourceKind === "dataframe_column" ? layerCanFacet || recipeCanFacet : layerCanSelectPanels
   );
+  const selectedRecipeRequiresY = recipeRequiresY(recipeKind);
+  const selectedRecipeSupportsGroup = recipeSupportsGroup(recipeKind);
+  const selectedRecipeUsesError = recipeUsesError(recipeKind);
+  const selectedRecipeUsesSubject = recipeUsesSubject(recipeKind);
 
   useEffect(() => {
     if (!variable) {
@@ -1873,22 +1908,24 @@ function VariablePanel({
                   ))}
                 </select>
               </label>
-              <label>
-                Y / value
-                <select
-                  data-testid="recipe-y-column-select"
-                  value={recipeYColumn}
-                  onChange={(event) => setRecipeYColumn(event.target.value)}
-                >
-                  {recipeVariable?.columns.map((column) => (
-                    <option key={column} value={column}>
-                      {column}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {selectedRecipeRequiresY ? (
+                <label>
+                  Y / value
+                  <select
+                    data-testid="recipe-y-column-select"
+                    value={recipeYColumn}
+                    onChange={(event) => setRecipeYColumn(event.target.value)}
+                  >
+                    {recipeVariable?.columns.map((column) => (
+                      <option key={column} value={column}>
+                        {column}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
             </div>
-            {recipeKind === "mean_sem_line" || recipeKind === "mean_sem_bar" ? (
+            {selectedRecipeSupportsGroup ? (
               <label>
                 Group column
                 <select
@@ -1905,7 +1942,7 @@ function VariablePanel({
                 </select>
               </label>
             ) : null}
-            {recipeKind === "paired_before_after" ? (
+            {selectedRecipeUsesSubject ? (
               <label>
                 Subject column
                 <select
@@ -1921,27 +1958,29 @@ function VariablePanel({
                 </select>
               </label>
             ) : null}
-            <label>
-              Error
-              <select
-                data-testid="recipe-error-select"
-                value={recipeError}
-                onChange={(event) => setRecipeError(event.target.value as RecipeLayer["error"])}
-              >
-                {errorModes.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {selectedRecipeUsesError ? (
+              <label>
+                Error
+                <select
+                  data-testid="recipe-error-select"
+                  value={recipeError}
+                  onChange={(event) => setRecipeError(event.target.value as RecipeLayer["error"])}
+                >
+                  {errorModes.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             {!dataframeVariables.length ? (
               <p className="compatibility-note">Stats recipes require a pandas DataFrame variable.</p>
             ) : null}
             <button
               className="primary-button"
               data-testid="add-recipe-button"
-              disabled={!recipeVariable || !recipeXColumn || !recipeYColumn}
+              disabled={!recipeVariable || !recipeXColumn || (selectedRecipeRequiresY && !recipeYColumn)}
               onClick={() =>
                 recipeVariable &&
                 onAddRecipe(
@@ -2919,6 +2958,10 @@ function RecipeControls({
   const linestyle = inheritedStyleValue(recipe.style, defaults, "linestyle") ?? "";
   const linewidth = inheritedStyleValue(recipe.style, defaults, "linewidth") ?? 1.8;
   const alpha = inheritedStyleValue(recipe.style, defaults, "alpha") ?? 1;
+  const selectedRecipeRequiresY = recipeRequiresY(recipe.kind);
+  const selectedRecipeSupportsGroup = recipeSupportsGroup(recipe.kind);
+  const selectedRecipeUsesError = recipeUsesError(recipe.kind);
+  const selectedRecipeUsesSubject = recipeUsesSubject(recipe.kind);
   return (
     <div className="layer-controls">
       {defaults ? <p className="profile-note">Layer defaults inherited from project profile.</p> : null}
@@ -2937,7 +2980,7 @@ function RecipeControls({
         optionLabel={(value) => recipeLabels[value as RecipeKind]}
         testId="recipe-kind-field"
         field="kind"
-        onChange={(value) => onChange({ ...recipe, kind: value as RecipeKind })}
+        onChange={(value) => onChange(withRecipeKind(recipe, value as RecipeKind))}
       />
       <TextField
         label="DataFrame"
@@ -2954,15 +2997,17 @@ function RecipeControls({
           field="dataset.x"
           onChange={(value) => onChange({ ...recipe, dataset: { ...recipe.dataset, x: value || null } })}
         />
-        <TextField
-          label="Y column"
-          value={recipe.dataset.y ?? ""}
-          testId="recipe-y-field"
-          field="dataset.y"
-          onChange={(value) => onChange({ ...recipe, dataset: { ...recipe.dataset, y: value || null } })}
-        />
+        {selectedRecipeRequiresY ? (
+          <TextField
+            label="Y column"
+            value={recipe.dataset.y ?? ""}
+            testId="recipe-y-field"
+            field="dataset.y"
+            onChange={(value) => onChange({ ...recipe, dataset: { ...recipe.dataset, y: value || null } })}
+          />
+        ) : null}
       </div>
-      {recipe.kind === "mean_sem_line" || recipe.kind === "mean_sem_bar" ? (
+      {selectedRecipeSupportsGroup ? (
         <TextField
           label="Group column"
           value={recipe.dataset.group ?? ""}
@@ -2971,7 +3016,7 @@ function RecipeControls({
           onChange={(value) => onChange({ ...recipe, dataset: { ...recipe.dataset, group: value || null } })}
         />
       ) : null}
-      {recipe.kind === "paired_before_after" ? (
+      {selectedRecipeUsesSubject ? (
         <TextField
           label="Subject column"
           value={recipe.dataset.subject ?? ""}
@@ -2980,14 +3025,16 @@ function RecipeControls({
           onChange={(value) => onChange({ ...recipe, dataset: { ...recipe.dataset, subject: value || null } })}
         />
       ) : null}
-      <SelectField
-        label="Error"
-        value={recipe.error}
-        options={errorModes}
-        testId="recipe-error-field"
-        field="error"
-        onChange={(value) => onChange({ ...recipe, error: value as RecipeLayer["error"] })}
-      />
+      {selectedRecipeUsesError ? (
+        <SelectField
+          label="Error"
+          value={recipe.error}
+          options={errorModes}
+          testId="recipe-error-field"
+          field="error"
+          onChange={(value) => onChange({ ...recipe, error: value as RecipeLayer["error"] })}
+        />
+      ) : null}
       <TextField
         label="Label"
         value={String(label)}

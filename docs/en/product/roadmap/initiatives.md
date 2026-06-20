@@ -36,7 +36,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | These cover common scientific-paper chart patterns without expanding into generic business dashboards. |
 | Maturity | `foundation-needed` |
 | Horizon | `near` |
-| Progress | First beta slice added `mean_sem_bar` for mean-plus-error categorical bars with optional grouped bars; grouped/stacked/count bar families and distribution overlays remain future work. |
+| Progress | Beta slices added `mean_sem_bar` for mean-plus-error categorical bars and `count_bar` for ungrouped or grouped frequency bars; stacked bars and distribution overlays remain future work. |
 | Gate/Prerequisite | Shared recipe roles and validation errors are clear enough for multiple recipe families. |
 
 | Field | Value |
