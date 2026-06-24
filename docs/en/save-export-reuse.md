@@ -24,9 +24,9 @@ Script writeback may only replace a unique controlled block:
 # figstudio:end main
 ```
 
-FigStudio rejects missing blocks, duplicated blocks for the same id, nested markers, unmatched markers, and IO failures. It does not edit outside the controlled block.
+FigStudio rejects missing blocks, duplicated blocks for the same id, nested markers, unmatched markers, and IO failures. It does not edit outside the controlled block. When script writeback is blocked, the generated replacement remains visible in the code panel.
 
-Notebook-style sessions return replacement cell code and do not mutate notebook files.
+Notebook-style sessions return replacement cell code and do not mutate notebook files. After **Save code**, the code panel shows the returned replacement cell and enables the copy button so the cell can be pasted deliberately.
 
 ## Export Files
 

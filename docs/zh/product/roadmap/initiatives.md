@@ -143,6 +143,7 @@
 | Why it matters | Notebook 用户需要更顺滑的 handoff，同时保留对 file mutation 的控制。 |
 | Maturity | `foundation-needed` |
 | Horizon | `near` |
+| Progress | Save code 现在会从返回的 notebook replacement cell 填充 code panel，并提供 copy action，同时不修改 notebook 文件。 |
 | Gate/Prerequisite | Notebook workflow 继续返回 replacement code，而不是 silent edit notebook files。 |
 
 ## AI-Compatible Handoff And Provenance

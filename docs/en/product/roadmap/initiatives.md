@@ -143,6 +143,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Notebook users need a smoother handoff while staying in control of file mutation. |
 | Maturity | `foundation-needed` |
 | Horizon | `near` |
+| Progress | Save code now populates the code panel from the returned notebook replacement cell and exposes a copy action, while keeping notebook files untouched. |
 | Gate/Prerequisite | Notebook workflow continues to return replacement code rather than silently editing notebook files. |
 
 ## AI-Compatible Handoff And Provenance

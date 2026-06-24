@@ -580,11 +580,50 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex: 0 0 auto;
+}
+
+.code-panel-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 1 1 auto;
+  max-width: 70%;
+  min-width: 0;
 }
 
 .code-panel small {
   color: #9fb3c8;
   font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-copy-button {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(159, 179, 200, 0.45);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #dbe8f6;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.code-copy-button:hover:not(:disabled) {
+  border-color: rgba(219, 232, 246, 0.75);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.code-copy-button:disabled {
+  color: #5b6b7b;
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .code-loading {

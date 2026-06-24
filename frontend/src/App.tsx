@@ -41,6 +41,7 @@ import type {
   SecondaryYAxisSpec,
   StyleProfile,
   StyleProfilesResponse,
+  SaveCodeResponse,
   ValidationIssue,
   VariableSummary
 } from "./types";
@@ -1134,6 +1135,7 @@ export function App() {
   } = useAppStore();
 
   const [saveMessage, setSaveMessage] = useState("");
+  const [saveResponse, setSaveResponse] = useState<SaveCodeResponse | null>(null);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const [selectedAxisId, setSelectedAxisId] = useState("ax0");
   const [layerFocusRequest, setLayerFocusRequest] = useState<{ layerId: string; nonce: number } | null>(null);
@@ -1173,6 +1175,8 @@ export function App() {
     if (!spec) {
       return;
     }
+    setSaveMessage("");
+    setSaveResponse(null);
     const timeout = window.setTimeout(async () => {
       try {
         const validation = await api.validate(spec, validationOptionsForSpec(spec));
@@ -1306,13 +1310,14 @@ export function App() {
     }
     setStatus("Saving code");
     try {
-      const response = await api.saveCode(spec, render?.code);
+      const response = await api.saveCode(spec);
+      setSaveResponse(response);
       const saveHelp = response.wrote_file
         ? "Script marker block updated."
-        : `${response.message} Copy the replacement cell code from this panel.`;
-      setSaveMessage(response.ok ? saveHelp : `${response.message} Generated code remains available below.`);
+        : `${response.message} Replacement cell code is shown below.`;
+      setSaveMessage(response.ok ? saveHelp : `${response.message} Replacement code remains available below.`);
       if (!response.ok) {
-        setStatus("Save blocked: copy generated code from the panel.");
+        setStatus("Save blocked: copy replacement code from the panel.");
       } else {
         setStatus(response.wrote_file ? "Script updated." : "Notebook replacement code ready.");
       }
@@ -1599,7 +1604,7 @@ export function App() {
             </div>
           </div>
           <Preview render={render} issues={validationIssues} onIssueSelect={focusValidationIssue} />
-          <CodePanel code={render?.code ?? ""} saveMessage={saveMessage} />
+          <CodePanel code={saveResponse?.notebook_cell ?? render?.code ?? ""} saveMessage={saveMessage} />
         </section>
 
         <Inspector

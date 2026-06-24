@@ -44,9 +44,14 @@ def test_api_session_variables_render_and_notebook_save():
     assert "<svg" in render_response.json()["image"]
 
     save_response = client.post("/api/save-code", json={"spec": spec.model_dump()})
+    save_payload = save_response.json()
     assert save_response.status_code == 200
-    assert save_response.json()["wrote_file"] is False
-    assert "notebook_cell" in save_response.json()
+    assert save_payload["ok"] is True
+    assert save_payload["wrote_file"] is False
+    assert save_payload["script_path"] is None
+    assert save_payload["code"] == save_payload["notebook_cell"]
+    assert "axes_flat[0].plot(range(len(values)), values" in save_payload["notebook_cell"]
+    assert "No script_path was provided" in save_payload["message"]
 
 
 def test_render_and_export_failures_return_structured_errors():

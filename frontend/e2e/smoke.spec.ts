@@ -18,6 +18,38 @@ async function expectDesktopWorkspaceFitsViewport(page: import("@playwright/test
   expect(metrics.codePanelBottom).toBeLessThanOrEqual(metrics.clientHeight + 1);
 }
 
+test("notebook save populates replacement cell code and copy action", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text: unknown) => {
+          window.localStorage.setItem("figstudioCopiedCode", String(text));
+        }
+      }
+    });
+  });
+  await page.goto("/");
+
+  await expect(page.getByTestId("empty-preview")).toBeVisible();
+  await expect(page.getByTestId("copy-code-button")).toBeDisabled();
+
+  await page.getByTestId("save-code-button").click();
+
+  await expect(page.getByTestId("status-line")).toContainText("Notebook replacement code ready");
+  await expect(page.getByTestId("save-message")).toContainText("Replacement cell code is shown below");
+  await expect(page.getByTestId("copy-code-button")).toBeEnabled();
+  await expect(page.getByTestId("code-panel")).toContainText("import matplotlib.pyplot as plt");
+  await expect(page.getByTestId("code-panel")).toContainText("plt.subplots");
+
+  await page.getByTestId("copy-code-button").click();
+
+  await expect(page.getByTestId("save-message")).toContainText("Copied");
+  await expect
+    .poll(() => page.evaluate(() => window.localStorage.getItem("figstudioCopiedCode") ?? ""))
+    .toContain("plt.subplots");
+});
+
 test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
@@ -163,7 +195,8 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await page.getByTestId("save-code-button").click();
   await expect(page.getByTestId("status-line")).toContainText("Notebook replacement code ready");
   await expect(page.getByTestId("save-message")).toContainText("No script_path was provided");
-  await expect(page.getByTestId("save-message")).toContainText("Copy the replacement cell code");
+  await expect(page.getByTestId("save-message")).toContainText("Replacement cell code is shown below");
+  await expect(page.getByTestId("copy-code-button")).toBeEnabled();
 });
 
 test("creates mapping-key repeated panels from the layer builder", async ({ page }) => {

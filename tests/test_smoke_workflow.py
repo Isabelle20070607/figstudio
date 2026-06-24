@@ -41,6 +41,8 @@ def test_local_app_smoke_workflow_without_real_port():
     assert "axes_flat[0].plot" in rendered.json()["code"]
 
     saved = client.post("/api/save-code", json={"spec": spec.model_dump()})
+    saved_payload = saved.json()
     assert saved.status_code == 200
-    assert saved.json()["wrote_file"] is False
-    assert "notebook_cell" in saved.json()
+    assert saved_payload["wrote_file"] is False
+    assert "notebook_cell" in saved_payload
+    assert "axes_flat[0].plot(range(len(signal)), signal" in saved_payload["notebook_cell"]

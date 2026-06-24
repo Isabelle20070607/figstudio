@@ -24,9 +24,9 @@ flowchart TD
 # figstudio:end main
 ```
 
-FigStudio 会拒绝缺失 block、同一 id 的重复 block、嵌套 markers、不匹配 markers 和 IO failures。它不会编辑受控块之外的代码。
+FigStudio 会拒绝缺失 block、同一 id 的重复 block、嵌套 markers、不匹配 markers 和 IO failures。它不会编辑受控块之外的代码。脚本写回被阻止时，生成的 replacement 仍会显示在 code panel 中。
 
-Notebook 风格会话返回替换 cell code，不直接修改 Notebook 文件。
+Notebook 风格会话返回替换 cell code，不直接修改 Notebook 文件。点击 **Save code** 后，code panel 会显示返回的 replacement cell，并启用 copy button，方便用户主动粘贴到 Notebook。
 
 ## 导出文件
 
