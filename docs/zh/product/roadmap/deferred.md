@@ -10,7 +10,7 @@
 | Hosted dashboard publishing | 发布 dashboard 不属于可复现 manuscript-figure workflow。 | 项目有意扩展到 local scientific figure authoring 之外。 |
 | 自动重写任意用户 Matplotlib source code | Safe writeback 限于 controlled marker blocks。 | 单独的、明确的 source-transformation design 存在，并具备强 safety boundaries。 |
 | 直接修改 Notebook files | Notebook writeback 是 semi-automatic，返回 replacement code。 | 用户批准的 notebook file mutation workflow 有清楚 rollback 和 review model。 |
-| 完整 Matplotlib artist coverage，包括所有 custom artist、3D、polar plots、animation 或 browser-native interactive publishing | Full artist coverage 会稀释对可复现 publication panels 的支持。 | 高需求 artist families 可以通过清楚、可测试的 contracts 支持。 |
+| 完整 Matplotlib artist coverage，包括所有 custom artist、完整 3D editing、完整 animation timeline editing 或 browser-native interactive publishing | Full artist coverage 会稀释对可复现 exploration 和 publication panels 的支持。 | 高需求 artist families 可以通过清楚、可测试的 contracts 支持；limited polar、animation-lite 或 static 3D views 可以先作为有边界的 roadmap initiatives 处理。 |
 | 自动把任意 seaborn、statannotations 或 custom statistical artists 恢复为 editable recipes | 只有能保留 raw 或 reproducible data 时，恢复才有价值。 | Source artist 暴露足够 data 和 semantics，可生成可复现 code。 |
 | Desktop installers | Public beta 以 Python package 为第一安装路径。 | Python package workflow 稳定，且 installer demand 足以证明 distribution 工作值得做。 |
 | 更丰富的 style systems | 当前 generated-code 和 style-profile contracts 应先证明稳定。 | Style profiles 被广泛使用，且用户需要更强表达力的 governance model。 |

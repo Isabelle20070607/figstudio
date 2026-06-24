@@ -21,13 +21,40 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Field | Value |
 | --- | --- |
 | Theme | Scientific authoring primitives |
+| Initiative | Add automatic repeated-panel layout optimization as an initial layout suggestion. |
+| Why it matters | Repeated panels should start compact, non-overlapping, and appropriate for the plotted content instead of forcing users to hand-place every axes. |
+| Maturity | `foundation-needed` |
+| Horizon | `near` |
+| Gate/Prerequisite | The optimizer outputs existing `FigureSpec.rows`, `FigureSpec.cols`, and `AxesSpec` row/column/span geometry; it does not require a new public layout API. |
+
+| Field | Value |
+| --- | --- |
+| Theme | Scientific authoring primitives |
 | Initiative | Explore full `subplot_mosaic` authoring. |
 | Why it matters | Mosaic layouts can express publication panels that outgrow named presets. |
 | Maturity | `exploratory` |
 | Horizon | `later` |
 | Gate/Prerequisite | Preset-backed GridSpec panel layouts prove stable in real workflows. |
 
+| Field | Value |
+| --- | --- |
+| Theme | Scientific authoring primitives |
+| Initiative | Revisit limited polar plots, animation-lite, and static 3D only as bounded scientific exploration views. |
+| Why it matters | Circular data, parameter sliders, frame sequences, and simple state-space views can help exploration, but they should not turn FigStudio into a full artist or animation editor. |
+| Maturity | `exploratory` |
+| Horizon | `later` |
+| Gate/Prerequisite | Core 2D recipes, repeated-panel workflows, validation, export, and generated-code contracts stay stable. |
+
 ## Recipe And Statistical Coverage
+
+| Field | Value |
+| --- | --- |
+| Theme | Recipe and statistical coverage |
+| Initiative | Organize analysis recipes around research questions such as group comparison, paired conditions, time course comparison, distribution inspection, relationships, and matrix or heatmap review. |
+| Why it matters | Users explore scientific data by asking questions, not by choosing chart primitives first. |
+| Maturity | `foundation-needed` |
+| Horizon | `near` |
+| Gate/Prerequisite | Recipe roles, validation, and generated-code templates remain simple enough to explain and test. |
 
 | Field | Value |
 | --- | --- |
@@ -56,6 +83,35 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Maturity | `exploratory` |
 | Horizon | `later` |
 | Gate/Prerequisite | Matplotlib exposes enough raw or reproducible data for the relevant artists. |
+
+## Exploration Workspace
+
+| Field | Value |
+| --- | --- |
+| Theme | Exploration workspace |
+| Initiative | Add an exploration result board with result cards, pinned findings, spec snapshots, notes, and restore or duplicate actions. |
+| Why it matters | Exploration is branching and iterative; users need to remember which data view, mapping, filter, recipe, and style produced a useful result. |
+| Maturity | `foundation-needed` |
+| Horizon | `later` |
+| Gate/Prerequisite | Saved specs, generated-code hashes, and provenance records are stable enough to store lightweight session history without raw data. |
+
+| Field | Value |
+| --- | --- |
+| Theme | Exploration workspace |
+| Initiative | Add parameter sweeps for common analysis choices such as bin size, smoothing, normalization, aggregation level, filter, time window, scale, and error style. |
+| Why it matters | Researchers need to see whether a conclusion survives reasonable parameter changes before investing in publication polish. |
+| Maturity | `exploratory` |
+| Horizon | `later` |
+| Gate/Prerequisite | Sweep results can be represented as repeatable specs, result cards, or generated Matplotlib code rather than hidden browser-only state. |
+
+| Field | Value |
+| --- | --- |
+| Theme | Exploration workspace |
+| Initiative | Add object drill-down, from-plot data selection, selected-vs-rest comparison, and basic data hierarchy warnings. |
+| Why it matters | Users should be able to trace points, curves, or panels back to objects and detect outliers, scale traps, imbalance, or pseudoreplication risks. |
+| Maturity | `exploratory` |
+| Horizon | `later` |
+| Gate/Prerequisite | Data previews and warnings remain advisory, deterministic, and non-mutating. |
 
 ## Publication Workflow
 

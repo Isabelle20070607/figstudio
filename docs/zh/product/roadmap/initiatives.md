@@ -21,13 +21,40 @@
 | Field | Value |
 | --- | --- |
 | Theme | Scientific authoring primitives |
+| Initiative | 增加 automatic repeated-panel layout optimization，作为初始 layout suggestion。 |
+| Why it matters | Repeated panels 应该从紧凑、无重叠、适合当前图形内容的布局开始，而不是让用户手工摆放每个 axes。 |
+| Maturity | `foundation-needed` |
+| Horizon | `near` |
+| Gate/Prerequisite | Optimizer 输出现有 `FigureSpec.rows`、`FigureSpec.cols` 和 `AxesSpec` row/column/span geometry；不要求新增 public layout API。 |
+
+| Field | Value |
+| --- | --- |
+| Theme | Scientific authoring primitives |
 | Initiative | 探索完整 `subplot_mosaic` authoring。 |
 | Why it matters | Mosaic layouts 可以表达超过 named presets 的发表图版结构。 |
 | Maturity | `exploratory` |
 | Horizon | `later` |
 | Gate/Prerequisite | Preset-backed GridSpec panel layouts 在真实 workflow 中证明稳定。 |
 
+| Field | Value |
+| --- | --- |
+| Theme | Scientific authoring primitives |
+| Initiative | 只以有边界的科研 exploration views 重新评估 limited polar plots、animation-lite 和 static 3D。 |
+| Why it matters | Circular data、parameter sliders、frame sequences 和简单 state-space views 对探索有价值，但不应把 FigStudio 变成完整 artist 或 animation editor。 |
+| Maturity | `exploratory` |
+| Horizon | `later` |
+| Gate/Prerequisite | 核心 2D recipes、repeated-panel workflows、validation、export 和 generated-code contracts 保持稳定。 |
+
 ## Recipe And Statistical Coverage
+
+| Field | Value |
+| --- | --- |
+| Theme | Recipe and statistical coverage |
+| Initiative | 围绕科研问题组织 analysis recipes，例如 group comparison、paired conditions、time course comparison、distribution inspection、relationships，以及 matrix 或 heatmap review。 |
+| Why it matters | 用户探索科研数据时首先是在问问题，而不是先选择 chart primitives。 |
+| Maturity | `foundation-needed` |
+| Horizon | `near` |
+| Gate/Prerequisite | Recipe roles、validation 和 generated-code templates 仍然简单到可以解释和测试。 |
 
 | Field | Value |
 | --- | --- |
@@ -56,6 +83,35 @@
 | Maturity | `exploratory` |
 | Horizon | `later` |
 | Gate/Prerequisite | Matplotlib 为相关 artists 暴露足够 raw 或 reproducible data。 |
+
+## Exploration Workspace
+
+| Field | Value |
+| --- | --- |
+| Theme | Exploration workspace |
+| Initiative | 增加 exploration result board，包含 result cards、pinned findings、spec snapshots、notes，以及 restore 或 duplicate 操作。 |
+| Why it matters | Exploration 是分支式、迭代式流程；用户需要记住哪个 data view、mapping、filter、recipe 和 style 产生了有价值的结果。 |
+| Maturity | `foundation-needed` |
+| Horizon | `later` |
+| Gate/Prerequisite | Saved specs、generated-code hashes 和 provenance records 稳定到可以保存轻量 session history，且不保存原始数据。 |
+
+| Field | Value |
+| --- | --- |
+| Theme | Exploration workspace |
+| Initiative | 增加 parameter sweeps，用于 bin size、smoothing、normalization、aggregation level、filter、time window、scale 和 error style 等常见分析选择。 |
+| Why it matters | 研究者需要先判断结论是否经得起合理参数变化，再投入 publication polish。 |
+| Maturity | `exploratory` |
+| Horizon | `later` |
+| Gate/Prerequisite | Sweep results 可以表示为可复现 specs、result cards 或 generated Matplotlib code，而不是隐藏在 browser-only state 中。 |
+
+| Field | Value |
+| --- | --- |
+| Theme | Exploration workspace |
+| Initiative | 增加 object drill-down、from-plot data selection、selected-vs-rest comparison 和基础 data hierarchy warnings。 |
+| Why it matters | 用户应该能从点、曲线或 panel 反查对象，并发现 outliers、scale traps、imbalance 或 pseudoreplication risks。 |
+| Maturity | `exploratory` |
+| Horizon | `later` |
+| Gate/Prerequisite | Data previews 和 warnings 保持 advisory、deterministic 且 non-mutating。 |
 
 ## Publication Workflow
 
