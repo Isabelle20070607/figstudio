@@ -51,10 +51,8 @@
 | Theme | Recipe and statistical coverage |
 | Initiative | 围绕科研问题组织 analysis recipes，例如 group comparison、paired conditions、time course comparison、distribution inspection、relationships，以及 matrix 或 heatmap review。 |
 | Why it matters | 用户探索科研数据时首先是在问问题，而不是先选择 chart primitives。 |
-| Maturity | `ready` |
-| Horizon | `near` |
-| Progress | Recipe model 现在覆盖 line summaries、mean-plus-error bars、count bars 和 stacked count bars，并有 role-specific validation 与 pure Matplotlib codegen；剩余工作是按 research question 组织 UI。 |
-| Gate/Prerequisite | Recipe roles、validation 和 generated-code templates 仍然简单到可以解释和测试。 |
+| Status | 已在 beta 中完成。 |
+| Completion note | Recipe builder 现在围绕 time-course comparison、group/condition comparison、categorical counts/composition 和 paired observations 组织已上线 recipes，同时保持现有 `RecipeLayer.kind`、dataset-role validation 和 pure Matplotlib codegen contracts。 |
 
 | Field | Value |
 | --- | --- |
@@ -64,7 +62,7 @@
 | Maturity | `ready` |
 | Horizon | `near` |
 | Progress | Beta slices 已增加 `mean_sem_bar` 用于 mean-plus-error 分类柱状图，增加 `count_bar` 用于 ungrouped 或 grouped 频数柱状图，并增加 `stacked_bar` 用于 grouped stacked 频数柱状图；distribution overlays 仍是未来工作。 |
-| Readiness | Shared recipe roles 和 validation paths 已经让剩余 categorical overlays 更像增量扩展，而不是基础设施问题。 |
+| Readiness | Shared recipe roles、validation paths 和 research-question selector 已经让剩余 categorical overlays 更像增量扩展，而不是基础设施问题。 |
 | Gate/Prerequisite | Shared recipe roles 和 validation errors 清楚到足以承载多个 recipe families。 |
 
 | Field | Value |

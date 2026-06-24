@@ -51,10 +51,8 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Theme | Recipe and statistical coverage |
 | Initiative | Organize analysis recipes around research questions such as group comparison, paired conditions, time course comparison, distribution inspection, relationships, and matrix or heatmap review. |
 | Why it matters | Users explore scientific data by asking questions, not by choosing chart primitives first. |
-| Maturity | `ready` |
-| Horizon | `near` |
-| Progress | The recipe model now covers line summaries, mean-plus-error bars, count bars, and stacked count bars with role-specific validation and pure Matplotlib codegen; remaining work is the research-question UI grouping. |
-| Gate/Prerequisite | Recipe roles, validation, and generated-code templates remain simple enough to explain and test. |
+| Status | Completed in beta. |
+| Completion note | The recipe builder now groups shipped recipes around time-course comparison, group/condition comparison, categorical counts/composition, and paired observations while preserving the existing `RecipeLayer.kind`, dataset-role validation, and pure Matplotlib codegen contracts. |
 
 | Field | Value |
 | --- | --- |
@@ -64,7 +62,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Maturity | `ready` |
 | Horizon | `near` |
 | Progress | Beta slices added `mean_sem_bar` for mean-plus-error categorical bars, `count_bar` for ungrouped or grouped frequency bars, and `stacked_bar` for grouped stacked frequency bars; distribution overlays remain future work. |
-| Readiness | Shared recipe roles and validation paths now make the remaining categorical overlays incremental rather than foundational. |
+| Readiness | Shared recipe roles, validation paths, and the research-question selector now make the remaining categorical overlays incremental rather than foundational. |
 | Gate/Prerequisite | Shared recipe roles and validation errors are clear enough for multiple recipe families. |
 
 | Field | Value |

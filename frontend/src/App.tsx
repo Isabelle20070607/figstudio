@@ -60,22 +60,63 @@ const plotKinds: PlotKind[] = [
   "fill_between"
 ];
 
-const recipeKinds: RecipeKind[] = [
-  "mean_sem_line",
-  "mean_sem_bar",
-  "count_bar",
-  "stacked_bar",
-  "grouped_points",
-  "paired_before_after"
-];
-const recipeLabels: Record<RecipeKind, string> = {
-  mean_sem_line: "Mean +/- SEM line",
-  mean_sem_bar: "Mean +/- SEM bars",
-  count_bar: "Count bars",
-  stacked_bar: "Stacked count bars",
-  grouped_points: "Grouped points",
-  paired_before_after: "Paired before/after"
+const recipeDetails: Record<RecipeKind, { label: string; role: string }> = {
+  mean_sem_line: {
+    label: "Mean +/- SEM line",
+    role: "Summarizes a measured value across ordered X values with optional groups."
+  },
+  mean_sem_bar: {
+    label: "Mean +/- SEM bars",
+    role: "Compares category means with optional grouped bars and error caps."
+  },
+  count_bar: {
+    label: "Count bars",
+    role: "Counts rows by category with an optional grouping column."
+  },
+  stacked_bar: {
+    label: "Stacked count bars",
+    role: "Shows category composition from row counts split by a required group column."
+  },
+  grouped_points: {
+    label: "Grouped points",
+    role: "Shows individual observations by category with a mean and error summary."
+  },
+  paired_before_after: {
+    label: "Paired before/after",
+    role: "Connects repeated observations by subject and overlays condition means."
+  }
 };
+const recipeQuestionGroups: Array<{
+  id: string;
+  label: string;
+  summary: string;
+  recipes: RecipeKind[];
+}> = [
+  {
+    id: "time-course",
+    label: "Time-course comparison",
+    summary: "Compare trajectories across time, dose, or another ordered X variable.",
+    recipes: ["mean_sem_line"]
+  },
+  {
+    id: "group-condition",
+    label: "Group/condition comparison",
+    summary: "Compare measured values across experimental conditions or cohorts.",
+    recipes: ["mean_sem_bar", "grouped_points"]
+  },
+  {
+    id: "categorical-counts",
+    label: "Categorical counts/composition",
+    summary: "Count observations or compare category composition.",
+    recipes: ["count_bar", "stacked_bar"]
+  },
+  {
+    id: "paired-observations",
+    label: "Paired observations",
+    summary: "Track repeated measurements for the same subject across conditions.",
+    recipes: ["paired_before_after"]
+  }
+];
 const errorModes: RecipeLayer["error"][] = ["sem", "sd", "none"];
 const referenceLineOrientations: ReferenceLineOrientation[] = ["horizontal", "vertical"];
 
@@ -97,6 +138,14 @@ const secondaryYAxisLayerKinds = new Set<PlotKind>([
 const indexSource = "__index__";
 const noneSource = "__none__";
 const defaultFacetLimit = 12;
+
+function recipeLabel(kind: RecipeKind) {
+  return recipeDetails[kind].label;
+}
+
+function recipeQuestionGroup(kind: RecipeKind) {
+  return recipeQuestionGroups.find((group) => group.recipes.includes(kind)) ?? recipeQuestionGroups[0];
+}
 
 function recipeRequiresY(kind: RecipeKind) {
   return kind !== "count_bar" && kind !== "stacked_bar";
@@ -1961,20 +2010,13 @@ function VariablePanel({
           </>
         ) : (
           <>
-            <label>
-              Recipe
-              <select
-                data-testid="recipe-kind-select"
-                value={recipeKind}
-                onChange={(event) => setRecipeKind(event.target.value as RecipeKind)}
-              >
-                {recipeKinds.map((item) => (
-                  <option key={item} value={item}>
-                    {recipeLabels[item]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <RecipeKindSelect
+              label="Research question"
+              value={recipeKind}
+              selectTestId="recipe-kind-select"
+              onChange={setRecipeKind}
+            />
+            <RecipeQuestionNote kind={recipeKind} testId="recipe-question-note" />
             <label>
               DataFrame
               <select
@@ -3074,15 +3116,15 @@ function RecipeControls({
         field="axes_id"
         onChange={(value) => onChange({ ...recipe, axes_id: value })}
       />
-      <SelectField
-        label="Recipe"
+      <RecipeKindSelect
+        label="Research question"
         value={recipe.kind}
-        options={recipeKinds}
-        optionLabel={(value) => recipeLabels[value as RecipeKind]}
-        testId="recipe-kind-field"
+        fieldTestId="recipe-kind-field"
+        selectTestId="recipe-kind-field-select"
         field="kind"
-        onChange={(value) => onChange(withRecipeKind(recipe, value as RecipeKind))}
+        onChange={(value) => onChange(withRecipeKind(recipe, value))}
       />
+      <RecipeQuestionNote kind={recipe.kind} testId="recipe-kind-field-note" />
       <TextField
         label="DataFrame"
         value={recipe.dataset.variable}
@@ -3439,6 +3481,48 @@ function SelectField({
         ))}
       </select>
     </label>
+  );
+}
+
+function RecipeKindSelect({
+  label,
+  value,
+  selectTestId,
+  fieldTestId,
+  field,
+  onChange
+}: {
+  label: string;
+  value: RecipeKind;
+  selectTestId: string;
+  fieldTestId?: string;
+  field?: string;
+  onChange: (value: RecipeKind) => void;
+}) {
+  return (
+    <label data-testid={fieldTestId} data-field={field}>
+      {label}
+      <select data-testid={selectTestId} value={value} onChange={(event) => onChange(event.target.value as RecipeKind)}>
+        {recipeQuestionGroups.map((group) => (
+          <optgroup key={group.id} label={group.label} data-testid={`recipe-question-group-${group.id}`}>
+            {group.recipes.map((kind) => (
+              <option key={kind} value={kind}>
+                {recipeLabel(kind)}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function RecipeQuestionNote({ kind, testId }: { kind: RecipeKind; testId: string }) {
+  const group = recipeQuestionGroup(kind);
+  return (
+    <p className="recipe-question-note" data-testid={testId}>
+      <strong>{group.label}</strong>: {group.summary} {recipeDetails[kind].role}
+    </p>
   );
 }
 

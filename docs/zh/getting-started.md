@@ -66,7 +66,7 @@ session = figstudio.open(locals())
 1. 打开 FigStudio 前，先完成数据读取、清洗、筛选、建模和汇总计算。
 2. 在左侧 **Variables** 面板选择 pandas DataFrame。
 3. 选择 **Plot layer** 创建直接图层，或选择 **Stats recipe** 创建常见统计图版。
-4. 选择图形或 recipe 类型。
+4. 选择图形类型，或选择 research-question recipe group 和具体 recipe。
 5. 映射 X/Y/value 列。
 6. 点击 **Add layer** 或 **Add recipe**，等待 Matplotlib 预览。
 7. 第一张预览渲染成功后，继续阅读 [科研制图工作流](scientific-workflows.md)。

@@ -66,7 +66,7 @@ The editor can still map data, render previews, export files, and generate code.
 1. Finish data loading, cleaning, filtering, modeling, and summary calculation before opening FigStudio.
 2. Select a pandas DataFrame in the left **Variables** panel.
 3. Choose **Plot layer** for a direct plot or **Stats recipe** for a common statistical panel.
-4. Pick the plot or recipe type.
+4. Pick the plot type, or choose a research-question recipe group and recipe.
 5. Map X/Y/value columns.
 6. Click **Add layer** or **Add recipe** and wait for the Matplotlib preview.
 7. Move to [Scientific Workflows](scientific-workflows.md) when the first preview renders.

@@ -56,17 +56,29 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await expect(page.getByTestId("code-panel")).toContainText("secondary_axes[0].plot");
 
   await page.getByTestId("builder-mode-select").selectOption("recipe");
+  const recipeSelect = page.getByTestId("recipe-kind-select");
+  await expect(recipeSelect.locator('optgroup[label="Time-course comparison"]')).toContainText("Mean +/- SEM line");
+  await expect(recipeSelect.locator('optgroup[label="Group/condition comparison"]')).toContainText("Grouped points");
+  await expect(recipeSelect.locator('optgroup[label="Categorical counts/composition"]')).toContainText("Stacked count bars");
+  await expect(recipeSelect.locator('optgroup[label="Paired observations"]')).toContainText("Paired before/after");
+  await expect(page.getByTestId("recipe-question-note")).toContainText("Time-course comparison");
   await page.getByTestId("recipe-kind-select").selectOption("mean_sem_line");
   await page.getByTestId("add-recipe-button").click();
   await expect(page.locator('[data-testid="layer-row"]').filter({ hasText: "recipe · mean_sem_line" })).toBeVisible();
+  await expect(page.getByTestId("recipe-kind-field-note")).toContainText("Time-course comparison");
+  await expect(page.getByTestId("recipe-kind-field-select").locator('optgroup[label="Time-course comparison"]')).toContainText(
+    "Mean +/- SEM line"
+  );
   await expect(page.getByTestId("status-line")).toContainText("Preview synced");
   await page.getByTestId("recipe-kind-select").selectOption("count_bar");
+  await expect(page.getByTestId("recipe-question-note")).toContainText("Categorical counts/composition");
   await expect(page.getByTestId("recipe-y-column-select")).toHaveCount(0);
   await expect(page.getByTestId("recipe-error-select")).toHaveCount(0);
   await page.getByTestId("add-recipe-button").click();
   await expect(page.locator('[data-testid="layer-row"]').filter({ hasText: "recipe · count_bar" })).toBeVisible();
   await expect(page.getByTestId("code-panel")).toContainText(".size().reindex");
   await page.getByTestId("recipe-kind-select").selectOption("stacked_bar");
+  await expect(page.getByTestId("recipe-question-note")).toContainText("Categorical counts/composition");
   await expect(page.getByTestId("recipe-y-column-select")).toHaveCount(0);
   await expect(page.getByTestId("recipe-error-select")).toHaveCount(0);
   await expect(page.getByTestId("recipe-group-column-select")).not.toHaveValue("");

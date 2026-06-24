@@ -16,16 +16,14 @@ Single-value-source plots such as `hist`, `boxplot`, and `violin` use the Y/valu
 
 Use recipe mode when the selected variable is a pandas DataFrame and you want a common statistical figure without writing the plotting boilerplate.
 
-Bundled recipes:
+The builder groups bundled recipes by research question:
 
-| Recipe | Use it for |
-| --- | --- |
-| `mean_sem_line` | Group by X and optional group column, compute mean plus SEM or SD, then draw a line with error bars. |
-| `mean_sem_bar` | Group by X and optional group column, compute mean plus SEM or SD, then draw categorical bars with error caps. |
-| `count_bar` | Count rows by X category and optional group column, then draw categorical frequency bars. |
-| `stacked_bar` | Count rows by X category and required group column, then draw stacked categorical bars. |
-| `grouped_points` | Preserve first-seen category order, scatter individual points by category, and overlay mean plus SEM or SD. |
-| `paired_before_after` | Group paired observations by subject, draw subject traces, and overlay condition means. |
+| Research question | Recipes | Use it for |
+| --- | --- | --- |
+| Time-course comparison | `mean_sem_line` | Group by X and optional group column, compute mean plus SEM or SD, then draw a line with error bars. |
+| Group/condition comparison | `mean_sem_bar`, `grouped_points` | Compare category means with error caps, or show individual observations plus mean and error summaries. |
+| Categorical counts/composition | `count_bar`, `stacked_bar` | Count rows by X category, optionally split or stack counts by group. |
+| Paired observations | `paired_before_after` | Group paired observations by subject, draw subject traces, and overlay condition means. |
 
 Recipes store variable names, column names, style choices, and target axes in the `FigureSpec`. They do not store raw DataFrame data. `count_bar` uses X and optional group columns only; `stacked_bar` uses X plus group columns; value/error columns are ignored for both. Generated code still imports Matplotlib only and computes statistics from your live DataFrame variable.
 
