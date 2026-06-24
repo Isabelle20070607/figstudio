@@ -23,8 +23,9 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Theme | Scientific authoring primitives |
 | Initiative | Add automatic repeated-panel layout optimization as an initial layout suggestion. |
 | Why it matters | Repeated panels should start compact, non-overlapping, and appropriate for the plotted content instead of forcing users to hand-place every axes. |
-| Maturity | `foundation-needed` |
+| Maturity | `ready` |
 | Horizon | `near` |
+| Progress | Repeated-panel workflows now serialize through existing rows, columns, axes spans, DataFrame values, mapping keys, and sequence indices; gallery fixtures cover faceted and spanned layouts. |
 | Gate/Prerequisite | The optimizer outputs existing `FigureSpec.rows`, `FigureSpec.cols`, and `AxesSpec` row/column/span geometry; it does not require a new public layout API. |
 
 | Field | Value |
@@ -34,6 +35,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Mosaic layouts can express publication panels that outgrow named presets. |
 | Maturity | `exploratory` |
 | Horizon | `later` |
+| Readiness | GridSpec, span validation, and gallery proof make feasibility clearer, but a mosaic syntax would still introduce a new public layout authoring surface. |
 | Gate/Prerequisite | Preset-backed GridSpec panel layouts prove stable in real workflows. |
 
 | Field | Value |
@@ -52,8 +54,9 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Theme | Recipe and statistical coverage |
 | Initiative | Organize analysis recipes around research questions such as group comparison, paired conditions, time course comparison, distribution inspection, relationships, and matrix or heatmap review. |
 | Why it matters | Users explore scientific data by asking questions, not by choosing chart primitives first. |
-| Maturity | `foundation-needed` |
+| Maturity | `ready` |
 | Horizon | `near` |
+| Progress | The recipe model now covers line summaries, mean-plus-error bars, count bars, and stacked count bars with role-specific validation and pure Matplotlib codegen; remaining work is the research-question UI grouping. |
 | Gate/Prerequisite | Recipe roles, validation, and generated-code templates remain simple enough to explain and test. |
 
 | Field | Value |
@@ -61,9 +64,10 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Theme | Recipe and statistical coverage |
 | Initiative | Add categorical summary recipes such as grouped bars, stacked bars, count bars, bar-with-error panels, and point/box/violin overlays. |
 | Why it matters | These cover common scientific-paper chart patterns without expanding into generic business dashboards. |
-| Maturity | `foundation-needed` |
+| Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Beta slices added `mean_sem_bar` for mean-plus-error categorical bars and `count_bar` for ungrouped or grouped frequency bars; stacked bars and distribution overlays remain future work. |
+| Progress | Beta slices added `mean_sem_bar` for mean-plus-error categorical bars, `count_bar` for ungrouped or grouped frequency bars, and `stacked_bar` for grouped stacked frequency bars; distribution overlays remain future work. |
+| Readiness | Shared recipe roles and validation paths now make the remaining categorical overlays incremental rather than foundational. |
 | Gate/Prerequisite | Shared recipe roles and validation errors are clear enough for multiple recipe families. |
 
 | Field | Value |
@@ -73,6 +77,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | These fill high-value reproducible Matplotlib workflows for exploratory and manuscript figures. |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
+| Readiness | Existing recipe dispatch, dataset-role validation, and generated-code templates reduce implementation risk; the next risks are statistical semantics for fitted trends, bands, binning, and matrix controls. |
 | Gate/Prerequisite | Generated-code templates and recipe validation remain understandable as recipe complexity grows. |
 
 | Field | Value |
@@ -129,9 +134,10 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Theme | Publication workflow |
 | Initiative | Add publication-readiness checks for export. |
 | Why it matters | Missing figure intent, unreadable final-size typography, non-editable vector text, weak panel labels, legend or label overlap, untraceable statistics/source data, stale spec/code sync, and recipe errors are common final-mile problems. |
-| Maturity | `foundation-needed` |
+| Maturity | `ready` |
 | Horizon | `near` |
 | Progress | First advisory slice covers empty data-bearing figures, missing primary and secondary axis labels, missing legend labels for multi-item axes, and low-resolution PNG export settings. |
+| Readiness | Export-context advisory warnings are now proven; additional final-mile checks can layer on the same validation contract. |
 | Gate/Prerequisite | Checks are advisory and deterministic, with clear issue definitions and no hidden journal-specific or AI judgment. |
 
 | Field | Value |
@@ -161,6 +167,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Reproducibility improves when manifests record figure intent, FigStudio version, source script, data summaries, recipe semantics, export formats, generated-code hash, and readiness-check results. |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
+| Readiness | Readiness warning codes and exported `FigureSpec` artifacts now provide manifestable facts; generated-code hashing and source/session provenance remain the next prerequisites. |
 | Gate/Prerequisite | `FigureSpec` versioning, generated-code hashing, and advisory readiness-check definitions are stable. |
 
 | Field | Value |
@@ -170,6 +177,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Automation needs deterministic command surfaces after the interactive contract is stable. |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
+| Readiness | Validate, render, and codegen behavior is deterministic through the API and tests; CLI wrappers are lower risk, but patch diff/apply contracts remain future work. |
 | Gate/Prerequisite | `FigureSpec` and patch contracts stay stable. |
 
 ## Ecosystem And Templates
@@ -179,8 +187,9 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Theme | Ecosystem and templates |
 | Initiative | Prepare the recipe/template pack substrate. |
 | Why it matters | Namespaced recipe IDs, reusable chart-family roles, shared role schemas, validation hooks, generated-code templates, style defaults, gallery fixtures, and import/export compatibility should exist before external or domain-specific packs. |
-| Maturity | `foundation-needed` |
+| Maturity | `ready` |
 | Horizon | `near` |
+| Progress | Bundled recipes now share `RecipeKind`, dataset-role validation, generated-code dispatch, UI selectors, tests, and gallery-backed workflows across line and categorical families. |
 | Gate/Prerequisite | Bundled recipes and gallery fixtures share enough structure to avoid freezing a weak extension contract. |
 
 | Field | Value |
@@ -188,8 +197,9 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Theme | Ecosystem and templates |
 | Initiative | Add recipe and template packs for neuroscience, image panels, matrix/heatmap workflows, time series, and other domain-specific figure conventions. |
 | Why it matters | Domain packs should reuse stable primitives instead of becoming separate products. |
-| Maturity | `exploratory` |
+| Maturity | `foundation-needed` |
 | Horizon | `later` |
+| Readiness | Reference lines, repeated panels, secondary axes, and scientific-summary recipes are now available beta primitives; remaining prerequisites are pack substrate, domain fixtures, and loading rules. |
 | Gate/Prerequisite | Reference-line, repeated-panel, secondary-axis, and scientific-summary primitives can carry the common structure. |
 
 | Field | Value |
@@ -197,8 +207,9 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Theme | Ecosystem and templates |
 | Initiative | Start domain work with a bundled experimental neuroscience pack before considering an optional `figstudio-neuro` distribution. |
 | Why it matters | The neuroscience surface should prove recipe contracts, gallery examples, and package loading before splitting distribution. |
-| Maturity | `exploratory` |
+| Maturity | `foundation-needed` |
 | Horizon | `later` |
+| Readiness | The cross-domain primitives needed by `neuro.core` and ephys-style overlays are now present; keep this bundled and experimental until pack loading and gallery evidence exist. |
 | Gate/Prerequisite | Keep neuroscience organized as subdomains: `neuro.core`, `neuro.ephys`, and `neuro.neuroimaging`. |
 
 ## Product Ergonomics And Operations
