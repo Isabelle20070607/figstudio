@@ -23,6 +23,7 @@ Project guidance for `figstudio`.
 
 - Before reporting implementation or documentation work complete, run `git status --short` and finish with a local commit for the task's changes. If earlier agent-created dirty work is part of the same unfinished FigStudio slice, include it in the commit instead of leaving it behind; report the commit hash and clean/dirty status.
 - For roadmap-driven slices, close out implementation, verification, UI/docs discoverability, roadmap maturity/status sync, and the local commit together. Update only directly affected roadmap areas; if proof is blocked, record the partial or blocked state instead of upgrading maturity.
+- Also update roadmap readiness/dependency notes when a slice improves or weakens the feasibility, risk profile, or implementation prerequisites of a future item, even if that item was not directly implemented. Phrase future-item updates as readiness, dependency, risk, or proof changes; do not mark the item implemented unless the user-facing capability shipped.
 
 ## Documentation Ownership
 
