@@ -32,12 +32,16 @@ test("notebook save populates replacement cell code and copy action", async ({ p
   await page.goto("/");
 
   await expect(page.getByTestId("empty-preview")).toBeVisible();
+  await expect(page.getByTestId("save-code-button")).toContainText("Prepare cell");
+  await expect(page.getByTestId("code-panel-title")).toContainText("Generated code");
   await expect(page.getByTestId("copy-code-button")).toBeDisabled();
 
   await page.getByTestId("save-code-button").click();
 
-  await expect(page.getByTestId("status-line")).toContainText("Notebook replacement code ready");
-  await expect(page.getByTestId("save-message")).toContainText("Replacement cell code is shown below");
+  await expect(page.getByTestId("status-line")).toContainText("Notebook replacement cell ready");
+  await expect(page.getByTestId("code-panel-title")).toContainText("Notebook replacement cell");
+  await expect(page.getByTestId("save-message")).toContainText("Notebook replacement cell is shown below");
+  await expect(page.getByTestId("copy-code-button")).toHaveAttribute("title", "Copy notebook replacement cell");
   await expect(page.getByTestId("copy-code-button")).toBeEnabled();
   await expect(page.getByTestId("code-panel")).toContainText("import matplotlib.pyplot as plt");
   await expect(page.getByTestId("code-panel")).toContainText("plt.subplots");
@@ -48,6 +52,13 @@ test("notebook save populates replacement cell code and copy action", async ({ p
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem("figstudioCopiedCode") ?? ""))
     .toContain("plt.subplots");
+
+  await page.getByTestId("plot-kind-select").selectOption("line");
+  await page.getByTestId("add-layer-button").click();
+
+  await expect(page.getByTestId("code-panel-title")).toContainText("Generated code");
+  await expect(page.getByTestId("copy-code-button")).toHaveAttribute("title", "Copy generated code");
+  await expect(page.getByTestId("code-panel")).toContainText("axes_flat[0].plot");
 });
 
 test("covers the public beta editor workflow", async ({ page }, testInfo) => {
@@ -212,9 +223,9 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await expect(page.getByTestId("status-line")).toContainText("SVG export ready");
 
   await page.getByTestId("save-code-button").click();
-  await expect(page.getByTestId("status-line")).toContainText("Notebook replacement code ready");
-  await expect(page.getByTestId("save-message")).toContainText("No script_path was provided");
-  await expect(page.getByTestId("save-message")).toContainText("Replacement cell code is shown below");
+  await expect(page.getByTestId("status-line")).toContainText("Notebook replacement cell ready");
+  await expect(page.getByTestId("code-panel-title")).toContainText("Notebook replacement cell");
+  await expect(page.getByTestId("save-message")).toContainText("Notebook replacement cell is shown below");
   await expect(page.getByTestId("copy-code-button")).toBeEnabled();
 });
 

@@ -6,7 +6,7 @@
 
 ```mermaid
 flowchart TD
-  A["点击 Save code"] --> B{"是否提供 script_path？"}
+  A["点击 Save code 或 Prepare cell"] --> B{"是否提供 script_path？"}
   B -->|yes| C["生成 Matplotlib OO code"]
   C --> D{"是否只有一个匹配 marker block？"}
   D -->|yes| E["只替换该 block"]
@@ -26,7 +26,7 @@ flowchart TD
 
 FigStudio 会拒绝缺失 block、同一 id 的重复 block、嵌套 markers、不匹配 markers 和 IO failures。它不会编辑受控块之外的代码。脚本写回被阻止时，生成的 replacement 仍会显示在 code panel 中。
 
-Notebook 风格会话返回替换 cell code，不直接修改 Notebook 文件。点击 **Save code** 后，code panel 会显示返回的 replacement cell，并启用 copy button，方便用户主动粘贴到 Notebook。
+Notebook 风格或 no-script 会话返回替换 cell code，不直接修改 Notebook 文件。在这些会话中，toolbar 显示 **Prepare cell**。点击后，code panel 会切换为 **Notebook replacement cell**，并启用 copy button，方便用户主动粘贴到 Notebook。
 
 ## 导出文件
 

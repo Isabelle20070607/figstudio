@@ -28,7 +28,7 @@ flowchart TD
   C --> E["Call figstudio.open(locals(), script_path=__file__, block_id='main')"]
   D --> F["Call figstudio.open(locals())"]
   E --> G["Save code can replace one controlled marker block"]
-  F --> H["Save code returns replacement cell code"]
+  F --> H["Prepare cell returns replacement cell code"]
 ```
 
 ## First Script Session
@@ -59,7 +59,7 @@ import figstudio
 session = figstudio.open(locals())
 ```
 
-The editor can still map data, render previews, export files, and generate code. **Save code** returns replacement cell code in the response and code panel instead of mutating the notebook file.
+The editor can still map data, render previews, export files, and generate code. **Prepare cell** returns replacement cell code in the response and code panel instead of mutating the notebook file.
 
 ## Build The First DataFrame Plot
 

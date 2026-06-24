@@ -28,7 +28,7 @@ flowchart TD
   C --> E["调用 figstudio.open(locals(), script_path=__file__, block_id='main')"]
   D --> F["调用 figstudio.open(locals())"]
   E --> G["Save code 可替换一个受控 marker block"]
-  F --> H["Save code 返回替换 cell code"]
+  F --> H["Prepare cell 返回替换 cell code"]
 ```
 
 ## 第一个脚本会话
@@ -59,7 +59,7 @@ import figstudio
 session = figstudio.open(locals())
 ```
 
-编辑器仍可映射数据、渲染预览、导出文件并生成代码。**Save code** 会在响应和代码面板里返回替换 cell code，不会直接修改 Notebook 文件。
+编辑器仍可映射数据、渲染预览、导出文件并生成代码。**Prepare cell** 会在响应和代码面板里返回替换 cell code，不会直接修改 Notebook 文件。
 
 ## 创建第一张 DataFrame 图
 

@@ -16,7 +16,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { api } from "./api";
-import { CodePanel } from "./CodePanel";
+import { CodePanel, type CodePanelSource } from "./CodePanel";
 import { useAppStore } from "./store";
 import type {
   AnnotationSpec,
@@ -1138,6 +1138,16 @@ function validationRepairText(issue: ValidationIssue): string {
   }
 }
 
+function codePanelSourceForSave(saveResponse: SaveCodeResponse | null): CodePanelSource {
+  if (!saveResponse) {
+    return "generated";
+  }
+  if (!saveResponse.ok) {
+    return "fallback";
+  }
+  return saveResponse.wrote_file ? "generated" : "notebook";
+}
+
 export function App() {
   const {
     session,
@@ -1242,6 +1252,13 @@ export function App() {
     () => spec?.recipes?.find((recipe) => recipe.id === selectedLayerId),
     [selectedLayerId, spec?.recipes]
   );
+  const hasScriptWriteback = Boolean(session?.has_script_writeback);
+  const codePanelSource = codePanelSourceForSave(saveResponse);
+  const codePanelCode = saveResponse
+    ? !saveResponse.ok || saveResponse.wrote_file
+      ? saveResponse.code
+      : saveResponse.notebook_cell
+    : (render?.code ?? "");
 
   useEffect(() => {
     if (!spec?.axes.length) {
@@ -1339,12 +1356,12 @@ export function App() {
       setSaveResponse(response);
       const saveHelp = response.wrote_file
         ? "Script marker block updated."
-        : `${response.message} Replacement cell code is shown below.`;
+        : "Notebook replacement cell is shown below.";
       setSaveMessage(response.ok ? saveHelp : `${response.message} Replacement code remains available below.`);
       if (!response.ok) {
         setManualStatus("Save blocked: copy replacement code from the panel.");
       } else {
-        setManualStatus(response.wrote_file ? "Script updated." : "Notebook replacement code ready.");
+        setManualStatus(response.wrote_file ? "Script updated." : "Notebook replacement cell ready.");
       }
     } catch (error) {
       setManualStatus(error instanceof Error ? error.message : "Save failed");
@@ -1566,7 +1583,7 @@ export function App() {
           </button>
           <button className="action-button" data-testid="save-code-button" onClick={saveCode} disabled={!spec}>
             <Save size={16} />
-            Save code
+            {hasScriptWriteback ? "Save code" : "Prepare cell"}
           </button>
           <button
             className="icon-button"
@@ -1629,7 +1646,7 @@ export function App() {
             </div>
           </div>
           <Preview render={render} issues={validationIssues} onIssueSelect={focusValidationIssue} />
-          <CodePanel code={saveResponse?.notebook_cell ?? render?.code ?? ""} saveMessage={saveMessage} />
+          <CodePanel code={codePanelCode} saveMessage={saveMessage} source={codePanelSource} />
         </section>
 
         <Inspector

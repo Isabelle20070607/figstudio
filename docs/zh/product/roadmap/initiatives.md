@@ -138,10 +138,8 @@
 | Theme | Publication workflow |
 | Initiative | 加强 notebook copy 和 cell-output ergonomics。 |
 | Why it matters | Notebook 用户需要更顺滑的 handoff，同时保留对 file mutation 的控制。 |
-| Maturity | `foundation-needed` |
-| Horizon | `near` |
-| Progress | Save code 现在会从返回的 notebook replacement cell 填充 code panel，并提供 copy action，同时不修改 notebook 文件。 |
-| Gate/Prerequisite | Notebook workflow 继续返回 replacement code，而不是 silent edit notebook files。 |
+| Status | 已在 beta 中完成。 |
+| Completion note | No-script 和 notebook-style sessions 现在提供 mode-aware **Prepare cell** action；save 后 code panel 会切换为 **Notebook replacement cell**，提供 replacement cell 的 copy action，并在后续 spec edits 后回到 generated-code preview，同时仍不修改 notebook 文件。 |
 
 ## AI-Compatible Handoff And Provenance
 

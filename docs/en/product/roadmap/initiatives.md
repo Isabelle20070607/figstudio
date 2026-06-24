@@ -138,10 +138,8 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Theme | Publication workflow |
 | Initiative | Strengthen notebook copy and cell-output ergonomics. |
 | Why it matters | Notebook users need a smoother handoff while staying in control of file mutation. |
-| Maturity | `foundation-needed` |
-| Horizon | `near` |
-| Progress | Save code now populates the code panel from the returned notebook replacement cell and exposes a copy action, while keeping notebook files untouched. |
-| Gate/Prerequisite | Notebook workflow continues to return replacement code rather than silently editing notebook files. |
+| Status | Completed in beta. |
+| Completion note | No-script and notebook-style sessions now expose a mode-aware **Prepare cell** action, switch the code panel to **Notebook replacement cell** after save, expose a copy action for the replacement cell, and return to generated-code preview after further spec edits while keeping notebook files untouched. |
 
 ## AI-Compatible Handoff And Provenance
 

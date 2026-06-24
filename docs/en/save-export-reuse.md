@@ -6,7 +6,7 @@ Use this page when the figure is ready to leave the editor and become code, file
 
 ```mermaid
 flowchart TD
-  A["Click Save code"] --> B{"script_path was provided?"}
+  A["Click Save code or Prepare cell"] --> B{"script_path was provided?"}
   B -->|yes| C["Generate Matplotlib OO code"]
   C --> D{"Exactly one matching marker block?"}
   D -->|yes| E["Replace only that block"]
@@ -26,7 +26,7 @@ Script writeback may only replace a unique controlled block:
 
 FigStudio rejects missing blocks, duplicated blocks for the same id, nested markers, unmatched markers, and IO failures. It does not edit outside the controlled block. When script writeback is blocked, the generated replacement remains visible in the code panel.
 
-Notebook-style sessions return replacement cell code and do not mutate notebook files. After **Save code**, the code panel shows the returned replacement cell and enables the copy button so the cell can be pasted deliberately.
+Notebook-style or no-script sessions return replacement cell code and do not mutate notebook files. In those sessions the toolbar shows **Prepare cell**. After clicking it, the code panel switches to **Notebook replacement cell** and enables the copy button so the cell can be pasted deliberately.
 
 ## Export Files
 

@@ -3,12 +3,34 @@ import { lazy, Suspense, useEffect, useState } from "react";
 
 const GeneratedCodeEditor = lazy(() => import("./GeneratedCodeEditor"));
 
-export function CodePanel({ code, saveMessage }: { code: string; saveMessage: string }) {
+export type CodePanelSource = "generated" | "notebook" | "fallback";
+
+const codePanelCopyLabels: Record<CodePanelSource, string> = {
+  generated: "Copy generated code",
+  notebook: "Copy notebook replacement cell",
+  fallback: "Copy replacement code"
+};
+
+const codePanelTitles: Record<CodePanelSource, string> = {
+  generated: "Generated code",
+  notebook: "Notebook replacement cell",
+  fallback: "Replacement code fallback"
+};
+
+export function CodePanel({
+  code,
+  saveMessage,
+  source
+}: {
+  code: string;
+  saveMessage: string;
+  source: CodePanelSource;
+}) {
   const [copyMessage, setCopyMessage] = useState("");
 
   useEffect(() => {
     setCopyMessage("");
-  }, [code]);
+  }, [code, source]);
 
   async function copyCode() {
     if (!code) {
@@ -29,7 +51,7 @@ export function CodePanel({ code, saveMessage }: { code: string; saveMessage: st
       <div className="panel-heading">
         <span>
           <FileCode2 size={16} />
-          Generated code
+          <span data-testid="code-panel-title">{codePanelTitles[source]}</span>
         </span>
         <div className="code-panel-actions">
           <small data-testid={copyMessage || saveMessage ? "save-message" : "code-panel-help"}>{statusMessage}</small>
@@ -37,8 +59,8 @@ export function CodePanel({ code, saveMessage }: { code: string; saveMessage: st
             type="button"
             className="code-copy-button"
             data-testid="copy-code-button"
-            title="Copy code"
-            aria-label="Copy code"
+            title={codePanelCopyLabels[source]}
+            aria-label={codePanelCopyLabels[source]}
             onClick={() => void copyCode()}
             disabled={!code}
           >
