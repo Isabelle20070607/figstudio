@@ -61,7 +61,7 @@
 | Why it matters | 这些覆盖常见科研论文图形，同时避免扩张成泛 business dashboard。 |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Beta slices 已增加 `mean_sem_bar` 用于 mean-plus-error 分类柱状图，增加 `count_bar` 用于 ungrouped 或 grouped 频数柱状图，并增加 `stacked_bar` 用于 grouped stacked 频数柱状图；distribution overlays 仍是未来工作。 |
+| Progress | Beta slices 已增加 `mean_sem_bar` 用于 mean-plus-error 分类柱状图，增加 `count_bar` 用于 ungrouped 或 grouped 频数柱状图，增加 `stacked_bar` 用于 grouped stacked 频数柱状图，并增加 `boxplot_by_category` 用于 grouped value distributions；violin-style distribution overlays 仍是未来工作。 |
 | Readiness | Shared recipe roles、validation paths 和 research-question selector 已经让剩余 categorical overlays 更像增量扩展，而不是基础设施问题。 |
 | Gate/Prerequisite | Shared recipe roles 和 validation errors 清楚到足以承载多个 recipe families。 |
 
@@ -122,7 +122,7 @@
 | Why it matters | 用户需要接近真实生产场景的证据，展示 plot layers、statistics recipes、existing Figure inspection、notebook-style output 和 package install flows 如何从 source data 走到可见 preview 与 export artifacts。 |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | 已提交 gallery workflows 现在覆盖 DataFrame facet recipes、stacked categorical composition、secondary-axis overlays、GridSpec spans、reference lines、annotations、reusable specs 和 SVG preview assets。 |
+| Progress | 已提交 gallery workflows 现在覆盖 DataFrame facet recipes、category boxplot distributions、stacked categorical composition、secondary-axis overlays、GridSpec spans、reference lines、annotations、reusable specs 和 SVG preview assets。 |
 | Gate/Prerequisite | 每个例子展示 input data、user intent 或 figure contract、preview screenshot、generated Matplotlib code、FigureSpec/export artifact，以及它证明的 publication workflow。 |
 
 | Field | Value |
@@ -186,7 +186,7 @@
 | Why it matters | Namespaced recipe IDs、reusable chart-family roles、shared role schemas、validation hooks、generated-code templates、style defaults、gallery fixtures 和 import/export compatibility 应该在外部或领域专用 packs 前存在。 |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Bundled recipes 现在在 line 和 categorical families 上共享 `RecipeKind`、dataset-role validation、generated-code dispatch、UI selectors、tests 和 gallery-backed workflows。 |
+| Progress | Bundled recipes 现在在 line、categorical 和 distribution-summary families 上共享 `RecipeKind`、dataset-role validation、generated-code dispatch、UI selectors、tests 和 gallery-backed workflows。 |
 | Gate/Prerequisite | Bundled recipes 和 gallery fixtures 有足够共享结构，避免过早冻结脆弱 extension contract。 |
 
 | Field | Value |

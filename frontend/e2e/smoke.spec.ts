@@ -91,6 +91,7 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   const recipeSelect = page.getByTestId("recipe-kind-select");
   await expect(recipeSelect.locator('optgroup[label="Time-course comparison"]')).toContainText("Mean +/- SEM line");
   await expect(recipeSelect.locator('optgroup[label="Group/condition comparison"]')).toContainText("Grouped points");
+  await expect(recipeSelect.locator('optgroup[label="Group/condition comparison"]')).toContainText("Category boxplots");
   await expect(recipeSelect.locator('optgroup[label="Categorical counts/composition"]')).toContainText("Stacked count bars");
   await expect(recipeSelect.locator('optgroup[label="Paired observations"]')).toContainText("Paired before/after");
   await expect(page.getByTestId("recipe-question-note")).toContainText("Time-course comparison");
@@ -117,6 +118,13 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await page.getByTestId("add-recipe-button").click();
   await expect(page.locator('[data-testid="layer-row"]').filter({ hasText: "recipe · stacked_bar" })).toBeVisible();
   await expect(page.getByTestId("code-panel")).toContainText("bottom=");
+  await page.getByTestId("recipe-kind-select").selectOption("boxplot_by_category");
+  await expect(page.getByTestId("recipe-question-note")).toContainText("Group/condition comparison");
+  await expect(page.getByTestId("recipe-y-column-select")).toHaveCount(1);
+  await expect(page.getByTestId("recipe-error-select")).toHaveCount(0);
+  await page.getByTestId("add-recipe-button").click();
+  await expect(page.locator('[data-testid="layer-row"]').filter({ hasText: "recipe · boxplot_by_category" })).toBeVisible();
+  await expect(page.getByTestId("code-panel")).toContainText(".boxplot(");
   await page.getByTestId("facet-column-select").selectOption("condition");
   await page.getByTestId("facet-share-y-field-input").check();
   await page.getByTestId("create-facet-panels-button").click();

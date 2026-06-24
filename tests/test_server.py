@@ -762,6 +762,42 @@ def test_stacked_bar_recipe_api_smoke_workflow():
     assert "bottom=_recipe_recipe_1_bottom" in rendered.json()["code"]
 
 
+def test_boxplot_by_category_recipe_api_smoke_workflow():
+    df = pd.DataFrame(
+        {
+            "condition": ["control", "control", "drug", "drug", "drug"],
+            "genotype": ["wt", "mut", "wt", "mut", "wt"],
+            "response": [1.0, 0.8, 1.4, 1.1, 1.6],
+        }
+    )
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="boxplot_by_category",
+                dataset=RecipeDatasetRef(
+                    variable="df",
+                    x="condition",
+                    y="response",
+                    group="genotype",
+                ),
+                error="none",
+            )
+        ]
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    rendered = client.post("/api/render", json={"spec": spec.model_dump(), "format": "svg"})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is True
+    assert rendered.status_code == 200
+    assert "<svg" in rendered.json()["image"]
+    assert "axes_flat[0].boxplot(_recipe_recipe_1_group_values" in rendered.json()["code"]
+
+
 def test_recipe_validation_reports_non_dataframe_source():
     session = FigStudioSession(registry=VariableRegistry({"values": [1, 2, 3]}), port=8001)
     client = TestClient(create_app(session))
@@ -887,3 +923,39 @@ def test_stacked_bar_validation_requires_group_and_ignores_y():
     assert missing_group.status_code == 200
     assert missing_group.json()["ok"] is False
     assert missing_group.json()["issues"][0]["field"] == "dataset.group"
+
+
+def test_boxplot_by_category_validation_requires_y_and_accepts_optional_group():
+    df = pd.DataFrame({"condition": ["control", "drug"], "genotype": ["wt", "mut"], "response": [1.0, 2.0]})
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8001)
+    client = TestClient(create_app(session))
+
+    valid_spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="boxplot-ok",
+                kind="boxplot_by_category",
+                dataset=RecipeDatasetRef(variable="df", x="condition", y="response", group="genotype"),
+                error="none",
+            )
+        ]
+    )
+    missing_y_spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="boxplot-missing-y",
+                kind="boxplot_by_category",
+                dataset=RecipeDatasetRef(variable="df", x="condition"),
+                error="none",
+            )
+        ]
+    )
+
+    valid = client.post("/api/validate", json={"spec": valid_spec.model_dump()})
+    missing_y = client.post("/api/validate", json={"spec": missing_y_spec.model_dump()})
+
+    assert valid.status_code == 200
+    assert valid.json()["ok"] is True
+    assert missing_y.status_code == 200
+    assert missing_y.json()["ok"] is False
+    assert missing_y.json()["issues"][0]["field"] == "dataset.y"

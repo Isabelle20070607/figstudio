@@ -32,6 +32,17 @@ The companion specs are portable FigStudio state. They store variable names, col
 | Data shape | Synthetic sample QC DataFrame with `sample_id`, `stage`, and `qc_status` columns |
 | Figure contract | One recipe groups the live `df` by workflow stage and QC status, stacks counts as plain Matplotlib bars, and stays clean for SVG export-context validation |
 
+## Category Boxplot Response
+
+![Category boxplot response](../assets/gallery/category-boxplot-response.svg)
+
+| Item | Details |
+| --- | --- |
+| Files | [script](../../examples/gallery/category_boxplot_response.py), [spec](../../examples/gallery/category_boxplot_response.figstudio.json) |
+| Demonstrates | `boxplot_by_category` recipes, grouped distribution summaries, publish-mode labels, SVG export readiness checks |
+| Data shape | Synthetic response DataFrame with `condition`, `genotype`, `replicate`, and `response` columns |
+| Figure contract | One recipe groups live `df` values by condition and genotype, offsets Matplotlib boxplots by group, and keeps the generated code independent of FigStudio |
+
 ## Secondary-Axis Timecourse
 
 ![Secondary-axis timecourse](../assets/gallery/secondary-axis-timecourse.svg)

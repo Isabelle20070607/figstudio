@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "mode": "publish",
+  "width": 5.8,
+  "height": 3.8,
+  "dpi": 300,
+  "rows": 1,
+  "cols": 1,
+  "axes": [
+    {
+      "id": "ax0",
+      "row": 0,
+      "col": 0,
+      "title": "Response distributions by condition and genotype",
+      "xlabel": "Condition",
+      "ylabel": "Normalized response",
+      "ylim": [
+        0.6,
+        1.9
+      ],
+      "grid": true,
+      "legend": true
+    }
+  ],
+  "layers": [],
+  "recipes": [
+    {
+      "id": "condition-response-boxplot",
+      "kind": "boxplot_by_category",
+      "axes_id": "ax0",
+      "dataset": {
+        "variable": "df",
+        "x": "condition",
+        "y": "response",
+        "group": "genotype"
+      },
+      "style": {
+        "label": "Response",
+        "color": "#2563eb",
+        "marker": "o",
+        "alpha": 0.32,
+        "linewidth": 1.1
+      },
+      "error": "none"
+    }
+  ],
+  "reference_lines": [],
+  "annotations": [],
+  "style": {
+    "preset": "journal_double",
+    "title": "",
+    "font_family": "Arial",
+    "font_size": 8,
+    "constrained_layout": true
+  },
+  "show": false
+}

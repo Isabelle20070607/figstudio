@@ -664,6 +664,8 @@ def _required_recipe_columns(recipe: RecipeLayer) -> list[str]:
         return ["x"]
     if recipe.kind == "stacked_bar":
         return ["x", "group"]
+    if recipe.kind == "boxplot_by_category":
+        return ["x", "y"]
     return ["x", "y"]
 
 

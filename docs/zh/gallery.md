@@ -32,6 +32,17 @@ uv run python examples/gallery/faceted_dose_response.py
 | Data shape | Synthetic sample QC DataFrame，包含 `sample_id`、`stage` 和 `qc_status` columns |
 | Figure contract | 一个 recipe 按 workflow stage 和 QC status 对 live `df` 分组，把 counts 堆叠成 plain Matplotlib bars，并在 SVG export-context validation 下保持 clean |
 
+## Category Boxplot Response
+
+![Category boxplot response](../assets/gallery/category-boxplot-response.svg)
+
+| 项目 | 说明 |
+| --- | --- |
+| Files | [script](../../examples/gallery/category_boxplot_response.py), [spec](../../examples/gallery/category_boxplot_response.figstudio.json) |
+| Demonstrates | `boxplot_by_category` recipes、grouped distribution summaries、publish-mode labels、SVG export readiness checks |
+| Data shape | Synthetic response DataFrame，包含 `condition`、`genotype`、`replicate` 和 `response` columns |
+| Figure contract | 一个 recipe 按 condition 和 genotype 对 live `df` values 分组，按 group 偏移 Matplotlib boxplots，并让 generated code 不依赖 FigStudio |
+
 ## Secondary-Axis Timecourse
 
 ![Secondary-axis timecourse](../assets/gallery/secondary-axis-timecourse.svg)

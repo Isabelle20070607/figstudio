@@ -61,7 +61,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | These cover common scientific-paper chart patterns without expanding into generic business dashboards. |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Beta slices added `mean_sem_bar` for mean-plus-error categorical bars, `count_bar` for ungrouped or grouped frequency bars, and `stacked_bar` for grouped stacked frequency bars; distribution overlays remain future work. |
+| Progress | Beta slices added `mean_sem_bar` for mean-plus-error categorical bars, `count_bar` for ungrouped or grouped frequency bars, `stacked_bar` for grouped stacked frequency bars, and `boxplot_by_category` for grouped value distributions; violin-style distribution overlays remain future work. |
 | Readiness | Shared recipe roles, validation paths, and the research-question selector now make the remaining categorical overlays incremental rather than foundational. |
 | Gate/Prerequisite | Shared recipe roles and validation errors are clear enough for multiple recipe families. |
 
@@ -122,7 +122,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Users need production-like proof of plot layers, statistics recipes, existing Figure inspection, notebook-style output, and package install flows from source data through visible preview and export artifacts. |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Checked-in gallery workflows now cover DataFrame facet recipes, stacked categorical composition, secondary-axis overlays, GridSpec spans, reference lines, annotations, reusable specs, and SVG preview assets. |
+| Progress | Checked-in gallery workflows now cover DataFrame facet recipes, category boxplot distributions, stacked categorical composition, secondary-axis overlays, GridSpec spans, reference lines, annotations, reusable specs, and SVG preview assets. |
 | Gate/Prerequisite | Each example shows input data, user intent or figure contract, preview screenshot, generated Matplotlib code, FigureSpec/export artifact, and the publication workflow it demonstrates. |
 
 | Field | Value |
@@ -186,7 +186,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Namespaced recipe IDs, reusable chart-family roles, shared role schemas, validation hooks, generated-code templates, style defaults, gallery fixtures, and import/export compatibility should exist before external or domain-specific packs. |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Bundled recipes now share `RecipeKind`, dataset-role validation, generated-code dispatch, UI selectors, tests, and gallery-backed workflows across line and categorical families. |
+| Progress | Bundled recipes now share `RecipeKind`, dataset-role validation, generated-code dispatch, UI selectors, tests, and gallery-backed workflows across line, categorical, and distribution-summary families. |
 | Gate/Prerequisite | Bundled recipes and gallery fixtures share enough structure to avoid freezing a weak extension contract. |
 
 | Field | Value |

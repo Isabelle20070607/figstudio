@@ -157,3 +157,28 @@ def test_render_svg_from_stacked_bar_recipe():
     assert "<svg" in svg
     assert "groupby(['condition', 'genotype'], sort=False).size().unstack(fill_value=0)" in code
     assert "bottom=_recipe_recipe_1_bottom" in code
+
+
+def test_render_svg_from_boxplot_by_category_recipe():
+    df = pd.DataFrame(
+        {
+            "condition": ["control", "control", "drug", "drug", "drug"],
+            "genotype": ["wt", "mut", "wt", "mut", "wt"],
+            "response": [1.0, 0.8, 1.4, 1.1, 1.6],
+        }
+    )
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="boxplot_by_category",
+                dataset=RecipeDatasetRef(variable="df", x="condition", y="response", group="genotype"),
+                error="none",
+            )
+        ]
+    )
+
+    svg, code = RenderEngine({"df": df}).render_base64(spec, "svg")
+
+    assert "<svg" in svg
+    assert "axes_flat[0].boxplot(_recipe_recipe_1_group_values" in code

@@ -17,6 +17,7 @@ export type RecipeKind =
   | "mean_sem_bar"
   | "count_bar"
   | "stacked_bar"
+  | "boxplot_by_category"
   | "grouped_points"
   | "paired_before_after";
 

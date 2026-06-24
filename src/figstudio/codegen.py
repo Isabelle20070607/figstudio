@@ -328,6 +328,8 @@ class MatplotlibCodegen:
             return self._count_bar_code(recipe, style, axis_index)
         if recipe.kind == "stacked_bar":
             return self._stacked_bar_code(recipe, style, axis_index)
+        if recipe.kind == "boxplot_by_category":
+            return self._boxplot_by_category_code(recipe, style, axis_index)
         if recipe.kind == "grouped_points":
             return self._grouped_points_code(recipe, style, axis_index)
         if recipe.kind == "paired_before_after":
@@ -339,7 +341,8 @@ class MatplotlibCodegen:
             return True
         return bool(
             recipe.dataset.group
-            and recipe.kind in {"mean_sem_line", "mean_sem_bar", "count_bar", "stacked_bar"}
+            and recipe.kind
+            in {"mean_sem_line", "mean_sem_bar", "count_bar", "stacked_bar", "boxplot_by_category"}
         )
 
     def _reference_line_code(self, reference_line: ReferenceLineSpec, axis_index: int) -> list[str]:
@@ -579,6 +582,98 @@ class MatplotlibCodegen:
                     ),
                 ]
             )
+        lines.extend(
+            [
+                f"{ax}.set_xticks({prefix}_x)",
+                f"{ax}.set_xticklabels([str(value) for value in {prefix}_x_order])",
+            ]
+        )
+        return [line.replace(", )", ")").replace("(, ", "(") for line in lines]
+
+    def _boxplot_by_category_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:
+        data = recipe.dataset
+        var = _safe_var(data.variable)
+        prefix = self._recipe_prefix(recipe)
+        ax = f"axes_flat[{axis_index}]"
+        label_base = style.label or data.y or "Value"
+        color = style.color or "#2563eb"
+        box_kwargs = _kwargs(
+            patch_artist=True,
+            showmeans=True,
+            boxprops={
+                "facecolor": color,
+                "alpha": style.alpha if style.alpha is not None else 0.28,
+            },
+            medianprops={"color": "#111827"},
+            meanprops={
+                "marker": style.marker or "o",
+                "markerfacecolor": color,
+                "markeredgecolor": "#111827",
+            },
+        )
+
+        lines = [
+            f"{prefix}_df = {var}",
+            f"{prefix}_x_order = list(dict.fromkeys({prefix}_df[{data.x!r}].dropna().tolist()))",
+            f"{prefix}_x = list(range(len({prefix}_x_order)))",
+        ]
+        if data.group:
+            lines.extend(
+                [
+                    f"{prefix}_groups = list(dict.fromkeys({prefix}_df[{data.group!r}].dropna().tolist()))",
+                    f"{prefix}_box_width = 0.72 / max(len({prefix}_groups), 1)",
+                    f"for {prefix}_group_index, {prefix}_group in enumerate({prefix}_groups):",
+                    f"    {prefix}_group_df = {prefix}_df[{prefix}_df[{data.group!r}] == {prefix}_group]",
+                    f"    {prefix}_group_values = []",
+                    f"    {prefix}_group_positions = []",
+                    f"    for {prefix}_category_index, {prefix}_category in enumerate({prefix}_x_order):",
+                    (
+                        f"        {prefix}_category_values = {prefix}_group_df.loc["
+                        f"{prefix}_group_df[{data.x!r}] == {prefix}_category, {data.y!r}].dropna()"
+                    ),
+                    f"        if len({prefix}_category_values):",
+                    f"            {prefix}_group_values.append({prefix}_category_values)",
+                    (
+                        f"            {prefix}_offset = "
+                        f"({prefix}_group_index - (len({prefix}_groups) - 1) / 2) * {prefix}_box_width"
+                    ),
+                    (
+                        f"            {prefix}_group_positions.append("
+                        f"{prefix}_x[{prefix}_category_index] + {prefix}_offset)"
+                    ),
+                    f"    if {prefix}_group_values:",
+                    (
+                        f"        {ax}.boxplot({prefix}_group_values, positions={prefix}_group_positions, "
+                        f"widths={prefix}_box_width * 0.72, {box_kwargs})"
+                    ),
+                    (
+                        f"        {ax}.plot([], [], color={color!r}, linewidth=6, "
+                        f"label=f'{label_base} {{{prefix}_group}}')"
+                    ),
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    f"{prefix}_values = []",
+                    f"{prefix}_positions = []",
+                    f"for {prefix}_category_index, {prefix}_category in enumerate({prefix}_x_order):",
+                    (
+                        f"    {prefix}_category_values = {prefix}_df.loc["
+                        f"{prefix}_df[{data.x!r}] == {prefix}_category, {data.y!r}].dropna()"
+                    ),
+                    f"    if len({prefix}_category_values):",
+                    f"        {prefix}_values.append({prefix}_category_values)",
+                    f"        {prefix}_positions.append({prefix}_x[{prefix}_category_index])",
+                    f"if {prefix}_values:",
+                    (
+                        f"    {ax}.boxplot({prefix}_values, positions={prefix}_positions, "
+                        f"widths=0.58, {box_kwargs})"
+                    ),
+                ]
+            )
+            if style.label:
+                lines.append(f"{ax}.plot([], [], color={color!r}, linewidth=6, label={style.label!r})")
         lines.extend(
             [
                 f"{ax}.set_xticks({prefix}_x)",

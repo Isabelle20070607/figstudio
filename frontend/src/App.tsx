@@ -78,6 +78,10 @@ const recipeDetails: Record<RecipeKind, { label: string; role: string }> = {
     label: "Stacked count bars",
     role: "Shows category composition from row counts split by a required group column."
   },
+  boxplot_by_category: {
+    label: "Category boxplots",
+    role: "Shows value distributions by category with optional group offsets."
+  },
   grouped_points: {
     label: "Grouped points",
     role: "Shows individual observations by category with a mean and error summary."
@@ -103,7 +107,7 @@ const recipeQuestionGroups: Array<{
     id: "group-condition",
     label: "Group/condition comparison",
     summary: "Compare measured values across experimental conditions or cohorts.",
-    recipes: ["mean_sem_bar", "grouped_points"]
+    recipes: ["mean_sem_bar", "grouped_points", "boxplot_by_category"]
   },
   {
     id: "categorical-counts",
@@ -153,7 +157,13 @@ function recipeRequiresY(kind: RecipeKind) {
 }
 
 function recipeSupportsGroup(kind: RecipeKind) {
-  return kind === "mean_sem_line" || kind === "mean_sem_bar" || kind === "count_bar" || kind === "stacked_bar";
+  return (
+    kind === "mean_sem_line" ||
+    kind === "mean_sem_bar" ||
+    kind === "count_bar" ||
+    kind === "stacked_bar" ||
+    kind === "boxplot_by_category"
+  );
 }
 
 function recipeRequiresGroup(kind: RecipeKind) {
@@ -161,7 +171,7 @@ function recipeRequiresGroup(kind: RecipeKind) {
 }
 
 function recipeUsesError(kind: RecipeKind) {
-  return kind !== "count_bar" && kind !== "stacked_bar";
+  return kind !== "count_bar" && kind !== "stacked_bar" && kind !== "boxplot_by_category";
 }
 
 function recipeUsesSubject(kind: RecipeKind) {
@@ -839,15 +849,18 @@ function createRecipe({
     style: {
       label,
       color: kind === "stacked_bar" ? null : colors[0],
-      marker: kind === "grouped_points" || kind === "paired_before_after" ? "o" : null,
+      marker:
+        kind === "grouped_points" || kind === "paired_before_after" || kind === "boxplot_by_category" ? "o" : null,
       linestyle: kind === "mean_sem_line" ? "-" : null,
       linewidth: kind === "mean_sem_line" || kind === "paired_before_after" ? 1.8 : null,
       alpha:
         kind === "grouped_points"
           ? 0.78
-          : kind === "mean_sem_bar" || kind === "count_bar" || kind === "stacked_bar"
-            ? 0.85
-            : null
+          : kind === "boxplot_by_category"
+            ? 0.32
+            : kind === "mean_sem_bar" || kind === "count_bar" || kind === "stacked_bar"
+              ? 0.85
+              : null
     },
     error: recipeUsesError(kind) ? error : "none",
     readonly: false,
@@ -1317,12 +1330,12 @@ export function App() {
         : `${response.message} Replacement cell code is shown below.`;
       setSaveMessage(response.ok ? saveHelp : `${response.message} Replacement code remains available below.`);
       if (!response.ok) {
-        setStatus("Save blocked: copy replacement code from the panel.");
+        setManualStatus("Save blocked: copy replacement code from the panel.");
       } else {
-        setStatus(response.wrote_file ? "Script updated." : "Notebook replacement code ready.");
+        setManualStatus(response.wrote_file ? "Script updated." : "Notebook replacement code ready.");
       }
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Save failed");
+      setManualStatus(error instanceof Error ? error.message : "Save failed");
     }
   }
 
