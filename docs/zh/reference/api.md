@@ -43,9 +43,20 @@ figstudio --port 8767 --no-browser
 figstudio --project G:\workspace\figstudio --no-browser
 figstudio demo
 figstudio demo --project G:\workspace\figstudio --port 8767 --no-browser
+figstudio codegen figure.figstudio.json --output figure.py
+figstudio validate figure.figstudio.json --data-script data.py --context export --export-format svg --json
+figstudio render figure.figstudio.json --data-script data.py --output preview.svg
+figstudio export figure.figstudio.json --data-script data.py --output figure.pdf
 ```
 
-CLI 会打印 session URL，并持续运行直到被中断。
+Session commands 会打印 session URL，并持续运行直到被中断。Headless commands 会执行一次后退出：
+
+- `codegen` 读取 `.figstudio.json` spec，并把生成的 Matplotlib code 写到 stdout 或 `--output`。
+- `validate` 基于可选的可信 `--data-script` namespace 校验 spec，validation errors 返回 exit `1`。
+- `render` 基于 spec 和可信 `--data-script` 写出 SVG 或 PNG preview。
+- `export` 基于 spec 和可信 `--data-script` 用 export-context validation 写出 PNG、SVG 或 PDF。
+
+`--data-script` 会在当前进程执行可信 Python code，并把它的 globals 作为 live namespace。只对自己控制的脚本使用它。`render` 和 `export` 在省略 `--format` 时会从 `--output` 推断格式；不支持或缺失 suffix 会返回 exit `2`。Exit codes：成功或仅有 warnings 为 `0`，validation errors 为 `1`，CLI usage、input 或 runtime failures 为 `2`。
 
 ## FigureSpec
 

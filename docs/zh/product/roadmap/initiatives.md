@@ -155,6 +155,7 @@
 | Why it matters | 外部 agent 可以基于 figure-contract-style reasoning 提出 `FigureSpec` 或 patch changes，但 FigStudio 仍然是确定性的 validator、previewer、differ 和 applier。 |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
+| Readiness | Headless validate、render、export 和 codegen commands 现在提供了面向外部 agents 的确定性 automation endpoints；spec diff/apply UX 和 patch acceptance 仍是前置条件。 |
 | Gate/Prerequisite | 导入 `FigureSpec` 或 patch，显示 spec diff，validate，preview，并让用户 apply 或 reject 修改。 |
 
 | Field | Value |
@@ -172,10 +173,8 @@
 | Theme | AI-compatible handoff and provenance |
 | Initiative | 增加面向 agent 的 headless `validate`、`render`、`export`、`codegen` commands。 |
 | Why it matters | Interactive contract 稳定后，automation 需要确定性的 command surfaces。 |
-| Maturity | `foundation-needed` |
-| Horizon | `later` |
-| Readiness | Validate、render 和 codegen behavior 已通过 API 和 tests 保持 deterministic；CLI wrappers 风险更低，但 patch diff/apply contracts 仍是未来工作。 |
-| Gate/Prerequisite | `FigureSpec` 和 patch contracts 保持稳定。 |
+| Status | 已在 beta 中完成。 |
+| Completion note | CLI 现在支持对 `.figstudio.json` specs 执行一次性的 `codegen`、`validate`、`render` 和 `export` commands。依赖数据的 commands 会执行显式可信 `--data-script` namespace，可在可能时从 output suffix 推断格式，并返回确定性的 exit codes。Patch diff/apply 仍属于 deterministic AI handoff，而不是本 command-wrapper slice。 |
 
 ## Ecosystem And Templates
 

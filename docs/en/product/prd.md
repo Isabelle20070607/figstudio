@@ -26,6 +26,7 @@ Future product direction and candidate work live in the [roadmap](roadmap.md).
 - Configure manuscript presets, project style profiles, panel layouts, axes settings, secondary Y-axis overlays, layer styles, reference lines, and text/arrow annotations.
 - Load `.figstudio/styles.json` project style profiles and store profile references plus explicit override fields in `FigureSpec`.
 - Render previews and exports through Matplotlib Agg.
+- Run deterministic headless `codegen`, `validate`, `render`, and `export` commands against `.figstudio.json` specs, with data-dependent commands using an explicit trusted Python data script.
 - Save generated code to one unique controlled script block or return notebook replacement code.
 - Import and export `.figstudio.json` session specs.
 - Store recipe intent, column mappings, facet equality filters, and repeated-panel selections in specs, not raw data.
@@ -56,6 +57,7 @@ Future product direction and candidate work live in the [roadmap](roadmap.md).
 - DataFrame facet panels generate filtered Matplotlib code, preserve shared-axis flags, and round-trip through `.figstudio.json`.
 - Mapping-key and sequence-index repeated panels generate selected-item Matplotlib code and round-trip through `.figstudio.json`.
 - Validation, render, export, and writeback failures return readable structured errors, including repair suggestions for common validation issues.
+- Headless CLI commands can generate code from a spec, validate with a trusted data script, render preview files, export publication files, infer output formats from file suffixes, and return deterministic exit codes.
 - Existing Figure inspection preserves supported line, scatter, image, and bar data as editable generated layers.
 - A built wheel includes the React editor and serves it from `127.0.0.1` after clean install.
 - `figstudio.load_spec()` and `figstudio.save_spec()` round-trip a `.figstudio.json` file.

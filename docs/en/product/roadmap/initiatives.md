@@ -155,6 +155,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | External agents can propose `FigureSpec` or patch changes from figure-contract-style reasoning while FigStudio remains the deterministic validator, previewer, differ, and applier. |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
+| Readiness | Headless validate, render, export, and codegen commands now provide deterministic automation endpoints for external agents; spec diff/apply UX and patch acceptance remain prerequisites. |
 | Gate/Prerequisite | Import a `FigureSpec` or patch, show the spec diff, validate, preview, and let the user apply or reject the change. |
 
 | Field | Value |
@@ -172,10 +173,8 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Theme | AI-compatible handoff and provenance |
 | Initiative | Add headless agent tooling such as `validate`, `render`, `export`, and `codegen` commands. |
 | Why it matters | Automation needs deterministic command surfaces after the interactive contract is stable. |
-| Maturity | `foundation-needed` |
-| Horizon | `later` |
-| Readiness | Validate, render, and codegen behavior is deterministic through the API and tests; CLI wrappers are lower risk, but patch diff/apply contracts remain future work. |
-| Gate/Prerequisite | `FigureSpec` and patch contracts stay stable. |
+| Status | Completed in beta. |
+| Completion note | The CLI now supports one-shot `codegen`, `validate`, `render`, and `export` commands for `.figstudio.json` specs. Data-dependent commands execute an explicit trusted `--data-script` namespace, infer output formats from output suffixes when possible, and return deterministic exit codes. Patch diff/apply remains under deterministic AI handoff, not this command-wrapper slice. |
 
 ## Ecosystem And Templates
 

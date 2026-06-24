@@ -26,6 +26,7 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - 配置 manuscript presets、project style profiles、panel layouts、axes settings、secondary Y-axis overlays、layer styles、reference lines 和 text/arrow annotations。
 - 加载 `.figstudio/styles.json` project style profiles，并在 `FigureSpec` 中保存 profile references 和 explicit override fields。
 - 用 Matplotlib Agg 生成 previews 和 exports。
+- 对 `.figstudio.json` specs 运行确定性的 headless `codegen`、`validate`、`render` 和 `export` commands；依赖数据的 commands 使用显式可信 Python data script。
 - 将 generated code 写入唯一受控脚本块，或返回 notebook replacement code。
 - 导入和导出 `.figstudio.json` session specs。
 - Specs 保存 recipe intent、column mappings、facet equality filters 和 repeated-panel selections，不保存原始数据。
@@ -56,6 +57,7 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - DataFrame facet panels 会生成带过滤的 Matplotlib code，保留 shared-axis flags，并能通过 `.figstudio.json` 往返保存。
 - Mapping-key 和 sequence-index repeated panels 会生成 selected-item Matplotlib code，并能通过 `.figstudio.json` 往返保存。
 - Validation、render、export 和 writeback failures 返回可读 structured errors，并为常见 validation issues 提供 repair suggestions。
+- Headless CLI commands 能从 spec 生成 code、用可信 data script 校验、渲染 preview files、导出 publication files、从文件 suffix 推断 output format，并返回确定性的 exit codes。
 - Existing Figure inspection 能把受支持的 line、scatter、image 和 bar data 保留为 editable generated layers。
 - 构建后的 wheel 包含 React editor，clean install 后可从 `127.0.0.1` 提供完整 UI。
 - `figstudio.load_spec()` 和 `figstudio.save_spec()` 能往返保存 `.figstudio.json` 文件。

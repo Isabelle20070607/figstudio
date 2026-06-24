@@ -43,9 +43,20 @@ figstudio --port 8767 --no-browser
 figstudio --project G:\workspace\figstudio --no-browser
 figstudio demo
 figstudio demo --project G:\workspace\figstudio --port 8767 --no-browser
+figstudio codegen figure.figstudio.json --output figure.py
+figstudio validate figure.figstudio.json --data-script data.py --context export --export-format svg --json
+figstudio render figure.figstudio.json --data-script data.py --output preview.svg
+figstudio export figure.figstudio.json --data-script data.py --output figure.pdf
 ```
 
-The CLI prints the session URL and runs until interrupted.
+Session commands print the session URL and run until interrupted. Headless commands run once and exit:
+
+- `codegen` loads a `.figstudio.json` spec and writes generated Matplotlib code to stdout or `--output`.
+- `validate` checks a spec against an optional trusted `--data-script` namespace and returns exit `1` for validation errors.
+- `render` writes SVG or PNG preview output from a spec and trusted `--data-script`.
+- `export` writes PNG, SVG, or PDF output from a spec and trusted `--data-script` using export-context validation.
+
+`--data-script` executes trusted Python code in the current process and uses its globals as the live namespace. Use only scripts you control. `render` and `export` infer the output format from `--output` when `--format` is omitted; unsupported or missing suffixes return exit `2`. Exit codes are `0` for success or warnings-only validation, `1` for validation errors, and `2` for CLI usage, input, or runtime failures.
 
 ## FigureSpec
 
