@@ -43,6 +43,17 @@ The companion specs are portable FigStudio state. They store variable names, col
 | Data shape | Synthetic response DataFrame with `condition`, `genotype`, `replicate`, and `response` columns |
 | Figure contract | One recipe groups live `df` values by condition and genotype, offsets Matplotlib boxplots by group, and keeps the generated code independent of FigStudio |
 
+## Category Violin Response
+
+![Category violin response](../assets/gallery/category-violin-response.svg)
+
+| Item | Details |
+| --- | --- |
+| Files | [script](../../examples/gallery/category_violin_response.py), [spec](../../examples/gallery/category_violin_response.figstudio.json) |
+| Demonstrates | `violin_by_category` recipes, grouped distribution summaries, publish-mode labels, SVG export readiness checks |
+| Data shape | Synthetic response DataFrame with `condition`, `genotype`, `replicate`, and `response` columns |
+| Figure contract | One recipe groups live `df` values by condition and genotype, offsets Matplotlib violins by group, and keeps the generated code independent of FigStudio |
+
 ## Secondary-Axis Timecourse
 
 ![Secondary-axis timecourse](../assets/gallery/secondary-axis-timecourse.svg)

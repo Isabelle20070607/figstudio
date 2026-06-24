@@ -6,7 +6,7 @@ Use this path if you are making figures:
 
 1. [Get Started](getting-started.md): install FigStudio, run the demo, open from a script or notebook, and create the first DataFrame plot.
 2. [Scientific Workflows](scientific-workflows.md): use plot layers, statistics recipes, faceted panels, secondary Y-axis overlays, reference lines, existing Matplotlib figures, annotations, and publication polish.
-3. [Gallery](gallery.md): inspect checked-in workflows for facets, category boxplots, stacked bars, secondary axes, GridSpec spans, reference lines, and reusable specs.
+3. [Gallery](gallery.md): inspect checked-in workflows for facets, category boxplots, category violins, stacked bars, secondary axes, GridSpec spans, reference lines, and reusable specs.
 4. [Styles And Layouts](styles-and-layouts.md): apply manuscript presets, panel layouts, GridSpec output, and project style profiles.
 5. [Save, Export, Reuse](save-export-reuse.md): save code safely, export PNG/SVG/PDF, and reuse `.figstudio.json` specs.
 6. [Troubleshooting](troubleshooting.md): recover from validation, render, export, writeback, and style profile issues.

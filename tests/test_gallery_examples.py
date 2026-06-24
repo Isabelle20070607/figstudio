@@ -13,10 +13,12 @@ from figstudio.validation import validate_figure_spec
 GALLERY_DIR = Path(__file__).resolve().parents[1] / "examples" / "gallery"
 GALLERY_ASSET_DIR = Path(__file__).resolve().parents[1] / "docs" / "assets" / "gallery"
 BOXPLOT_WORKFLOW = "category_boxplot_response"
+VIOLIN_WORKFLOW = "category_violin_response"
 STACKED_BAR_WORKFLOW = "stacked_bar_sample_composition"
 PREVIEW_ASSETS = {
     "faceted_dose_response": "faceted-dose-response.svg",
     BOXPLOT_WORKFLOW: "category-boxplot-response.svg",
+    VIOLIN_WORKFLOW: "category-violin-response.svg",
     STACKED_BAR_WORKFLOW: "stacked-bar-sample-composition.svg",
     "secondary_axis_timecourse": "secondary-axis-timecourse.svg",
     "spanned_layout_signal_map": "spanned-layout-signal-map.svg",
@@ -96,3 +98,17 @@ def test_boxplot_gallery_workflow_is_svg_export_ready():
     code = MatplotlibCodegen().generate(spec)
     assert "axes_flat[0].boxplot(_recipe_condition_response_boxplot_group_values" in code
     assert "label=f'Response {_recipe_condition_response_boxplot_group}'" in code
+
+
+def test_violin_gallery_workflow_is_svg_export_ready():
+    module = _load_example_module(VIOLIN_WORKFLOW)
+    spec = figstudio.load_spec(GALLERY_DIR / f"{VIOLIN_WORKFLOW}.figstudio.json")
+
+    response = validate_figure_spec(_namespace(module), spec, context="export", export_format="svg")
+    assert response.ok, _issue_summary(response)
+    readiness_issues = [issue for issue in response.issues if issue.code.startswith("readiness_")]
+    assert readiness_issues == [], _issue_summary(response)
+
+    code = MatplotlibCodegen().generate(spec)
+    assert "axes_flat[0].violinplot(_recipe_condition_response_violin_group_values" in code
+    assert "label=f'Response {_recipe_condition_response_violin_group}'" in code

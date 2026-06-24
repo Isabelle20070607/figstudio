@@ -485,6 +485,33 @@ def test_generates_boxplot_by_category_recipe_code():
     assert "figstudio" not in code.lower()
 
 
+def test_generates_violin_by_category_recipe_code():
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="violin_by_category",
+                dataset=RecipeDatasetRef(variable="df", x="condition", y="response", group="genotype"),
+                style=LayerStyle(label="Response", color="#0f766e", alpha=0.34, linewidth=1.1),
+                error="none",
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "_recipe_recipe_1_x_order = list(dict.fromkeys" in code
+    assert "_recipe_recipe_1_group_values = []" in code
+    assert "_recipe_recipe_1_group_positions.append" in code
+    assert "axes_flat[0].violinplot(_recipe_recipe_1_group_values" in code
+    assert "showmeans=True" in code
+    assert "showmedians=True" in code
+    assert "_recipe_recipe_1_body.set_facecolor('#0f766e')" in code
+    assert "label=f'Response {_recipe_recipe_1_group}'" in code
+    assert "set_xticklabels([str(value) for value in _recipe_recipe_1_x_order])" in code
+    assert "figstudio" not in code.lower()
+
+
 def test_generates_grouped_points_recipe_code():
     spec = FigureSpec(
         recipes=[

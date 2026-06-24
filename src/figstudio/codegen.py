@@ -330,6 +330,8 @@ class MatplotlibCodegen:
             return self._stacked_bar_code(recipe, style, axis_index)
         if recipe.kind == "boxplot_by_category":
             return self._boxplot_by_category_code(recipe, style, axis_index)
+        if recipe.kind == "violin_by_category":
+            return self._violin_by_category_code(recipe, style, axis_index)
         if recipe.kind == "grouped_points":
             return self._grouped_points_code(recipe, style, axis_index)
         if recipe.kind == "paired_before_after":
@@ -342,7 +344,14 @@ class MatplotlibCodegen:
         return bool(
             recipe.dataset.group
             and recipe.kind
-            in {"mean_sem_line", "mean_sem_bar", "count_bar", "stacked_bar", "boxplot_by_category"}
+            in {
+                "mean_sem_line",
+                "mean_sem_bar",
+                "count_bar",
+                "stacked_bar",
+                "boxplot_by_category",
+                "violin_by_category",
+            }
         )
 
     def _reference_line_code(self, reference_line: ReferenceLineSpec, axis_index: int) -> list[str]:
@@ -672,6 +681,102 @@ class MatplotlibCodegen:
                     ),
                 ]
             )
+            if style.label:
+                lines.append(f"{ax}.plot([], [], color={color!r}, linewidth=6, label={style.label!r})")
+        lines.extend(
+            [
+                f"{ax}.set_xticks({prefix}_x)",
+                f"{ax}.set_xticklabels([str(value) for value in {prefix}_x_order])",
+            ]
+        )
+        return [line.replace(", )", ")").replace("(, ", "(") for line in lines]
+
+    def _violin_by_category_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:
+        data = recipe.dataset
+        var = _safe_var(data.variable)
+        prefix = self._recipe_prefix(recipe)
+        ax = f"axes_flat[{axis_index}]"
+        label_base = style.label or data.y or "Value"
+        color = style.color or "#2563eb"
+        alpha = style.alpha if style.alpha is not None else 0.34
+        linewidth = style.linewidth or 1.0
+
+        def style_lines(parts_name: str, indent: str) -> list[str]:
+            return [
+                f"{indent}for {prefix}_body in {parts_name}['bodies']:",
+                f"{indent}    {prefix}_body.set_facecolor({color!r})",
+                f"{indent}    {prefix}_body.set_edgecolor({color!r})",
+                f"{indent}    {prefix}_body.set_alpha({alpha!r})",
+                f"{indent}for {prefix}_key in ['cmeans', 'cmedians', 'cmins', 'cmaxes', 'cbars']:",
+                f"{indent}    if {prefix}_key in {parts_name}:",
+                f"{indent}        {parts_name}[{prefix}_key].set_color({color!r})",
+                f"{indent}        {parts_name}[{prefix}_key].set_linewidth({linewidth!r})",
+            ]
+
+        lines = [
+            f"{prefix}_df = {var}",
+            f"{prefix}_x_order = list(dict.fromkeys({prefix}_df[{data.x!r}].dropna().tolist()))",
+            f"{prefix}_x = list(range(len({prefix}_x_order)))",
+        ]
+        if data.group:
+            lines.extend(
+                [
+                    f"{prefix}_groups = list(dict.fromkeys({prefix}_df[{data.group!r}].dropna().tolist()))",
+                    f"{prefix}_violin_width = 0.72 / max(len({prefix}_groups), 1)",
+                    f"for {prefix}_group_index, {prefix}_group in enumerate({prefix}_groups):",
+                    f"    {prefix}_group_df = {prefix}_df[{prefix}_df[{data.group!r}] == {prefix}_group]",
+                    f"    {prefix}_group_values = []",
+                    f"    {prefix}_group_positions = []",
+                    f"    for {prefix}_category_index, {prefix}_category in enumerate({prefix}_x_order):",
+                    (
+                        f"        {prefix}_category_values = {prefix}_group_df.loc["
+                        f"{prefix}_group_df[{data.x!r}] == {prefix}_category, {data.y!r}].dropna()"
+                    ),
+                    f"        if len({prefix}_category_values):",
+                    f"            {prefix}_group_values.append({prefix}_category_values)",
+                    (
+                        f"            {prefix}_offset = "
+                        f"({prefix}_group_index - (len({prefix}_groups) - 1) / 2) * {prefix}_violin_width"
+                    ),
+                    (
+                        f"            {prefix}_group_positions.append("
+                        f"{prefix}_x[{prefix}_category_index] + {prefix}_offset)"
+                    ),
+                    f"    if {prefix}_group_values:",
+                    (
+                        f"        {prefix}_parts = {ax}.violinplot("
+                        f"{prefix}_group_values, positions={prefix}_group_positions, "
+                        f"widths={prefix}_violin_width * 0.78, showmeans=True, showmedians=True)"
+                    ),
+                ]
+            )
+            lines.extend(style_lines(f"{prefix}_parts", "        "))
+            lines.append(
+                f"        {ax}.plot([], [], color={color!r}, linewidth=6, "
+                f"label=f'{label_base} {{{prefix}_group}}')"
+            )
+        else:
+            lines.extend(
+                [
+                    f"{prefix}_values = []",
+                    f"{prefix}_positions = []",
+                    f"for {prefix}_category_index, {prefix}_category in enumerate({prefix}_x_order):",
+                    (
+                        f"    {prefix}_category_values = {prefix}_df.loc["
+                        f"{prefix}_df[{data.x!r}] == {prefix}_category, {data.y!r}].dropna()"
+                    ),
+                    f"    if len({prefix}_category_values):",
+                    f"        {prefix}_values.append({prefix}_category_values)",
+                    f"        {prefix}_positions.append({prefix}_x[{prefix}_category_index])",
+                    f"if {prefix}_values:",
+                    (
+                        f"    {prefix}_parts = {ax}.violinplot("
+                        f"{prefix}_values, positions={prefix}_positions, widths=0.58, "
+                        "showmeans=True, showmedians=True)"
+                    ),
+                ]
+            )
+            lines.extend(style_lines(f"{prefix}_parts", "    "))
             if style.label:
                 lines.append(f"{ax}.plot([], [], color={color!r}, linewidth=6, label={style.label!r})")
         lines.extend(

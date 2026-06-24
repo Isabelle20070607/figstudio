@@ -21,11 +21,11 @@ Builder 会按科研问题组织内置 recipes：
 | 科研问题 | Recipes | 适用场景 |
 | --- | --- | --- |
 | Time-course comparison | `mean_sem_line` | 按 X 和可选 group 列分组，计算 mean 加 SEM 或 SD，再绘制带误差线的折线。 |
-| Group/condition comparison | `mean_sem_bar`, `grouped_points`, `boxplot_by_category` | 对比分类均值和误差帽，显示 individual observations 并叠加 mean/error summary，或用 boxplots 查看分组 value distributions。 |
+| Group/condition comparison | `mean_sem_bar`, `grouped_points`, `boxplot_by_category`, `violin_by_category` | 对比分类均值和误差帽，显示 individual observations 并叠加 mean/error summary，或用 boxplots/violins 查看分组 value distributions。 |
 | Categorical counts/composition | `count_bar`, `stacked_bar` | 按 X category 统计行数，并可按 group 拆分或堆叠 counts。 |
 | Paired observations | `paired_before_after` | 按 subject 分组配对 observation，绘制 subject traces，并叠加 condition means。 |
 
-Recipes 会把变量名、列名、样式选择和目标 axes 存进 `FigureSpec`，不会保存原始 DataFrame 数据。`boxplot_by_category` 使用 X 和 Y 列以及可选 group 列；因为直接绘制 distribution，error 设置会被忽略。`count_bar` 只使用 X 和可选 group 列；`stacked_bar` 使用 X 和 group 列；两者都会忽略 value/error columns。生成代码仍只 import Matplotlib，并从 live DataFrame 变量计算统计量。
+Recipes 会把变量名、列名、样式选择和目标 axes 存进 `FigureSpec`，不会保存原始 DataFrame 数据。`boxplot_by_category` 和 `violin_by_category` 使用 X 和 Y 列以及可选 group 列；因为直接绘制 distribution，error 设置会被忽略。`count_bar` 只使用 X 和可选 group 列；`stacked_bar` 使用 X 和 group 列；两者都会忽略 value/error columns。生成代码仍只 import Matplotlib，并从 live DataFrame 变量计算统计量。
 
 可以运行 `examples/general_stats_recipe.py`，用 synthetic repeated-measures 数据试用内置 recipes。
 

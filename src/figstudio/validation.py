@@ -652,7 +652,12 @@ def _validate_recipe(
                 )
             )
 
-    fields_to_check = ["x", "group"] if recipe.kind in {"count_bar", "stacked_bar"} else ["x", "y", "group", "subject"]
+    if recipe.kind in {"count_bar", "stacked_bar"}:
+        fields_to_check = ["x", "group"]
+    elif recipe.kind == "violin_by_category":
+        fields_to_check = ["x", "y", "group"]
+    else:
+        fields_to_check = ["x", "y", "group", "subject"]
     for field in fields_to_check:
         column = getattr(data, field)
         if column:
@@ -664,7 +669,7 @@ def _required_recipe_columns(recipe: RecipeLayer) -> list[str]:
         return ["x"]
     if recipe.kind == "stacked_bar":
         return ["x", "group"]
-    if recipe.kind == "boxplot_by_category":
+    if recipe.kind in {"boxplot_by_category", "violin_by_category"}:
         return ["x", "y"]
     return ["x", "y"]
 

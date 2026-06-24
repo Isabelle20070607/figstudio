@@ -28,6 +28,7 @@ RecipeKind = Literal[
     "count_bar",
     "stacked_bar",
     "boxplot_by_category",
+    "violin_by_category",
     "grouped_points",
     "paired_before_after",
 ]

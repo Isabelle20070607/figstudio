@@ -82,6 +82,10 @@ const recipeDetails: Record<RecipeKind, { label: string; role: string }> = {
     label: "Category boxplots",
     role: "Shows value distributions by category with optional group offsets."
   },
+  violin_by_category: {
+    label: "Category violins",
+    role: "Shows smoothed value distributions by category with optional group offsets."
+  },
   grouped_points: {
     label: "Grouped points",
     role: "Shows individual observations by category with a mean and error summary."
@@ -107,7 +111,7 @@ const recipeQuestionGroups: Array<{
     id: "group-condition",
     label: "Group/condition comparison",
     summary: "Compare measured values across experimental conditions or cohorts.",
-    recipes: ["mean_sem_bar", "grouped_points", "boxplot_by_category"]
+    recipes: ["mean_sem_bar", "grouped_points", "boxplot_by_category", "violin_by_category"]
   },
   {
     id: "categorical-counts",
@@ -162,7 +166,8 @@ function recipeSupportsGroup(kind: RecipeKind) {
     kind === "mean_sem_bar" ||
     kind === "count_bar" ||
     kind === "stacked_bar" ||
-    kind === "boxplot_by_category"
+    kind === "boxplot_by_category" ||
+    kind === "violin_by_category"
   );
 }
 
@@ -171,7 +176,12 @@ function recipeRequiresGroup(kind: RecipeKind) {
 }
 
 function recipeUsesError(kind: RecipeKind) {
-  return kind !== "count_bar" && kind !== "stacked_bar" && kind !== "boxplot_by_category";
+  return (
+    kind !== "count_bar" &&
+    kind !== "stacked_bar" &&
+    kind !== "boxplot_by_category" &&
+    kind !== "violin_by_category"
+  );
 }
 
 function recipeUsesSubject(kind: RecipeKind) {
@@ -852,15 +862,17 @@ function createRecipe({
       marker:
         kind === "grouped_points" || kind === "paired_before_after" || kind === "boxplot_by_category" ? "o" : null,
       linestyle: kind === "mean_sem_line" ? "-" : null,
-      linewidth: kind === "mean_sem_line" || kind === "paired_before_after" ? 1.8 : null,
+      linewidth: kind === "mean_sem_line" || kind === "paired_before_after" ? 1.8 : kind === "violin_by_category" ? 1.1 : null,
       alpha:
         kind === "grouped_points"
           ? 0.78
           : kind === "boxplot_by_category"
             ? 0.32
-            : kind === "mean_sem_bar" || kind === "count_bar" || kind === "stacked_bar"
-              ? 0.85
-              : null
+            : kind === "violin_by_category"
+              ? 0.34
+              : kind === "mean_sem_bar" || kind === "count_bar" || kind === "stacked_bar"
+                ? 0.85
+                : null
     },
     error: recipeUsesError(kind) ? error : "none",
     readonly: false,

@@ -40,6 +40,7 @@ df = pd.DataFrame(rows)
 # - mean_sem_bar: x=condition, y=endpoint
 # - count_bar: x=condition
 # - stacked_bar: x=condition, group=subject
+# - violin_by_category: x=condition, y=endpoint
 # - grouped_points: x=condition, y=endpoint
 # - paired_before_after: x=condition, y=endpoint, subject=subject
 figstudio.open(locals(), script_path=__file__, block_id="general_stats")

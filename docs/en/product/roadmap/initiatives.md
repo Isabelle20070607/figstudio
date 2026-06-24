@@ -59,11 +59,8 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Theme | Recipe and statistical coverage |
 | Initiative | Add categorical summary recipes such as grouped bars, stacked bars, count bars, bar-with-error panels, and point/box/violin overlays. |
 | Why it matters | These cover common scientific-paper chart patterns without expanding into generic business dashboards. |
-| Maturity | `ready` |
-| Horizon | `near` |
-| Progress | Beta slices added `mean_sem_bar` for mean-plus-error categorical bars, `count_bar` for ungrouped or grouped frequency bars, `stacked_bar` for grouped stacked frequency bars, and `boxplot_by_category` for grouped value distributions; violin-style distribution overlays remain future work. |
-| Readiness | Shared recipe roles, validation paths, and the research-question selector now make the remaining categorical overlays incremental rather than foundational. |
-| Gate/Prerequisite | Shared recipe roles and validation errors are clear enough for multiple recipe families. |
+| Status | Completed in beta. |
+| Completion note | Beta slices added `mean_sem_bar` for mean-plus-error categorical bars, `count_bar` for ungrouped or grouped frequency bars, `stacked_bar` for grouped stacked frequency bars, `boxplot_by_category` for grouped value distributions, and `violin_by_category` for grouped violin distributions. |
 
 | Field | Value |
 | --- | --- |
@@ -122,7 +119,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Users need production-like proof of plot layers, statistics recipes, existing Figure inspection, notebook-style output, and package install flows from source data through visible preview and export artifacts. |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Checked-in gallery workflows now cover DataFrame facet recipes, category boxplot distributions, stacked categorical composition, secondary-axis overlays, GridSpec spans, reference lines, annotations, reusable specs, and SVG preview assets. |
+| Progress | Checked-in gallery workflows now cover DataFrame facet recipes, category boxplot and violin distributions, stacked categorical composition, secondary-axis overlays, GridSpec spans, reference lines, annotations, reusable specs, and SVG preview assets. |
 | Gate/Prerequisite | Each example shows input data, user intent or figure contract, preview screenshot, generated Matplotlib code, FigureSpec/export artifact, and the publication workflow it demonstrates. |
 
 | Field | Value |

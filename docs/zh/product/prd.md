@@ -21,7 +21,7 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - 可通过 Python package 安装，运行时不需要 Node/npm。
 - 通过 `figstudio.open(locals(), ...)` 或 `figstudio demo` 启动。
 - 检查 DataFrame、Series、ndarray、mapping、list、tuple 和已有 Matplotlib Figure 的安全 summaries。
-- 创建和编辑 public beta plot kinds 和内置 statistics recipes：mean/SEM lines、mean/SEM bars、count bars、stacked count bars、grouped points 和 paired before/after panels。
+- 创建和编辑 public beta plot kinds 和内置 statistics recipes：mean/SEM lines、mean/SEM bars、count bars、stacked count bars、grouped points、category boxplots、category violins 和 paired before/after panels。
 - 基于 DataFrame 列首次出现的取值创建 faceted panels，并为普通 plot layers 支持 mapping-key 和 sequence-index repeated panels，同时给出紧凑的初始 layout suggestion。
 - 配置 manuscript presets、project style profiles、panel layouts、axes settings、secondary Y-axis overlays、layer styles、reference lines 和 text/arrow annotations。
 - 加载 `.figstudio/styles.json` project style profiles，并在 `FigureSpec` 中保存 profile references 和 explicit override fields。

@@ -6,7 +6,7 @@ FigStudio 面向已经在脚本或 Notebook 中准备好数据、希望更快得
 
 1. [快速开始](getting-started.md)：安装 FigStudio、运行 demo、从脚本或 Notebook 打开，并创建第一张 DataFrame 图。
 2. [科研制图工作流](scientific-workflows.md)：使用 plot layers、统计 recipes、faceted panels、secondary Y-axis overlays、reference lines、已有 Matplotlib Figure、annotations 和发表级精修。
-3. [Gallery](gallery.md)：查看已提交 workflows，覆盖 facets、category boxplots、stacked bars、secondary axes、GridSpec spans、reference lines 和 reusable specs。
+3. [Gallery](gallery.md)：查看已提交 workflows，覆盖 facets、category boxplots、category violins、stacked bars、secondary axes、GridSpec spans、reference lines 和 reusable specs。
 4. [样式与布局](styles-and-layouts.md)：使用 manuscript presets、panel layouts、GridSpec 输出和项目 style profiles。
 5. [保存、导出与复用](save-export-reuse.md)：安全保存代码、导出 PNG/SVG/PDF，并复用 `.figstudio.json` specs。
 6. [排错](troubleshooting.md)：处理 validation、render、export、writeback 和 style profile 问题。
