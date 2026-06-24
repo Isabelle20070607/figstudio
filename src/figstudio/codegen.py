@@ -144,7 +144,7 @@ class MatplotlibCodegen:
             filter_lines, filtered_recipe = self._filtered_recipe(recipe)
             lines.extend(filter_lines)
             lines.extend(self._recipe_code(filtered_recipe, style, axis_index))
-            if style.label:
+            if self._recipe_has_legend_entries(filtered_recipe, style):
                 legend_axes.add(axis_index)
             lines.append("")
 
@@ -326,11 +326,21 @@ class MatplotlibCodegen:
             return self._mean_sem_bar_code(recipe, style, axis_index)
         if recipe.kind == "count_bar":
             return self._count_bar_code(recipe, style, axis_index)
+        if recipe.kind == "stacked_bar":
+            return self._stacked_bar_code(recipe, style, axis_index)
         if recipe.kind == "grouped_points":
             return self._grouped_points_code(recipe, style, axis_index)
         if recipe.kind == "paired_before_after":
             return self._paired_before_after_code(recipe, style, axis_index)
         raise ValueError(f"Unsupported recipe kind: {recipe.kind}")
+
+    def _recipe_has_legend_entries(self, recipe: RecipeLayer, style: LayerStyle) -> bool:
+        if style.label:
+            return True
+        return bool(
+            recipe.dataset.group
+            and recipe.kind in {"mean_sem_line", "mean_sem_bar", "count_bar", "stacked_bar"}
+        )
 
     def _reference_line_code(self, reference_line: ReferenceLineSpec, axis_index: int) -> list[str]:
         ax = f"axes_flat[{axis_index}]"
@@ -492,6 +502,67 @@ class MatplotlibCodegen:
                         f"    {ax}.bar({prefix}_positions, {prefix}_counts[{prefix}_group], "
                         f"width={prefix}_bar_width, label=f'{label_base} {{{prefix}_group}}', "
                         f"{bar_kwargs})"
+                    ),
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    (
+                        f"{prefix}_counts = {prefix}_df.groupby({data.x!r}, sort=False)"
+                        f".size().reindex({prefix}_x_order, fill_value=0)"
+                    ),
+                    (
+                        f"{ax}.bar({prefix}_x, {prefix}_counts, width=0.72, "
+                        f"label={style.label!r}, {bar_kwargs})"
+                    ),
+                ]
+            )
+        lines.extend(
+            [
+                f"{ax}.set_xticks({prefix}_x)",
+                f"{ax}.set_xticklabels([str(value) for value in {prefix}_x_order])",
+            ]
+        )
+        return [line.replace(", )", ")").replace("(, ", "(") for line in lines]
+
+    def _stacked_bar_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:
+        data = recipe.dataset
+        var = _safe_var(data.variable)
+        prefix = self._recipe_prefix(recipe)
+        ax = f"axes_flat[{axis_index}]"
+        label_base = style.label or "Count"
+        bar_kwargs = _kwargs(
+            color=style.color,
+            alpha=style.alpha if style.alpha is not None else 0.85,
+            linewidth=style.linewidth,
+        )
+
+        lines = [
+            f"{prefix}_df = {var}",
+            f"{prefix}_x_order = list(dict.fromkeys({prefix}_df[{data.x!r}].dropna().tolist()))",
+            f"{prefix}_x = list(range(len({prefix}_x_order)))",
+        ]
+        if data.group:
+            lines.extend(
+                [
+                    f"{prefix}_groups = list(dict.fromkeys({prefix}_df[{data.group!r}].dropna().tolist()))",
+                    (
+                        f"{prefix}_counts = {prefix}_df.groupby([{data.x!r}, {data.group!r}], "
+                        "sort=False).size().unstack(fill_value=0)"
+                    ),
+                    f"{prefix}_counts = {prefix}_counts.reindex(index={prefix}_x_order, fill_value=0)",
+                    f"{prefix}_counts = {prefix}_counts.reindex(columns={prefix}_groups, fill_value=0)",
+                    f"{prefix}_bottom = [0] * len({prefix}_x_order)",
+                    f"for {prefix}_group in {prefix}_groups:",
+                    (
+                        f"    {ax}.bar({prefix}_x, {prefix}_counts[{prefix}_group], "
+                        f"bottom={prefix}_bottom, width=0.72, "
+                        f"label=f'{label_base} {{{prefix}_group}}', {bar_kwargs})"
+                    ),
+                    (
+                        f"    {prefix}_bottom = [bottom + value for bottom, value in "
+                        f"zip({prefix}_bottom, {prefix}_counts[{prefix}_group])]"
                     ),
                 ]
             )

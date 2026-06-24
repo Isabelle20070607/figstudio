@@ -631,7 +631,7 @@ def _validate_recipe(
 
     _validate_data_filters(namespace, recipe.id, recipe.axes_id, data, issues)
 
-    required = ["x"] if recipe.kind == "count_bar" else ["x", "y"]
+    required = _required_recipe_columns(recipe)
     if recipe.kind == "paired_before_after":
         required.append("subject")
 
@@ -652,11 +652,19 @@ def _validate_recipe(
                 )
             )
 
-    fields_to_check = ["x", "group"] if recipe.kind == "count_bar" else ["x", "y", "group", "subject"]
+    fields_to_check = ["x", "group"] if recipe.kind in {"count_bar", "stacked_bar"} else ["x", "y", "group", "subject"]
     for field in fields_to_check:
         column = getattr(data, field)
         if column:
             _check_dataframe_column(value, recipe, column, field, issues)
+
+
+def _required_recipe_columns(recipe: RecipeLayer) -> list[str]:
+    if recipe.kind == "count_bar":
+        return ["x"]
+    if recipe.kind == "stacked_bar":
+        return ["x", "group"]
+    return ["x", "y"]
 
 
 def _validate_layer_y_axis(layer: PlotLayer, axis: AxesSpec, issues: list[ValidationIssue]) -> None:

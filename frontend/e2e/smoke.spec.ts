@@ -66,6 +66,13 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await page.getByTestId("add-recipe-button").click();
   await expect(page.locator('[data-testid="layer-row"]').filter({ hasText: "recipe · count_bar" })).toBeVisible();
   await expect(page.getByTestId("code-panel")).toContainText(".size().reindex");
+  await page.getByTestId("recipe-kind-select").selectOption("stacked_bar");
+  await expect(page.getByTestId("recipe-y-column-select")).toHaveCount(0);
+  await expect(page.getByTestId("recipe-error-select")).toHaveCount(0);
+  await expect(page.getByTestId("recipe-group-column-select")).not.toHaveValue("");
+  await page.getByTestId("add-recipe-button").click();
+  await expect(page.locator('[data-testid="layer-row"]').filter({ hasText: "recipe · stacked_bar" })).toBeVisible();
+  await expect(page.getByTestId("code-panel")).toContainText("bottom=");
   await page.getByTestId("facet-column-select").selectOption("condition");
   await page.getByTestId("facet-share-y-field-input").check();
   await page.getByTestId("create-facet-panels-button").click();
@@ -121,6 +128,11 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   expect(countRecipe).toBeTruthy();
   expect(countRecipe.dataset.y).toBeNull();
   expect(countRecipe.error).toBe("none");
+  const stackedRecipe = exportedSpec.recipes.find((recipe: any) => recipe.kind === "stacked_bar");
+  expect(stackedRecipe).toBeTruthy();
+  expect(stackedRecipe.dataset.y).toBeNull();
+  expect(stackedRecipe.dataset.group).toBeTruthy();
+  expect(stackedRecipe.error).toBe("none");
   await page.getByTestId("import-spec-input").setInputFiles(exportedSpecPath);
   await expect(page.getByTestId("style-profile-field-select")).toHaveValue("manuscript");
   await expect(page.getByTestId("layout-preset-field-select")).toHaveValue("large_left");

@@ -60,11 +60,19 @@ const plotKinds: PlotKind[] = [
   "fill_between"
 ];
 
-const recipeKinds: RecipeKind[] = ["mean_sem_line", "mean_sem_bar", "count_bar", "grouped_points", "paired_before_after"];
+const recipeKinds: RecipeKind[] = [
+  "mean_sem_line",
+  "mean_sem_bar",
+  "count_bar",
+  "stacked_bar",
+  "grouped_points",
+  "paired_before_after"
+];
 const recipeLabels: Record<RecipeKind, string> = {
   mean_sem_line: "Mean +/- SEM line",
   mean_sem_bar: "Mean +/- SEM bars",
   count_bar: "Count bars",
+  stacked_bar: "Stacked count bars",
   grouped_points: "Grouped points",
   paired_before_after: "Paired before/after"
 };
@@ -91,15 +99,19 @@ const noneSource = "__none__";
 const defaultFacetLimit = 12;
 
 function recipeRequiresY(kind: RecipeKind) {
-  return kind !== "count_bar";
+  return kind !== "count_bar" && kind !== "stacked_bar";
 }
 
 function recipeSupportsGroup(kind: RecipeKind) {
-  return kind === "mean_sem_line" || kind === "mean_sem_bar" || kind === "count_bar";
+  return kind === "mean_sem_line" || kind === "mean_sem_bar" || kind === "count_bar" || kind === "stacked_bar";
+}
+
+function recipeRequiresGroup(kind: RecipeKind) {
+  return kind === "stacked_bar";
 }
 
 function recipeUsesError(kind: RecipeKind) {
-  return kind !== "count_bar";
+  return kind !== "count_bar" && kind !== "stacked_bar";
 }
 
 function recipeUsesSubject(kind: RecipeKind) {
@@ -376,6 +388,14 @@ function isNumericDtype(dtype?: string): boolean {
 
 function defaultFacetColumn(variable?: VariableSummary): string {
   return variable?.columns.find((column) => !isNumericDtype(variable.dtypes[column])) ?? firstColumn(variable);
+}
+
+function defaultGroupColumn(variable?: VariableSummary, xColumn = firstColumn(variable)): string {
+  return (
+    variable?.columns.find((column) => column !== xColumn && !isNumericDtype(variable.dtypes[column])) ??
+    variable?.columns.find((column) => column !== xColumn) ??
+    ""
+  );
 }
 
 function facetDisplayLabel(value: FacetValue): string {
@@ -714,7 +734,7 @@ function createRecipe({
   subjectColumn: string;
   error: RecipeLayer["error"];
 }): RecipeLayer {
-  const label = kind === "count_bar" ? "Count" : yColumn || variable.name;
+  const label = kind === "count_bar" || kind === "stacked_bar" ? "Count" : yColumn || variable.name;
   return {
     id: createId("recipe"),
     kind,
@@ -729,11 +749,16 @@ function createRecipe({
     },
     style: {
       label,
-      color: colors[0],
+      color: kind === "stacked_bar" ? null : colors[0],
       marker: kind === "grouped_points" || kind === "paired_before_after" ? "o" : null,
       linestyle: kind === "mean_sem_line" ? "-" : null,
       linewidth: kind === "mean_sem_line" || kind === "paired_before_after" ? 1.8 : null,
-      alpha: kind === "grouped_points" ? 0.78 : kind === "mean_sem_bar" || kind === "count_bar" ? 0.85 : null
+      alpha:
+        kind === "grouped_points"
+          ? 0.78
+          : kind === "mean_sem_bar" || kind === "count_bar" || kind === "stacked_bar"
+            ? 0.85
+            : null
     },
     error: recipeUsesError(kind) ? error : "none",
     readonly: false,
@@ -1574,6 +1599,7 @@ function VariablePanel({
   );
   const selectedRecipeRequiresY = recipeRequiresY(recipeKind);
   const selectedRecipeSupportsGroup = recipeSupportsGroup(recipeKind);
+  const selectedRecipeRequiresGroup = recipeRequiresGroup(recipeKind);
   const selectedRecipeUsesError = recipeUsesError(recipeKind);
   const selectedRecipeUsesSubject = recipeUsesSubject(recipeKind);
 
@@ -1596,10 +1622,11 @@ function VariablePanel({
     const subjectColumn =
       recipeVariable.columns.find((column) => /subject|animal|mouse|participant|id/i.test(column)) ??
       firstColumn(recipeVariable);
+    const xColumn = firstColumn(recipeVariable);
     setRecipeVariableName(recipeVariable.name);
-    setRecipeXColumn(firstColumn(recipeVariable));
+    setRecipeXColumn(xColumn);
     setRecipeYColumn(secondColumn(recipeVariable));
-    setRecipeGroupColumn("");
+    setRecipeGroupColumn(recipeRequiresGroup(recipeKind) ? defaultGroupColumn(recipeVariable, xColumn) : "");
     setRecipeSubjectColumn(subjectColumn);
   }, [recipeVariable?.name, recipeKind]);
 
@@ -2002,7 +2029,12 @@ function VariablePanel({
             <button
               className="primary-button"
               data-testid="add-recipe-button"
-              disabled={!recipeVariable || !recipeXColumn || (selectedRecipeRequiresY && !recipeYColumn)}
+              disabled={
+                !recipeVariable ||
+                !recipeXColumn ||
+                (selectedRecipeRequiresY && !recipeYColumn) ||
+                (selectedRecipeRequiresGroup && !recipeGroupColumn)
+              }
               onClick={() =>
                 recipeVariable &&
                 onAddRecipe(

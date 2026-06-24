@@ -12,7 +12,13 @@ export type PlotKind =
   | "step"
   | "fill_between";
 
-export type RecipeKind = "mean_sem_line" | "mean_sem_bar" | "count_bar" | "grouped_points" | "paired_before_after";
+export type RecipeKind =
+  | "mean_sem_line"
+  | "mean_sem_bar"
+  | "count_bar"
+  | "stacked_bar"
+  | "grouped_points"
+  | "paired_before_after";
 
 export type FigurePreset = "custom" | "journal_single" | "journal_double" | "poster" | "slide";
 

@@ -435,6 +435,30 @@ def test_generates_grouped_count_bar_recipe_code():
     assert "figstudio" not in code.lower()
 
 
+def test_generates_stacked_bar_recipe_code():
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="stacked_bar",
+                dataset=RecipeDatasetRef(variable="df", x="condition", group="genotype"),
+                style=LayerStyle(label="Cells", color="#0f766e"),
+                error="none",
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "groupby(['condition', 'genotype'], sort=False).size().unstack(fill_value=0)" in code
+    assert "_recipe_recipe_1_bottom = [0] * len(_recipe_recipe_1_x_order)" in code
+    assert "axes_flat[0].bar(_recipe_recipe_1_x, _recipe_recipe_1_counts[_recipe_recipe_1_group]" in code
+    assert "bottom=_recipe_recipe_1_bottom" in code
+    assert "label=f'Cells {_recipe_recipe_1_group}'" in code
+    assert "axes_flat[0].legend()" in code
+    assert "figstudio" not in code.lower()
+
+
 def test_generates_grouped_points_recipe_code():
     spec = FigureSpec(
         recipes=[

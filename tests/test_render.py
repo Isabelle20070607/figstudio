@@ -132,3 +132,28 @@ def test_render_svg_from_count_bar_recipe():
     assert "<svg" in svg
     assert "groupby(['condition', 'genotype'], sort=False).size().unstack(fill_value=0)" in code
     assert "axes_flat[0].bar(_recipe_recipe_1_positions" in code
+
+
+def test_render_svg_from_stacked_bar_recipe():
+    df = pd.DataFrame(
+        {
+            "condition": ["control", "drug", "control", "drug", "drug"],
+            "genotype": ["wt", "wt", "mut", "mut", "wt"],
+        }
+    )
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="stacked_bar",
+                dataset=RecipeDatasetRef(variable="df", x="condition", group="genotype"),
+                error="none",
+            )
+        ]
+    )
+
+    svg, code = RenderEngine({"df": df}).render_base64(spec, "svg")
+
+    assert "<svg" in svg
+    assert "groupby(['condition', 'genotype'], sort=False).size().unstack(fill_value=0)" in code
+    assert "bottom=_recipe_recipe_1_bottom" in code
