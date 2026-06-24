@@ -193,6 +193,23 @@ test("suggests compact repeated-panel layout for sequence sources", async ({ pag
   await expect(page.getByTestId("code-panel")).toContainText("signal_sequence[0]");
 });
 
+test("uses figure aspect when suggesting repeated-panel layout", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("variable-panel")).toBeVisible();
+
+  await page.getByTestId("figure-width-field-input").fill("3");
+  await page.getByTestId("figure-height-field-input").fill("6");
+  await page.locator('[data-testid="variable-row"][data-variable-name="signal_sequence"]').click();
+  await expect(page.getByTestId("repeated-panel-kind-note")).toContainText("sequence items");
+  await page.getByTestId("create-facet-panels-button").click();
+
+  await expect(page.getByTestId("active-axes-select").locator("option")).toHaveCount(8);
+  await expect(page.getByTestId("rows-field-input")).toHaveValue("4");
+  await expect(page.getByTestId("cols-field-input")).toHaveValue("2");
+  await expect(page.getByTestId("status-line")).toContainText("4x2 layout");
+  await expect(page.getByTestId("code-panel")).toContainText("signal_sequence[0]");
+});
+
 test("validation issues select the affected editor context", async ({ page }, testInfo) => {
   await page.goto("/");
   await expect(page.getByTestId("variable-panel")).toBeVisible();
