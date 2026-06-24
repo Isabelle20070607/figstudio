@@ -182,6 +182,8 @@ test("suggests compact repeated-panel layout for sequence sources", async ({ pag
   await page.goto("/");
   await expect(page.getByTestId("variable-panel")).toBeVisible();
 
+  await page.getByTestId("figure-width-field-input").fill("8");
+  await page.getByTestId("figure-height-field-input").fill("6");
   await page.locator('[data-testid="variable-row"][data-variable-name="signal_sequence"]').click();
   await expect(page.getByTestId("repeated-panel-kind-note")).toContainText("sequence items");
   await page.getByTestId("create-facet-panels-button").click();
@@ -197,8 +199,8 @@ test("uses figure aspect when suggesting repeated-panel layout", async ({ page }
   await page.goto("/");
   await expect(page.getByTestId("variable-panel")).toBeVisible();
 
-  await page.getByTestId("figure-width-field-input").fill("3");
-  await page.getByTestId("figure-height-field-input").fill("6");
+  await page.getByTestId("figure-width-field-input").fill("4");
+  await page.getByTestId("figure-height-field-input").fill("8");
   await page.locator('[data-testid="variable-row"][data-variable-name="signal_sequence"]').click();
   await expect(page.getByTestId("repeated-panel-kind-note")).toContainText("sequence items");
   await page.getByTestId("create-facet-panels-button").click();
