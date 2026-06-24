@@ -35,6 +35,8 @@ Try `examples/general_stats_recipe.py` to exercise the bundled recipes with synt
 
 Use **Facet panels** in the Explore builder when a plot layer or statistics recipe is backed by a pandas DataFrame. Choose a categorical DataFrame column, a panel limit, and shared-axis options; FigStudio creates one axes per first-seen value and adds filtered layers or recipes to those axes.
 
+When panels are created from DataFrame values, mapping keys, or sequence items, FigStudio starts from a compact rows-by-columns suggestion based on the panel count and current figure aspect. You can still adjust rows, columns, shared-axis flags, or layout presets in the polish panel.
+
 Facet specs stay data-light. They store equality filters such as `condition == "drug"`, display labels, target axes, and shared-axis flags, not DataFrame rows. Generated code filters the live DataFrame variable with pandas expressions before calling Matplotlib.
 
 For normal plot layers, the same repeated-panel controls also work with mapping and sequence sources. A mapping source repeats by literal-safe keys, and a list or tuple repeats by item index. FigStudio stores a `DatasetRef.selection`, selects the live item before plotting, and skips candidates that are not compatible with the current layer settings.

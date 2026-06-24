@@ -22,11 +22,8 @@
 | --- | --- |
 | Theme | Scientific authoring primitives |
 | Initiative | 增加 automatic repeated-panel layout optimization，作为初始 layout suggestion。 |
-| Why it matters | Repeated panels 应该从紧凑、无重叠、适合当前图形内容的布局开始，而不是让用户手工摆放每个 axes。 |
-| Maturity | `ready` |
-| Horizon | `near` |
-| Progress | Repeated-panel workflows 现在通过现有 rows、columns、axes spans、DataFrame values、mapping keys 和 sequence indices 序列化；gallery fixtures 覆盖 faceted 和 spanned layouts。 |
-| Gate/Prerequisite | Optimizer 输出现有 `FigureSpec.rows`、`FigureSpec.cols` 和 `AxesSpec` row/column/span geometry；不要求新增 public layout API。 |
+| Status | 已在 beta 中完成。 |
+| Completion note | Facet 和 repeated-panel builders 现在会根据 panel 数量与当前 figure aspect 选择紧凑、无重叠的初始 rows/columns，同时仍只输出已有 `FigureSpec.rows`、`FigureSpec.cols` 和单 cell `AxesSpec` geometry。 |
 
 | Field | Value |
 | --- | --- |

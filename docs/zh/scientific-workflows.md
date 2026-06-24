@@ -35,6 +35,8 @@ Recipes 会把变量名、列名、样式选择和目标 axes 存进 `FigureSpec
 
 当 plot layer 或 statistics recipe 基于 pandas DataFrame 时，可以在 Explore builder 中使用 **Facet panels**。选择 categorical DataFrame 列、panel 上限和 shared-axis options 后，FigStudio 会按首次出现的取值创建一个 axes，并把带 filter 的 layers 或 recipes 放到对应 axes 上。
 
+当 panels 来自 DataFrame values、mapping keys 或 sequence items 时，FigStudio 会根据 panel 数量和当前 figure aspect 先给出紧凑的 rows-by-columns suggestion。你仍然可以在 polish panel 中调整 rows、columns、shared-axis flags 或 layout presets。
+
 Facet specs 仍保持 data-light。它们保存 `condition == "drug"` 这样的等值 filters、显示 labels、target axes 和 shared-axis flags，不保存 DataFrame rows。生成代码会先用 pandas 表达式过滤 live DataFrame 变量，再调用 Matplotlib。
 
 对于普通 plot layer，同一组 repeated-panel controls 也支持 mapping 和 sequence source。Mapping source 会按可安全写成 Python literal 的 key 拆 panel，list 或 tuple 会按 item index 拆 panel。FigStudio 会保存 `DatasetRef.selection`，在绘图前从 live object 选出对应 item，并跳过与当前 layer 设置不兼容的候选。

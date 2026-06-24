@@ -267,6 +267,11 @@ interface FacetBuildPayload {
   message?: string;
 }
 
+interface PanelLayoutSuggestion {
+  rows: number;
+  cols: number;
+}
+
 function createId(prefix: string): string {
   if ("randomUUID" in crypto) {
     return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
@@ -301,6 +306,15 @@ function effectiveFigureValue(
     return spec.style[field] ?? null;
   }
   return spec[field];
+}
+
+function effectiveFigureAspect(spec?: FigureSpec, styleProfiles?: StyleProfilesResponse): number | undefined {
+  if (!spec || !styleProfiles) {
+    return undefined;
+  }
+  const width = Number(effectiveFigureValue(spec, styleProfiles, "width"));
+  const height = Number(effectiveFigureValue(spec, styleProfiles, "height"));
+  return width > 0 && height > 0 ? width / height : undefined;
 }
 
 function addFigureOverride(spec: FigureSpec, field: FigureOverrideField): string[] {
@@ -411,12 +425,37 @@ function facetFilter(column: string, value: FacetValue): DataFilterSpec {
   };
 }
 
-function facetLayout(count: number): { rows: number; cols: number } {
-  const cols = Math.max(1, Math.min(3, count));
-  return {
-    rows: Math.max(1, Math.ceil(count / cols)),
-    cols
-  };
+function repeatedPanelLayout(count: number, figureAspect = 4 / 3): PanelLayoutSuggestion {
+  const panelCount = Math.max(1, Math.min(12, Math.round(count || 1)));
+  const maxCols = Math.min(4, panelCount);
+  const maxRows = Math.min(6, panelCount);
+  let best: PanelLayoutSuggestion = { rows: panelCount, cols: 1 };
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  for (let rows = 1; rows <= maxRows; rows += 1) {
+    for (let cols = 1; cols <= maxCols; cols += 1) {
+      const capacity = rows * cols;
+      if (capacity < panelCount) {
+        continue;
+      }
+      const emptyCells = capacity - panelCount;
+      const panelAspect = (figureAspect * rows) / cols;
+      const aspectScore = Math.abs(Math.log(panelAspect / 1.15));
+      const portraitPenalty = rows > cols && panelCount > 2 ? 0.2 : 0;
+      const shapePenalty = Math.abs(rows - cols) * 0.03;
+      const score = emptyCells * 1.35 + aspectScore + portraitPenalty + shapePenalty;
+      if (score < bestScore) {
+        best = { rows, cols };
+        bestScore = score;
+      }
+    }
+  }
+
+  return best;
+}
+
+function repeatedPanelMessage(count: number, rows: number, cols: number, label = "repeated"): string {
+  return `Created ${count} ${label} panel${count === 1 ? "" : "s"} in a ${rows}x${cols} layout.`;
 }
 
 function createSecondaryYAxis(existing?: Partial<SecondaryYAxisSpec> | null): SecondaryYAxisSpec {
@@ -868,14 +907,15 @@ function candidateIsLayerCompatible(candidate: RepeatedPanelCandidate, kind: Plo
 function panelSkipMessage(
   createdCount: number,
   skipped: RepeatedPanelSkippedCandidate[],
-  incompatible: RepeatedPanelCandidate[]
+  incompatible: RepeatedPanelCandidate[],
+  layout: PanelLayoutSuggestion
 ): string {
   const skippedCount = skipped.length + incompatible.length;
   if (!skippedCount) {
-    return `Created ${createdCount} repeated panel${createdCount === 1 ? "" : "s"}.`;
+    return repeatedPanelMessage(createdCount, layout.rows, layout.cols);
   }
   const firstReason = skipped[0]?.reason ?? "Candidate item is not compatible with the current layer settings.";
-  return `Created ${createdCount} repeated panel${createdCount === 1 ? "" : "s"}; skipped ${skippedCount}: ${firstReason}`;
+  return `${repeatedPanelMessage(createdCount, layout.rows, layout.cols)} Skipped ${skippedCount}: ${firstReason}`;
 }
 
 function cloneLayer(layer: PlotLayer): PlotLayer {
@@ -1471,6 +1511,7 @@ export function App() {
         <VariablePanel
           variables={variables}
           selected={selectedVar?.name}
+          figureAspect={effectiveFigureAspect(spec, styleProfiles)}
           onSelect={setSelectedVariable}
           onAddLayer={(layer) => {
             updateSpec((draft) => ({
@@ -1535,6 +1576,7 @@ export function App() {
 interface VariablePanelProps {
   variables: VariableSummary[];
   selected?: string;
+  figureAspect?: number;
   onSelect: (name: string) => void;
   onAddLayer: (layer: PlotLayer) => void;
   onAddRecipe: (recipe: RecipeLayer) => void;
@@ -1545,6 +1587,7 @@ interface VariablePanelProps {
 function VariablePanel({
   variables,
   selected,
+  figureAspect,
   onSelect,
   onAddLayer,
   onAddRecipe,
@@ -1659,7 +1702,8 @@ function VariablePanel({
           value: candidate.value,
           label: candidate.label
         }));
-        const { rows, cols } = facetLayout(values.length);
+        const layout = repeatedPanelLayout(values.length, figureAspect);
+        const { rows, cols } = layout;
         const axes = createFacetAxes(values, facetColumn, cols);
         if (builderMode === "layer") {
           const baseLayer = createLayer(
@@ -1678,7 +1722,8 @@ function VariablePanel({
             cols,
             shareX: facetShareX,
             shareY: facetShareY,
-            layers: createFacetedLayers(baseLayer, values, facetColumn)
+            layers: createFacetedLayers(baseLayer, values, facetColumn),
+            message: repeatedPanelMessage(values.length, rows, cols, "faceted")
           });
         } else if (recipeVariable) {
           const baseRecipe = createRecipe({
@@ -1696,7 +1741,8 @@ function VariablePanel({
             cols,
             shareX: facetShareX,
             shareY: facetShareY,
-            recipes: createFacetedRecipes(baseRecipe, values, facetColumn)
+            recipes: createFacetedRecipes(baseRecipe, values, facetColumn),
+            message: repeatedPanelMessage(values.length, rows, cols, "faceted")
           });
         }
       } else if (builderMode === "layer") {
@@ -1706,7 +1752,8 @@ function VariablePanel({
           onStatus("No compatible mapping/sequence items for the current layer settings.");
           return;
         }
-        const { rows, cols } = facetLayout(compatible.length);
+        const layout = repeatedPanelLayout(compatible.length, figureAspect);
+        const { rows, cols } = layout;
         const titlePrefix = response.source_kind === "mapping_keys" ? "mapping key" : "sequence item";
         const axes = createRepeatedPanelAxes(compatible, titlePrefix, cols);
         const baseLayer = createLayer(
@@ -1726,7 +1773,7 @@ function VariablePanel({
           shareX: facetShareX,
           shareY: facetShareY,
           layers: createSelectedPanelLayers(baseLayer, compatible),
-          message: panelSkipMessage(compatible.length, response.skipped, incompatible)
+          message: panelSkipMessage(compatible.length, response.skipped, incompatible, layout)
         });
       }
       if (response.truncated) {

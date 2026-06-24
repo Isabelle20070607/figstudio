@@ -22,11 +22,8 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | --- | --- |
 | Theme | Scientific authoring primitives |
 | Initiative | Add automatic repeated-panel layout optimization as an initial layout suggestion. |
-| Why it matters | Repeated panels should start compact, non-overlapping, and appropriate for the plotted content instead of forcing users to hand-place every axes. |
-| Maturity | `ready` |
-| Horizon | `near` |
-| Progress | Repeated-panel workflows now serialize through existing rows, columns, axes spans, DataFrame values, mapping keys, and sequence indices; gallery fixtures cover faceted and spanned layouts. |
-| Gate/Prerequisite | The optimizer outputs existing `FigureSpec.rows`, `FigureSpec.cols`, and `AxesSpec` row/column/span geometry; it does not require a new public layout API. |
+| Status | Completed in beta. |
+| Completion note | Facet and repeated-panel builders now choose compact, non-overlapping initial rows and columns from the panel count and current figure aspect, while still emitting only existing `FigureSpec.rows`, `FigureSpec.cols`, and one-cell `AxesSpec` geometry. |
 
 | Field | Value |
 | --- | --- |
