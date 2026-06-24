@@ -122,6 +122,7 @@
 | Why it matters | 用户需要接近真实生产场景的证据，展示 plot layers、statistics recipes、existing Figure inspection、notebook-style output 和 package install flows 如何从 source data 走到可见 preview 与 export artifacts。 |
 | Maturity | `ready` |
 | Horizon | `near` |
+| Progress | 已提交 gallery workflows 现在覆盖 DataFrame facet recipes、stacked categorical composition、secondary-axis overlays、GridSpec spans、reference lines、annotations、reusable specs 和 SVG preview assets。 |
 | Gate/Prerequisite | 每个例子展示 input data、user intent 或 figure contract、preview screenshot、generated Matplotlib code、FigureSpec/export artifact，以及它证明的 publication workflow。 |
 
 | Field | Value |

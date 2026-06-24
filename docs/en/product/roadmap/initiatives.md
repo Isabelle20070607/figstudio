@@ -122,6 +122,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Users need production-like proof of plot layers, statistics recipes, existing Figure inspection, notebook-style output, and package install flows from source data through visible preview and export artifacts. |
 | Maturity | `ready` |
 | Horizon | `near` |
+| Progress | Checked-in gallery workflows now cover DataFrame facet recipes, stacked categorical composition, secondary-axis overlays, GridSpec spans, reference lines, annotations, reusable specs, and SVG preview assets. |
 | Gate/Prerequisite | Each example shows input data, user intent or figure contract, preview screenshot, generated Matplotlib code, FigureSpec/export artifact, and the publication workflow it demonstrates. |
 
 | Field | Value |

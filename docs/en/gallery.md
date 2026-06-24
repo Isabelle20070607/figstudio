@@ -21,6 +21,17 @@ The companion specs are portable FigStudio state. They store variable names, col
 | Data shape | Synthetic repeated-measures DataFrame with `condition`, `replicate`, `time`, and `response` columns |
 | Figure contract | Three panels filter the same `df` by condition and generate plain Matplotlib recipe code from live DataFrame columns |
 
+## Stacked Bar Sample Composition
+
+![Stacked bar sample composition](../assets/gallery/stacked-bar-sample-composition.svg)
+
+| Item | Details |
+| --- | --- |
+| Files | [script](../../examples/gallery/stacked_bar_sample_composition.py), [spec](../../examples/gallery/stacked_bar_sample_composition.figstudio.json) |
+| Demonstrates | `stacked_bar` recipes, grouped count aggregation, publish-mode labels, SVG export readiness checks |
+| Data shape | Synthetic sample QC DataFrame with `sample_id`, `stage`, and `qc_status` columns |
+| Figure contract | One recipe groups the live `df` by workflow stage and QC status, stacks counts as plain Matplotlib bars, and stays clean for SVG export-context validation |
+
 ## Secondary-Axis Timecourse
 
 ![Secondary-axis timecourse](../assets/gallery/secondary-axis-timecourse.svg)

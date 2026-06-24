@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "mode": "publish",
+  "width": 6.2,
+  "height": 4.0,
+  "dpi": 300,
+  "rows": 1,
+  "cols": 1,
+  "axes": [
+    {
+      "id": "ax0",
+      "row": 0,
+      "col": 0,
+      "title": "Sample QC composition by workflow stage",
+      "xlabel": "Workflow stage",
+      "ylabel": "Sample count",
+      "ylim": [
+        0.0,
+        60.0
+      ],
+      "grid": true,
+      "legend": true
+    }
+  ],
+  "layers": [],
+  "recipes": [
+    {
+      "id": "stage-composition",
+      "kind": "stacked_bar",
+      "axes_id": "ax0",
+      "dataset": {
+        "variable": "df",
+        "x": "stage",
+        "group": "qc_status"
+      },
+      "style": {
+        "label": "QC status",
+        "alpha": 0.9,
+        "linewidth": 0.4
+      },
+      "error": "none"
+    }
+  ],
+  "reference_lines": [],
+  "annotations": [],
+  "style": {
+    "preset": "journal_double",
+    "title": "",
+    "font_family": "Arial",
+    "font_size": 8,
+    "constrained_layout": true
+  },
+  "show": false
+}

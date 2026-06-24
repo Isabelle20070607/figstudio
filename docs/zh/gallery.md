@@ -21,6 +21,17 @@ uv run python examples/gallery/faceted_dose_response.py
 | Data shape | Synthetic repeated-measures DataFrame，包含 `condition`、`replicate`、`time` 和 `response` columns |
 | Figure contract | 三个 panels 按 condition 过滤同一个 `df`，并从 live DataFrame columns 生成 plain Matplotlib recipe code |
 
+## Stacked Bar Sample Composition
+
+![Stacked bar sample composition](../assets/gallery/stacked-bar-sample-composition.svg)
+
+| 项目 | 说明 |
+| --- | --- |
+| Files | [script](../../examples/gallery/stacked_bar_sample_composition.py), [spec](../../examples/gallery/stacked_bar_sample_composition.figstudio.json) |
+| Demonstrates | `stacked_bar` recipes、grouped count aggregation、publish-mode labels、SVG export readiness checks |
+| Data shape | Synthetic sample QC DataFrame，包含 `sample_id`、`stage` 和 `qc_status` columns |
+| Figure contract | 一个 recipe 按 workflow stage 和 QC status 对 live `df` 分组，把 counts 堆叠成 plain Matplotlib bars，并在 SVG export-context validation 下保持 clean |
+
 ## Secondary-Axis Timecourse
 
 ![Secondary-axis timecourse](../assets/gallery/secondary-axis-timecourse.svg)
