@@ -24,6 +24,7 @@ from figstudio.models import (
     ValidationIssue,
     ValidationResponse,
 )
+from figstudio.recipes import checked_recipe_fields, required_recipe_fields
 from figstudio.selection import (
     is_python_literal_key,
     normalize_mapping_key,
@@ -631,11 +632,7 @@ def _validate_recipe(
 
     _validate_data_filters(namespace, recipe.id, recipe.axes_id, data, issues)
 
-    required = _required_recipe_columns(recipe)
-    if recipe.kind == "paired_before_after":
-        required.append("subject")
-
-    for field in required:
+    for field in required_recipe_fields(recipe.kind):
         if not getattr(data, field):
             details, suggestion = _column_repair(value, variable=data.variable, field=field)
             details["field"] = field
@@ -652,26 +649,10 @@ def _validate_recipe(
                 )
             )
 
-    if recipe.kind in {"count_bar", "stacked_bar"}:
-        fields_to_check = ["x", "group"]
-    elif recipe.kind == "violin_by_category":
-        fields_to_check = ["x", "y", "group"]
-    else:
-        fields_to_check = ["x", "y", "group", "subject"]
-    for field in fields_to_check:
+    for field in checked_recipe_fields(recipe.kind):
         column = getattr(data, field)
         if column:
             _check_dataframe_column(value, recipe, column, field, issues)
-
-
-def _required_recipe_columns(recipe: RecipeLayer) -> list[str]:
-    if recipe.kind == "count_bar":
-        return ["x"]
-    if recipe.kind == "stacked_bar":
-        return ["x", "group"]
-    if recipe.kind in {"boxplot_by_category", "violin_by_category"}:
-        return ["x", "y"]
-    return ["x", "y"]
 
 
 def _validate_layer_y_axis(layer: PlotLayer, axis: AxesSpec, issues: list[ValidationIssue]) -> None:

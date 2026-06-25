@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type {
   FigureSpec,
   PlotLayer,
+  RecipeCatalogResponse,
   RenderResponse,
   SessionInfo,
   StyleProfilesResponse,
@@ -12,6 +13,7 @@ interface AppState {
   session?: SessionInfo;
   variables: VariableSummary[];
   styleProfiles: StyleProfilesResponse;
+  recipeCatalog: RecipeCatalogResponse;
   spec?: FigureSpec;
   render?: RenderResponse;
   selectedVariable?: string;
@@ -20,6 +22,7 @@ interface AppState {
   setSession: (session: SessionInfo) => void;
   setVariables: (variables: VariableSummary[]) => void;
   setStyleProfiles: (styleProfiles: StyleProfilesResponse) => void;
+  setRecipeCatalog: (recipeCatalog: RecipeCatalogResponse) => void;
   setSpec: (spec: FigureSpec) => void;
   setRender: (render?: RenderResponse) => void;
   setSelectedVariable: (name: string) => void;
@@ -32,6 +35,7 @@ interface AppState {
 export const useAppStore = create<AppState>((set, get) => ({
   variables: [],
   styleProfiles: { profiles: [], source_path: null, warnings: [] },
+  recipeCatalog: { version: 1, groups: [], recipes: [] },
   status: "Loading session",
   setSession: (session) => set({ session }),
   setVariables: (variables) =>
@@ -40,6 +44,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       selectedVariable: state.selectedVariable ?? variables[0]?.name
     })),
   setStyleProfiles: (styleProfiles) => set({ styleProfiles }),
+  setRecipeCatalog: (recipeCatalog) => set({ recipeCatalog }),
   setSpec: (spec) =>
     set((state) => ({
       spec,

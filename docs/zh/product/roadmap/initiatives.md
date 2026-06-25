@@ -180,7 +180,8 @@
 | Why it matters | Namespaced recipe IDs、reusable chart-family roles、shared role schemas、validation hooks、generated-code templates、style defaults、gallery fixtures 和 import/export compatibility 应该在外部或领域专用 packs 前存在。 |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Bundled recipes 现在在 line、categorical 和 distribution-summary families 上共享 `RecipeKind`、dataset-role validation、generated-code dispatch、UI selectors、tests 和 gallery-backed workflows。 |
+| Progress | Bundled recipes 现在在 line、categorical 和 distribution-summary families 上共享 `RecipeKind`、dataset-role validation、generated-code dispatch、UI selectors、tests、gallery-backed workflows，以及后端拥有的 `GET /api/recipe-catalog` contract，用于描述 groups、field roles、labels、默认 error 行为和默认 styles。 |
+| Readiness | Bundled catalog 建立了内部 substrate，但还不承诺外部 pack files、plugin loading 或 dynamic recipe kinds。 |
 | Gate/Prerequisite | Bundled recipes 和 gallery fixtures 有足够共享结构，避免过早冻结脆弱 extension contract。 |
 
 | Field | Value |

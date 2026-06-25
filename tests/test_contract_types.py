@@ -24,8 +24,13 @@ from figstudio.models import (
     ReferenceLineOrientation,
     ReferenceLineSpec,
     RecipeDatasetRef,
+    RecipeCatalogResponse,
+    RecipeDatasetField,
+    RecipeDefaultLabel,
+    RecipeDefinition,
     RecipeKind,
     RecipeLayer,
+    RecipeQuestionGroup,
     RepeatedPanelCandidate,
     RepeatedPanelCandidatesRequest,
     RepeatedPanelCandidatesResponse,
@@ -75,6 +80,8 @@ def test_frontend_plot_and_preset_literals_match_backend_contracts():
     assert _type_literals(source, "LayerYAxis") == set(get_args(LayerYAxis))
     assert _type_literals(source, "ValidationContext") == set(get_args(ValidationContext))
     assert _type_literals(source, "ExportFormat") == set(get_args(ExportFormat))
+    assert _type_literals(source, "RecipeDatasetField") == set(get_args(RecipeDatasetField))
+    assert _type_literals(source, "RecipeDefaultLabel") == set(get_args(RecipeDefaultLabel))
     assert _type_literals(source, "RepeatedPanelSourceKind") == set(get_args(RepeatedPanelSourceKind))
 
 
@@ -87,6 +94,9 @@ def test_frontend_interfaces_cover_backend_model_fields():
         DatasetRef: "DatasetRef",
         RecipeDatasetRef: "RecipeDatasetRef",
         LayerStyle: "LayerStyle",
+        RecipeQuestionGroup: "RecipeQuestionGroup",
+        RecipeDefinition: "RecipeDefinition",
+        RecipeCatalogResponse: "RecipeCatalogResponse",
         PlotLayer: "PlotLayer",
         RecipeLayer: "RecipeLayer",
         SecondaryYAxisSpec: "SecondaryYAxisSpec",

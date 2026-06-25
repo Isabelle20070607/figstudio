@@ -33,6 +33,9 @@ import type {
   PlotLayer,
   ReferenceLineOrientation,
   ReferenceLineSpec,
+  RecipeCatalogResponse,
+  RecipeDatasetField,
+  RecipeDefinition,
   RecipeKind,
   RecipeLayer,
   RepeatedPanelCandidate,
@@ -61,71 +64,6 @@ const plotKinds: PlotKind[] = [
   "fill_between"
 ];
 
-const recipeDetails: Record<RecipeKind, { label: string; role: string }> = {
-  mean_sem_line: {
-    label: "Mean +/- SEM line",
-    role: "Summarizes a measured value across ordered X values with optional groups."
-  },
-  mean_sem_bar: {
-    label: "Mean +/- SEM bars",
-    role: "Compares category means with optional grouped bars and error caps."
-  },
-  count_bar: {
-    label: "Count bars",
-    role: "Counts rows by category with an optional grouping column."
-  },
-  stacked_bar: {
-    label: "Stacked count bars",
-    role: "Shows category composition from row counts split by a required group column."
-  },
-  boxplot_by_category: {
-    label: "Category boxplots",
-    role: "Shows value distributions by category with optional group offsets."
-  },
-  violin_by_category: {
-    label: "Category violins",
-    role: "Shows smoothed value distributions by category with optional group offsets."
-  },
-  grouped_points: {
-    label: "Grouped points",
-    role: "Shows individual observations by category with a mean and error summary."
-  },
-  paired_before_after: {
-    label: "Paired before/after",
-    role: "Connects repeated observations by subject and overlays condition means."
-  }
-};
-const recipeQuestionGroups: Array<{
-  id: string;
-  label: string;
-  summary: string;
-  recipes: RecipeKind[];
-}> = [
-  {
-    id: "time-course",
-    label: "Time-course comparison",
-    summary: "Compare trajectories across time, dose, or another ordered X variable.",
-    recipes: ["mean_sem_line"]
-  },
-  {
-    id: "group-condition",
-    label: "Group/condition comparison",
-    summary: "Compare measured values across experimental conditions or cohorts.",
-    recipes: ["mean_sem_bar", "grouped_points", "boxplot_by_category", "violin_by_category"]
-  },
-  {
-    id: "categorical-counts",
-    label: "Categorical counts/composition",
-    summary: "Count observations or compare category composition.",
-    recipes: ["count_bar", "stacked_bar"]
-  },
-  {
-    id: "paired-observations",
-    label: "Paired observations",
-    summary: "Track repeated measurements for the same subject across conditions.",
-    recipes: ["paired_before_after"]
-  }
-];
 const errorModes: RecipeLayer["error"][] = ["sem", "sd", "none"];
 const referenceLineOrientations: ReferenceLineOrientation[] = ["horizontal", "vertical"];
 
@@ -148,44 +86,73 @@ const indexSource = "__index__";
 const noneSource = "__none__";
 const defaultFacetLimit = 12;
 
-function recipeLabel(kind: RecipeKind) {
-  return recipeDetails[kind].label;
+function recipeDefinition(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind): RecipeDefinition | undefined {
+  return recipeCatalog.recipes.find((recipe) => recipe.kind === kind);
 }
 
-function recipeQuestionGroup(kind: RecipeKind) {
-  return recipeQuestionGroups.find((group) => group.recipes.includes(kind)) ?? recipeQuestionGroups[0];
+function recipeDefinitionsByGroup(recipeCatalog: RecipeCatalogResponse, groupId: string): RecipeDefinition[] {
+  return recipeCatalog.recipes.filter((recipe) => recipe.question_group_id === groupId);
 }
 
-function recipeRequiresY(kind: RecipeKind) {
-  return kind !== "count_bar" && kind !== "stacked_bar";
+function recipeLabel(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind) {
+  return recipeDefinition(recipeCatalog, kind)?.label ?? kind;
 }
 
-function recipeSupportsGroup(kind: RecipeKind) {
+function recipeQuestionGroup(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind) {
+  const definition = recipeDefinition(recipeCatalog, kind);
   return (
-    kind === "mean_sem_line" ||
-    kind === "mean_sem_bar" ||
-    kind === "count_bar" ||
-    kind === "stacked_bar" ||
-    kind === "boxplot_by_category" ||
-    kind === "violin_by_category"
+    recipeCatalog.groups.find((group) => group.id === definition?.question_group_id) ??
+    recipeCatalog.groups[0]
   );
 }
 
-function recipeRequiresGroup(kind: RecipeKind) {
-  return kind === "stacked_bar";
-}
-
-function recipeUsesError(kind: RecipeKind) {
-  return (
-    kind !== "count_bar" &&
-    kind !== "stacked_bar" &&
-    kind !== "boxplot_by_category" &&
-    kind !== "violin_by_category"
+function recipeHasField(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind, field: RecipeDatasetField) {
+  const definition = recipeDefinition(recipeCatalog, kind);
+  return Boolean(
+    definition?.required_fields.includes(field) || definition?.optional_fields.includes(field)
   );
 }
 
-function recipeUsesSubject(kind: RecipeKind) {
-  return kind === "paired_before_after";
+function recipeRequiresField(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind, field: RecipeDatasetField) {
+  return Boolean(recipeDefinition(recipeCatalog, kind)?.required_fields.includes(field));
+}
+
+function recipeRequiresY(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind) {
+  return recipeRequiresField(recipeCatalog, kind, "y");
+}
+
+function recipeSupportsGroup(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind) {
+  return recipeHasField(recipeCatalog, kind, "group");
+}
+
+function recipeRequiresGroup(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind) {
+  return recipeRequiresField(recipeCatalog, kind, "group");
+}
+
+function recipeUsesError(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind) {
+  return recipeDefinition(recipeCatalog, kind)?.uses_error ?? false;
+}
+
+function recipeUsesSubject(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind) {
+  return recipeHasField(recipeCatalog, kind, "subject");
+}
+
+function recipeDefaultError(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind): RecipeLayer["error"] {
+  return recipeDefinition(recipeCatalog, kind)?.default_error ?? "none";
+}
+
+function recipeDefaultLabel(
+  recipeCatalog: RecipeCatalogResponse,
+  kind: RecipeKind,
+  variable: VariableSummary,
+  yColumn: string
+) {
+  const definition = recipeDefinition(recipeCatalog, kind);
+  return definition?.default_label === "count" ? "Count" : yColumn || variable.name;
+}
+
+function recipeDefaultStyle(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind): LayerStyle {
+  return { ...(recipeDefinition(recipeCatalog, kind)?.default_style ?? {}) };
 }
 
 const stylePresets: Record<
@@ -827,6 +794,7 @@ function createLayer(
 }
 
 function createRecipe({
+  recipeCatalog,
   kind,
   variable,
   xColumn,
@@ -835,6 +803,7 @@ function createRecipe({
   subjectColumn,
   error
 }: {
+  recipeCatalog: RecipeCatalogResponse;
   kind: RecipeKind;
   variable: VariableSummary;
   xColumn: string;
@@ -843,7 +812,7 @@ function createRecipe({
   subjectColumn: string;
   error: RecipeLayer["error"];
 }): RecipeLayer {
-  const label = kind === "count_bar" || kind === "stacked_bar" ? "Count" : yColumn || variable.name;
+  const defaultStyle = recipeDefaultStyle(recipeCatalog, kind);
   return {
     id: createId("recipe"),
     kind,
@@ -851,46 +820,32 @@ function createRecipe({
     dataset: {
       variable: variable.name,
       x: xColumn || null,
-      y: recipeRequiresY(kind) ? yColumn || null : null,
-      group: recipeSupportsGroup(kind) && groupColumn ? groupColumn : null,
-      subject: recipeUsesSubject(kind) ? subjectColumn || null : null,
+      y: recipeRequiresY(recipeCatalog, kind) ? yColumn || null : null,
+      group: recipeSupportsGroup(recipeCatalog, kind) && groupColumn ? groupColumn : null,
+      subject: recipeUsesSubject(recipeCatalog, kind) ? subjectColumn || null : null,
       filters: []
     },
     style: {
-      label,
-      color: kind === "stacked_bar" ? null : colors[0],
-      marker:
-        kind === "grouped_points" || kind === "paired_before_after" || kind === "boxplot_by_category" ? "o" : null,
-      linestyle: kind === "mean_sem_line" ? "-" : null,
-      linewidth: kind === "mean_sem_line" || kind === "paired_before_after" ? 1.8 : kind === "violin_by_category" ? 1.1 : null,
-      alpha:
-        kind === "grouped_points"
-          ? 0.78
-          : kind === "boxplot_by_category"
-            ? 0.32
-            : kind === "violin_by_category"
-              ? 0.34
-              : kind === "mean_sem_bar" || kind === "count_bar" || kind === "stacked_bar"
-                ? 0.85
-                : null
+      ...defaultStyle,
+      label: recipeDefaultLabel(recipeCatalog, kind, variable, yColumn)
     },
-    error: recipeUsesError(kind) ? error : "none",
+    error: recipeUsesError(recipeCatalog, kind) ? error : recipeDefaultError(recipeCatalog, kind),
     readonly: false,
     source: "recipe"
   };
 }
 
-function withRecipeKind(recipe: RecipeLayer, kind: RecipeKind): RecipeLayer {
+function withRecipeKind(recipeCatalog: RecipeCatalogResponse, recipe: RecipeLayer, kind: RecipeKind): RecipeLayer {
   return {
     ...recipe,
     kind,
     dataset: {
       ...recipe.dataset,
-      y: recipeRequiresY(kind) ? recipe.dataset.y ?? null : null,
-      group: recipeSupportsGroup(kind) ? recipe.dataset.group ?? null : null,
-      subject: recipeUsesSubject(kind) ? recipe.dataset.subject ?? null : null
+      y: recipeRequiresY(recipeCatalog, kind) ? recipe.dataset.y ?? null : null,
+      group: recipeSupportsGroup(recipeCatalog, kind) ? recipe.dataset.group ?? null : null,
+      subject: recipeUsesSubject(recipeCatalog, kind) ? recipe.dataset.subject ?? null : null
     },
-    error: recipeUsesError(kind) ? recipe.error : "none"
+    error: recipeUsesError(recipeCatalog, kind) ? recipe.error : recipeDefaultError(recipeCatalog, kind)
   };
 }
 
@@ -1153,6 +1108,7 @@ export function App() {
     session,
     variables,
     styleProfiles,
+    recipeCatalog,
     spec,
     render,
     selectedVariable,
@@ -1161,6 +1117,7 @@ export function App() {
     setSession,
     setVariables,
     setStyleProfiles,
+    setRecipeCatalog,
     setSpec,
     setRender,
     setSelectedVariable,
@@ -1182,10 +1139,11 @@ export function App() {
     let cancelled = false;
     async function load() {
       try {
-        const [sessionInfo, variableList, profiles, initialSpec] = await Promise.all([
+        const [sessionInfo, variableList, profiles, catalog, initialSpec] = await Promise.all([
           api.session(),
           api.variables(),
           api.styleProfiles(),
+          api.recipeCatalog(),
           api.spec()
         ]);
         if (cancelled) {
@@ -1194,6 +1152,7 @@ export function App() {
         setSession(sessionInfo);
         setVariables(variableList);
         setStyleProfiles(profiles);
+        setRecipeCatalog(catalog);
         setSpec(initialSpec);
         setStatus(nextStepStatus(initialSpec));
       } catch (error) {
@@ -1204,7 +1163,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [setSession, setSpec, setStatus, setStyleProfiles, setVariables]);
+  }, [setRecipeCatalog, setSession, setSpec, setStatus, setStyleProfiles, setVariables]);
 
   useEffect(() => {
     if (!spec) {
@@ -1606,6 +1565,7 @@ export function App() {
       <section className="workspace">
         <VariablePanel
           variables={variables}
+          recipeCatalog={recipeCatalog}
           selected={selectedVar?.name}
           figureAspect={effectiveFigureAspect(spec, styleProfiles)}
           onSelect={setSelectedVariable}
@@ -1652,6 +1612,7 @@ export function App() {
         <Inspector
           spec={spec}
           styleProfiles={styleProfiles}
+          recipeCatalog={recipeCatalog}
           selectedLayer={selectedLayer}
           selectedRecipe={selectedRecipe}
           selectedAxisId={selectedAxisId}
@@ -1671,6 +1632,7 @@ export function App() {
 
 interface VariablePanelProps {
   variables: VariableSummary[];
+  recipeCatalog: RecipeCatalogResponse;
   selected?: string;
   figureAspect?: number;
   onSelect: (name: string) => void;
@@ -1682,6 +1644,7 @@ interface VariablePanelProps {
 
 function VariablePanel({
   variables,
+  recipeCatalog,
   selected,
   figureAspect,
   onSelect,
@@ -1736,11 +1699,11 @@ function VariablePanel({
   const canFacet = Boolean(
     facetSourceKind === "dataframe_column" ? layerCanFacet || recipeCanFacet : layerCanSelectPanels
   );
-  const selectedRecipeRequiresY = recipeRequiresY(recipeKind);
-  const selectedRecipeSupportsGroup = recipeSupportsGroup(recipeKind);
-  const selectedRecipeRequiresGroup = recipeRequiresGroup(recipeKind);
-  const selectedRecipeUsesError = recipeUsesError(recipeKind);
-  const selectedRecipeUsesSubject = recipeUsesSubject(recipeKind);
+  const selectedRecipeRequiresY = recipeRequiresY(recipeCatalog, recipeKind);
+  const selectedRecipeSupportsGroup = recipeSupportsGroup(recipeCatalog, recipeKind);
+  const selectedRecipeRequiresGroup = recipeRequiresGroup(recipeCatalog, recipeKind);
+  const selectedRecipeUsesError = recipeUsesError(recipeCatalog, recipeKind);
+  const selectedRecipeUsesSubject = recipeUsesSubject(recipeCatalog, recipeKind);
 
   useEffect(() => {
     if (!variable) {
@@ -1765,9 +1728,9 @@ function VariablePanel({
     setRecipeVariableName(recipeVariable.name);
     setRecipeXColumn(xColumn);
     setRecipeYColumn(secondColumn(recipeVariable));
-    setRecipeGroupColumn(recipeRequiresGroup(recipeKind) ? defaultGroupColumn(recipeVariable, xColumn) : "");
+    setRecipeGroupColumn(recipeRequiresGroup(recipeCatalog, recipeKind) ? defaultGroupColumn(recipeVariable, xColumn) : "");
     setRecipeSubjectColumn(subjectColumn);
-  }, [recipeVariable?.name, recipeKind]);
+  }, [recipeCatalog, recipeVariable?.name, recipeKind]);
 
   useEffect(() => {
     setFacetColumn(facetSource?.kind === "dataframe" ? defaultFacetColumn(facetSource) : "");
@@ -1823,6 +1786,7 @@ function VariablePanel({
           });
         } else if (recipeVariable) {
           const baseRecipe = createRecipe({
+            recipeCatalog,
             kind: recipeKind,
             variable: recipeVariable,
             xColumn: recipeXColumn,
@@ -2058,12 +2022,13 @@ function VariablePanel({
         ) : (
           <>
             <RecipeKindSelect
+              recipeCatalog={recipeCatalog}
               label="Research question"
               value={recipeKind}
               selectTestId="recipe-kind-select"
               onChange={setRecipeKind}
             />
-            <RecipeQuestionNote kind={recipeKind} testId="recipe-question-note" />
+            <RecipeQuestionNote recipeCatalog={recipeCatalog} kind={recipeKind} testId="recipe-question-note" />
             <label>
               DataFrame
               <select
@@ -2175,6 +2140,7 @@ function VariablePanel({
                 recipeVariable &&
                 onAddRecipe(
                   createRecipe({
+                    recipeCatalog,
                     kind: recipeKind,
                     variable: recipeVariable,
                     xColumn: recipeXColumn,
@@ -2646,6 +2612,7 @@ function AnnotationControls({
 function Inspector({
   spec,
   styleProfiles,
+  recipeCatalog,
   selectedLayer,
   selectedRecipe,
   selectedAxisId,
@@ -2660,6 +2627,7 @@ function Inspector({
 }: {
   spec?: FigureSpec;
   styleProfiles: StyleProfilesResponse;
+  recipeCatalog: RecipeCatalogResponse;
   selectedLayer?: PlotLayer;
   selectedRecipe?: RecipeLayer;
   selectedAxisId: string;
@@ -3082,6 +3050,7 @@ function Inspector({
                   </button>
                 </div>
                 <RecipeControls
+                  recipeCatalog={recipeCatalog}
                   recipe={selectedRecipe}
                   defaults={profileRecipeDefaults(spec, styleProfiles, selectedRecipe)}
                   axes={spec.axes}
@@ -3132,11 +3101,13 @@ function updateSecondaryAxis(
 }
 
 function RecipeControls({
+  recipeCatalog,
   recipe,
   defaults,
   axes,
   onChange
 }: {
+  recipeCatalog: RecipeCatalogResponse;
   recipe: RecipeLayer;
   defaults?: LayerStyle;
   axes: AxesSpec[];
@@ -3148,10 +3119,10 @@ function RecipeControls({
   const linestyle = inheritedStyleValue(recipe.style, defaults, "linestyle") ?? "";
   const linewidth = inheritedStyleValue(recipe.style, defaults, "linewidth") ?? 1.8;
   const alpha = inheritedStyleValue(recipe.style, defaults, "alpha") ?? 1;
-  const selectedRecipeRequiresY = recipeRequiresY(recipe.kind);
-  const selectedRecipeSupportsGroup = recipeSupportsGroup(recipe.kind);
-  const selectedRecipeUsesError = recipeUsesError(recipe.kind);
-  const selectedRecipeUsesSubject = recipeUsesSubject(recipe.kind);
+  const selectedRecipeRequiresY = recipeRequiresY(recipeCatalog, recipe.kind);
+  const selectedRecipeSupportsGroup = recipeSupportsGroup(recipeCatalog, recipe.kind);
+  const selectedRecipeUsesError = recipeUsesError(recipeCatalog, recipe.kind);
+  const selectedRecipeUsesSubject = recipeUsesSubject(recipeCatalog, recipe.kind);
   return (
     <div className="layer-controls">
       {defaults ? <p className="profile-note">Layer defaults inherited from project profile.</p> : null}
@@ -3164,14 +3135,15 @@ function RecipeControls({
         onChange={(value) => onChange({ ...recipe, axes_id: value })}
       />
       <RecipeKindSelect
+        recipeCatalog={recipeCatalog}
         label="Research question"
         value={recipe.kind}
         fieldTestId="recipe-kind-field"
         selectTestId="recipe-kind-field-select"
         field="kind"
-        onChange={(value) => onChange(withRecipeKind(recipe, value))}
+        onChange={(value) => onChange(withRecipeKind(recipeCatalog, recipe, value))}
       />
-      <RecipeQuestionNote kind={recipe.kind} testId="recipe-kind-field-note" />
+      <RecipeQuestionNote recipeCatalog={recipeCatalog} kind={recipe.kind} testId="recipe-kind-field-note" />
       <TextField
         label="DataFrame"
         value={recipe.dataset.variable}
@@ -3532,6 +3504,7 @@ function SelectField({
 }
 
 function RecipeKindSelect({
+  recipeCatalog,
   label,
   value,
   selectTestId,
@@ -3539,6 +3512,7 @@ function RecipeKindSelect({
   field,
   onChange
 }: {
+  recipeCatalog: RecipeCatalogResponse;
   label: string;
   value: RecipeKind;
   selectTestId: string;
@@ -3550,11 +3524,11 @@ function RecipeKindSelect({
     <label data-testid={fieldTestId} data-field={field}>
       {label}
       <select data-testid={selectTestId} value={value} onChange={(event) => onChange(event.target.value as RecipeKind)}>
-        {recipeQuestionGroups.map((group) => (
+        {recipeCatalog.groups.map((group) => (
           <optgroup key={group.id} label={group.label} data-testid={`recipe-question-group-${group.id}`}>
-            {group.recipes.map((kind) => (
-              <option key={kind} value={kind}>
-                {recipeLabel(kind)}
+            {recipeDefinitionsByGroup(recipeCatalog, group.id).map((recipe) => (
+              <option key={recipe.kind} value={recipe.kind}>
+                {recipeLabel(recipeCatalog, recipe.kind)}
               </option>
             ))}
           </optgroup>
@@ -3564,11 +3538,20 @@ function RecipeKindSelect({
   );
 }
 
-function RecipeQuestionNote({ kind, testId }: { kind: RecipeKind; testId: string }) {
-  const group = recipeQuestionGroup(kind);
+function RecipeQuestionNote({
+  recipeCatalog,
+  kind,
+  testId
+}: {
+  recipeCatalog: RecipeCatalogResponse;
+  kind: RecipeKind;
+  testId: string;
+}) {
+  const definition = recipeDefinition(recipeCatalog, kind);
+  const group = recipeQuestionGroup(recipeCatalog, kind);
   return (
     <p className="recipe-question-note" data-testid={testId}>
-      <strong>{group.label}</strong>: {group.summary} {recipeDetails[kind].role}
+      <strong>{group?.label ?? "Recipe"}</strong>: {group?.summary ?? ""} {definition?.role ?? kind}
     </p>
   );
 }

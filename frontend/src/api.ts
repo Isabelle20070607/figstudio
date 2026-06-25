@@ -1,6 +1,7 @@
 import type {
   FacetValuesResponse,
   FigureSpec,
+  RecipeCatalogResponse,
   RepeatedPanelCandidatesRequest,
   RepeatedPanelCandidatesResponse,
   RenderResponse,
@@ -42,6 +43,7 @@ export const api = {
   session: () => request<SessionInfo>("/api/session"),
   variables: () => request<VariableSummary[]>("/api/variables"),
   styleProfiles: () => request<StyleProfilesResponse>("/api/style-profiles"),
+  recipeCatalog: () => request<RecipeCatalogResponse>("/api/recipe-catalog"),
   spec: () => request<FigureSpec>("/api/spec"),
   render: (spec: FigureSpec, format: "svg" | "png" = "svg") =>
     request<RenderResponse>("/api/render", {

@@ -28,6 +28,8 @@ export type ReferenceLineOrientation = "horizontal" | "vertical";
 export type LayerYAxis = "left" | "right";
 export type ValidationContext = "edit" | "export";
 export type ExportFormat = "png" | "svg" | "pdf";
+export type RecipeDatasetField = "x" | "y" | "group" | "subject";
+export type RecipeDefaultLabel = "count" | "y_or_variable";
 
 export interface DataFilterSpec {
   column: string;
@@ -88,6 +90,31 @@ export interface LayerStyle {
   bins?: number | null;
   fill_alpha?: number | null;
   colorbar?: boolean | null;
+}
+
+export interface RecipeQuestionGroup {
+  id: string;
+  label: string;
+  summary: string;
+}
+
+export interface RecipeDefinition {
+  kind: RecipeKind;
+  label: string;
+  question_group_id: string;
+  role: string;
+  required_fields: RecipeDatasetField[];
+  optional_fields: RecipeDatasetField[];
+  uses_error: boolean;
+  default_error: "sem" | "sd" | "none";
+  default_label: RecipeDefaultLabel;
+  default_style: LayerStyle;
+}
+
+export interface RecipeCatalogResponse {
+  version: number;
+  groups: RecipeQuestionGroup[];
+  recipes: RecipeDefinition[];
 }
 
 export interface PlotLayer {

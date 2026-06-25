@@ -81,6 +81,8 @@ Session commands 会打印 session URL，并持续运行直到被中断。Headle
 
 支持的 `RecipeLayer.kind` 值为 `mean_sem_line`、`mean_sem_bar`、`count_bar`、`stacked_bar`、`boxplot_by_category`、`violin_by_category`、`grouped_points` 和 `paired_before_after`。
 
+`GET /api/recipe-catalog` 会暴露 editor 使用的 bundled recipe catalog。Response 包含 `version`、`groups` 和 `recipes`；每个 recipe entry 记录 `kind`、label、research-question group、role 文案、必需和可选 dataset fields、默认 error 行为、默认 label 行为，以及默认 style。Public beta 中这个 catalog 只描述内置 recipes，不是外部 plugin 或 pack-loading contract。
+
 `ReferenceLineSpec.orientation` 为 `horizontal` 或 `vertical`。`value` 是 numeric value，`style` 复用 plot layer 的 label、color、line style、linewidth 和 alpha 字段。生成代码会输出 Matplotlib `axhline` 或 `axvline`。
 
 `DatasetRef` 字段可通过 `x_variable`、`y_variable`、`z_variable` 和 `yerr_variable` 指向 DataFrame 列或独立变量。普通 plot layer 也可以设置 `DatasetRef.selection`，使用 `kind: "mapping_key"` 或 `kind: "sequence_index"` 在 repeated panels 绘图前选出一个 item。`RecipeDatasetRef.variable` 必须指向 pandas DataFrame，且只保存列名。`boxplot_by_category` 和 `violin_by_category` 要求 `x` 和 `y`，接受可选 `group`，并忽略 `subject` 和 `error`；`count_bar` 要求 `x`，接受可选 `group`，并忽略 `y`、`subject` 和 `error`；`stacked_bar` 要求 `x` 和 `group`，同样忽略 `y`、`subject` 和 `error`。两种 dataset ref 都可以包含 `filters`；每个 `DataFilterSpec` 保存 `column`、`op: "eq"`、`value` 和可选 `label`，用于 DataFrame-backed facet panels。
@@ -96,6 +98,7 @@ Session commands 会打印 session URL，并持续运行直到被中断。Headle
 | `GET /api/session` | Session metadata、写回能力、可选 inspected figure tree。 |
 | `GET /api/variables` | 安全变量摘要。 |
 | `GET /api/style-profiles` | 已加载 project style profiles、source path 和非致命 load warnings。 |
+| `GET /api/recipe-catalog` | Bundled recipe groups、字段需求、labels 和默认 recipe style metadata。 |
 | `GET /api/spec` | 当前 `FigureSpec`。 |
 | `POST /api/validate` | 基于 live namespace 校验 `FigureSpec`；可接受 `context: "edit" \| "export"` 和 `export_format`，用于发表准备度预检。 |
 | `POST /api/facet-values` | 为 small-multiple panel authoring 返回 DataFrame 中按出现顺序去重的取值。 |

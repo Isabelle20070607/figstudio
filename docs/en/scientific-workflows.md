@@ -16,7 +16,7 @@ Single-value-source plots such as `hist`, `boxplot`, and `violin` use the Y/valu
 
 Use recipe mode when the selected variable is a pandas DataFrame and you want a common statistical figure without writing the plotting boilerplate.
 
-The builder groups bundled recipes by research question:
+The builder groups bundled recipes by research question. The group labels, field requirements, default labels, and default styles come from the bundled recipe catalog served at `GET /api/recipe-catalog`; this is a stable substrate for internal recipes, not external pack loading.
 
 | Research question | Recipes | Use it for |
 | --- | --- | --- |

@@ -81,6 +81,8 @@ Supported `PlotLayer.kind` values are `line`, `scatter`, `bar`, `barh`, `hist`, 
 
 Supported `RecipeLayer.kind` values are `mean_sem_line`, `mean_sem_bar`, `count_bar`, `stacked_bar`, `boxplot_by_category`, `violin_by_category`, `grouped_points`, and `paired_before_after`.
 
+`GET /api/recipe-catalog` exposes the bundled recipe catalog used by the editor. The response includes `version`, `groups`, and `recipes`; each recipe entry records its `kind`, label, research-question group, role text, required and optional dataset fields, default error behavior, default label behavior, and default style. This catalog is bundled-only in the public beta and is not an external plugin or pack-loading contract.
+
 `ReferenceLineSpec.orientation` is `horizontal` or `vertical`. The `value` field is numeric and `style` uses the same label, color, line style, linewidth, and alpha fields as plot layers. Generated code emits Matplotlib `axhline` or `axvline`.
 
 `DatasetRef` fields can point to DataFrame columns or independent variables through `x_variable`, `y_variable`, `z_variable`, and `yerr_variable`. Normal plot layers can also set `DatasetRef.selection` with `kind: "mapping_key"` or `kind: "sequence_index"` so repeated panels can select an item before plotting. `RecipeDatasetRef.variable` must name a pandas DataFrame and stores column names only. `boxplot_by_category` and `violin_by_category` require `x` and `y`, accept optional `group`, and ignore `subject` and `error`; `count_bar` requires `x`, accepts optional `group`, and ignores `y`, `subject`, and `error`; `stacked_bar` requires `x` and `group` and also ignores `y`, `subject`, and `error`. Both dataset refs can include `filters`; each `DataFilterSpec` stores `column`, `op: "eq"`, `value`, and optional `label` for DataFrame-backed facet panels.
@@ -96,6 +98,7 @@ The local FastAPI server is created per session and binds to `127.0.0.1` by defa
 | `GET /api/session` | Session metadata, writeback capability, optional inspected figure tree. |
 | `GET /api/variables` | Safe variable summaries. |
 | `GET /api/style-profiles` | Loaded project style profiles, source path, and non-fatal load warnings. |
+| `GET /api/recipe-catalog` | Bundled recipe groups, field requirements, labels, and default recipe style metadata. |
 | `GET /api/spec` | Current `FigureSpec`. |
 | `POST /api/validate` | Validate a `FigureSpec` against the live namespace; accepts optional `context: "edit" \| "export"` and `export_format` for publication-readiness preflight. |
 | `POST /api/facet-values` | Return ordered unique DataFrame values for small-multiple panel authoring. |

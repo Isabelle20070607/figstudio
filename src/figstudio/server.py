@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 from figstudio.codegen import MatplotlibCodegen
 from figstudio.models import (
+    DataSelectionSpec,
     ExportRequest,
     ExportResponse,
     ErrorDetail,
@@ -21,13 +22,13 @@ from figstudio.models import (
     FacetValuesRequest,
     FacetValuesResponse,
     FigureSpec,
+    RecipeCatalogResponse,
     RenderRequest,
     RenderResponse,
     RepeatedPanelCandidate,
     RepeatedPanelCandidatesRequest,
     RepeatedPanelCandidatesResponse,
     RepeatedPanelSkippedCandidate,
-    DataSelectionSpec,
     SaveCodeRequest,
     SaveCodeResponse,
     ExportFormat,
@@ -38,6 +39,7 @@ from figstudio.models import (
 )
 from figstudio.registry import _jsonable
 from figstudio.registry import VariableRegistry
+from figstudio.recipes import recipe_catalog
 from figstudio.render import RenderEngine
 from figstudio.selection import is_python_literal_key
 from figstudio.style_profiles import load_style_profiles, profile_map
@@ -107,6 +109,10 @@ def create_app(session: "FigStudioSession") -> FastAPI:
     @app.get("/api/style-profiles")
     def get_style_profiles() -> StyleProfilesResponse:
         return _style_profiles(session)
+
+    @app.get("/api/recipe-catalog")
+    def get_recipe_catalog() -> RecipeCatalogResponse:
+        return recipe_catalog()
 
     @app.get("/api/spec")
     def get_spec() -> FigureSpec:

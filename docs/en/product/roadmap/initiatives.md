@@ -180,7 +180,8 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Namespaced recipe IDs, reusable chart-family roles, shared role schemas, validation hooks, generated-code templates, style defaults, gallery fixtures, and import/export compatibility should exist before external or domain-specific packs. |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Bundled recipes now share `RecipeKind`, dataset-role validation, generated-code dispatch, UI selectors, tests, and gallery-backed workflows across line, categorical, and distribution-summary families. |
+| Progress | Bundled recipes now share `RecipeKind`, dataset-role validation, generated-code dispatch, UI selectors, tests, gallery-backed workflows, and a backend-owned `GET /api/recipe-catalog` contract for groups, field roles, labels, default error behavior, and default styles. |
+| Readiness | The bundled catalog establishes the internal substrate without committing to external pack files, plugin loading, or dynamic recipe kinds. |
 | Gate/Prerequisite | Bundled recipes and gallery fixtures share enough structure to avoid freezing a weak extension contract. |
 
 | Field | Value |

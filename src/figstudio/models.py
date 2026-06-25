@@ -39,6 +39,8 @@ ReferenceLineOrientation = Literal["horizontal", "vertical"]
 LayerYAxis = Literal["left", "right"]
 ValidationContext = Literal["edit", "export"]
 ExportFormat = Literal["png", "svg", "pdf"]
+RecipeDatasetField = Literal["x", "y", "group", "subject"]
+RecipeDefaultLabel = Literal["count", "y_or_variable"]
 
 
 class DataFilterSpec(BaseModel):
@@ -100,6 +102,31 @@ class LayerStyle(BaseModel):
     bins: int | None = None
     fill_alpha: float | None = None
     colorbar: bool | None = None
+
+
+class RecipeQuestionGroup(BaseModel):
+    id: str
+    label: str
+    summary: str
+
+
+class RecipeDefinition(BaseModel):
+    kind: RecipeKind
+    label: str
+    question_group_id: str
+    role: str
+    required_fields: list[RecipeDatasetField] = Field(default_factory=list)
+    optional_fields: list[RecipeDatasetField] = Field(default_factory=list)
+    uses_error: bool = True
+    default_error: Literal["sem", "sd", "none"] = "sem"
+    default_label: RecipeDefaultLabel = "y_or_variable"
+    default_style: LayerStyle = Field(default_factory=LayerStyle)
+
+
+class RecipeCatalogResponse(BaseModel):
+    version: int = 1
+    groups: list[RecipeQuestionGroup] = Field(default_factory=list)
+    recipes: list[RecipeDefinition] = Field(default_factory=list)
 
 
 class PlotLayer(BaseModel):
