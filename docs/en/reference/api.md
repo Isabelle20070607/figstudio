@@ -131,7 +131,7 @@ Current error codes are `validation_failed`, `render_failed`, `export_failed`, `
 
 Validation issue codes include `missing_style_profile`, `invalid_grid_size`, `duplicate_axes_id`, `invalid_axes_span`, `axes_out_of_bounds`, `axes_overlap`, `missing_axes`, `missing_variable`, `missing_column`, `unsupported_recipe_source`, `unsupported_filter_source`, `empty_filter_result`, `unsupported_selection_source`, `unsupported_selection_key`, `missing_selection_key`, `selection_index_out_of_range`, `unsupported_selected_channel`, `unplottable_selection_value`, `dimension_mismatch`, `requires_2d_data`, `log_scale_non_positive`, `unsupported_secondary_y_layer`, and `invalid_reference_line_value`.
 
-Export-context validation can also return advisory readiness warnings: `readiness_empty_figure`, `readiness_missing_axis_label`, `readiness_missing_secondary_y_label`, `readiness_missing_legend_labels`, and `readiness_low_png_resolution`. These warnings do not make `ValidationResponse.ok` false and do not block export unless normal validation errors are also present.
+Export-context validation can also return advisory readiness warnings: `readiness_empty_figure`, `readiness_missing_axis_label`, `readiness_missing_secondary_y_label`, `readiness_weak_panel_label`, `readiness_missing_legend_labels`, `readiness_legend_overlap_risk`, and `readiness_low_png_resolution`. These warnings do not make `ValidationResponse.ok` false and do not block export unless normal validation errors are also present.
 
 Each validation issue may include `suggestion` for UI repair guidance. `details` can include bounded context such as `available_variables`, `available_columns`, `available_axes`, `available_profiles`, and `suggested_value`; it does not include raw DataFrame contents.
 

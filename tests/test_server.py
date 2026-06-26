@@ -7,6 +7,7 @@ from figstudio.models import (
     DataSelectionSpec,
     DatasetRef,
     FigureSpec,
+    LayerStyle,
     PlotLayer,
     RecipeDatasetRef,
     RecipeLayer,
@@ -257,6 +258,62 @@ def test_export_readiness_reports_empty_figure_and_secondary_axis_label():
     assert right_axis_validation.json()["ok"] is True
     issue_codes = {issue["code"] for issue in right_axis_validation.json()["issues"]}
     assert "readiness_missing_secondary_y_label" in issue_codes
+
+
+def test_export_readiness_reports_weak_panel_labels_and_legend_overlap_risk():
+    session = FigStudioSession(registry=VariableRegistry({"values": [1, 2, 3]}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        width=4.0,
+        height=3.0,
+        dpi=300,
+        rows=1,
+        cols=2,
+        axes=[
+            AxesSpec(id="ax0", col=0, xlabel="Time", ylabel="Signal"),
+            AxesSpec(id="ax1", col=1, xlabel="Time", ylabel="Signal"),
+        ],
+        layers=[
+            *[
+                PlotLayer(
+                    id=f"condition-{index}",
+                    axes_id="ax0",
+                    kind="line",
+                    dataset=DatasetRef(variable="values"),
+                    style=LayerStyle(label=f"Condition {index}"),
+                )
+                for index in range(6)
+            ],
+            PlotLayer(
+                id="validation",
+                axes_id="ax1",
+                kind="scatter",
+                dataset=DatasetRef(variable="values"),
+                style=LayerStyle(label="Validation"),
+            ),
+        ],
+    )
+
+    validation = client.post(
+        "/api/validate",
+        json={"spec": spec.model_dump(), "context": "export", "export_format": "svg"},
+    )
+    issues = validation.json()["issues"]
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is True
+    assert all(issue["severity"] == "warning" for issue in issues)
+    panel_issues = [issue for issue in issues if issue["code"] == "readiness_weak_panel_label"]
+    assert [issue["axes_id"] for issue in panel_issues] == ["ax0", "ax1"]
+    assert all(issue["field"] == "axes.title" for issue in panel_issues)
+    legend_issue = next(
+        issue for issue in issues if issue["code"] == "readiness_legend_overlap_risk"
+    )
+    assert legend_issue["axes_id"] == "ax0"
+    assert legend_issue["field"] == "axes.legend"
+    assert legend_issue["details"]["item_count"] == 6
+    assert legend_issue["details"]["panel_area"] == 6.0
+    assert legend_issue["details"]["reasons"] == ["dense_legend_in_small_panel"]
 
 
 def test_facet_values_endpoint_returns_ordered_dataframe_values():

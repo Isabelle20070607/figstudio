@@ -129,8 +129,8 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Missing figure intent, unreadable final-size typography, non-editable vector text, weak panel labels, legend or label overlap, untraceable statistics/source data, stale spec/code sync, and recipe errors are common final-mile problems. |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | First advisory slice covers empty data-bearing figures, missing primary and secondary axis labels, missing legend labels for multi-item axes, and low-resolution PNG export settings. |
-| Readiness | Export-context advisory warnings are now proven; additional final-mile checks can layer on the same validation contract. |
+| Progress | Advisory checks now cover empty data-bearing figures, missing primary and secondary axis labels, weak multi-panel titles, missing legend labels for multi-item axes, crowded legend overlap risk in constrained panels, and low-resolution PNG export settings. |
+| Readiness | Export-context advisory warnings are now proven across content, label, legend, and PNG export settings; additional final-mile checks can layer on the same validation contract. |
 | Gate/Prerequisite | Checks are advisory and deterministic, with clear issue definitions and no hidden journal-specific or AI judgment. |
 
 | Field | Value |

@@ -36,6 +36,10 @@ MAX_REPAIR_CHOICES = 12
 PNG_READINESS_MIN_DPI = 300
 PNG_READINESS_MIN_WIDTH_PX = 1800
 PNG_READINESS_MIN_HEIGHT_PX = 1200
+LEGEND_READINESS_DENSE_ITEM_COUNT = 6
+LEGEND_READINESS_SMALL_PANEL_AREA_IN2 = 18.0
+LEGEND_READINESS_LONG_LABEL_CHARS = 32
+LEGEND_READINESS_NARROW_PANEL_WIDTH_IN = 4.0
 SECONDARY_Y_SUPPORTED_KINDS = {
     "line",
     "scatter",
@@ -296,6 +300,12 @@ def _validate_publication_readiness(
         if reference_line.axes_id in axes_by_id:
             references_by_axis.setdefault(reference_line.axes_id, []).append(reference_line)
 
+    data_axis_ids = {
+        axis_id
+        for axis_id in axes_by_id
+        if layers_by_axis.get(axis_id) or recipes_by_axis.get(axis_id)
+    }
+
     if not spec.layers and not spec.recipes:
         issues.append(
             ValidationIssue(
@@ -321,6 +331,30 @@ def _validate_publication_readiness(
         axis_recipes = recipes_by_axis.get(axis.id, [])
         if not axis_layers and not axis_recipes:
             continue
+
+        if len(data_axis_ids) > 1 and not axis.title.strip():
+            issues.append(
+                ValidationIssue(
+                    severity="warning",
+                    code="readiness_weak_panel_label",
+                    message=(
+                        f"Axes {axis.id!r} is part of a multi-panel export without "
+                        "a panel title."
+                    ),
+                    suggestion=(
+                        "Add a concise panel title or label so the exported figure can be "
+                        "referenced from captions and review comments."
+                    ),
+                    axes_id=axis.id,
+                    field="axes.title",
+                    details=_axis_layout_details(axis)
+                    | {
+                        "data_axes_count": len(data_axis_ids),
+                        "layer_ids": [layer.id for layer in axis_layers[:MAX_REPAIR_CHOICES]],
+                        "recipe_ids": [recipe.id for recipe in axis_recipes[:MAX_REPAIR_CHOICES]],
+                    },
+                )
+            )
 
         missing_fields: list[str] = []
         if not axis.xlabel.strip():
@@ -367,7 +401,7 @@ def _validate_publication_readiness(
             )
 
         legend_items = _legend_items(axis_layers, axis_recipes, references_by_axis.get(axis.id, []))
-        missing_legend_labels = [item for item in legend_items if not item["label"]]
+        missing_legend_labels = [item for item in legend_items if not _legend_label(item)]
         if axis.legend and len(legend_items) > 1 and missing_legend_labels:
             issues.append(
                 ValidationIssue(
@@ -389,6 +423,14 @@ def _validate_publication_readiness(
                         "missing_items": missing_legend_labels[:MAX_REPAIR_CHOICES],
                     },
                 )
+            )
+        elif axis.legend:
+            _validate_legend_readiness(
+                spec,
+                axis,
+                legend_items,
+                issues,
+                style_profiles,
             )
 
     if export_format == "png":
@@ -412,14 +454,97 @@ def _legend_items(
     ]
 
 
+def _legend_label(item: dict[str, str | None]) -> str:
+    return (item.get("label") or "").strip()
+
+
+def _validate_legend_readiness(
+    spec: FigureSpec,
+    axis: AxesSpec,
+    legend_items: list[dict[str, str | None]],
+    issues: list[ValidationIssue],
+    style_profiles: dict[str, StyleProfile] | None,
+) -> None:
+    labeled_items = [item for item in legend_items if _legend_label(item)]
+    if len(labeled_items) < 2:
+        return
+
+    width, height, _dpi = _resolved_figure_dimensions(spec, style_profiles)
+    panel_width, panel_height = _axis_panel_dimensions(spec, axis, width, height)
+    panel_area = panel_width * panel_height
+    long_label_items = [
+        item | {"label_length": len(_legend_label(item))}
+        for item in labeled_items
+        if len(_legend_label(item)) >= LEGEND_READINESS_LONG_LABEL_CHARS
+    ]
+    reasons: list[str] = []
+    if (
+        len(labeled_items) >= LEGEND_READINESS_DENSE_ITEM_COUNT
+        and panel_area < LEGEND_READINESS_SMALL_PANEL_AREA_IN2
+    ):
+        reasons.append("dense_legend_in_small_panel")
+    if long_label_items and panel_width < LEGEND_READINESS_NARROW_PANEL_WIDTH_IN:
+        reasons.append("long_labels_in_narrow_panel")
+    if not reasons:
+        return
+
+    issues.append(
+        ValidationIssue(
+            severity="warning",
+            code="readiness_legend_overlap_risk",
+            message=f"Axes {axis.id!r} has a legend that may overlap the plot at export size.",
+            suggestion=(
+                "Shorten legend labels, reduce legend entries, enlarge the panel, or "
+                "move the legend outside the data area before final export."
+            ),
+            axes_id=axis.id,
+            field="axes.legend",
+            details={
+                "axes_id": axis.id,
+                "item_count": len(labeled_items),
+                "panel_width": round(panel_width, 3),
+                "panel_height": round(panel_height, 3),
+                "panel_area": round(panel_area, 3),
+                "reasons": reasons,
+                "dense_item_threshold": LEGEND_READINESS_DENSE_ITEM_COUNT,
+                "small_panel_area_threshold": LEGEND_READINESS_SMALL_PANEL_AREA_IN2,
+                "long_label_char_threshold": LEGEND_READINESS_LONG_LABEL_CHARS,
+                "narrow_panel_width_threshold": LEGEND_READINESS_NARROW_PANEL_WIDTH_IN,
+                "long_label_items": long_label_items[:MAX_REPAIR_CHOICES],
+            },
+        )
+    )
+
+
+def _resolved_figure_dimensions(
+    spec: FigureSpec,
+    style_profiles: dict[str, StyleProfile] | None,
+) -> tuple[float, float, int]:
+    width = float(resolved_figure_value(spec, style_profiles, "width") or spec.width)
+    height = float(resolved_figure_value(spec, style_profiles, "height") or spec.height)
+    dpi = int(resolved_figure_value(spec, style_profiles, "dpi") or spec.dpi)
+    return width, height, dpi
+
+
+def _axis_panel_dimensions(
+    spec: FigureSpec,
+    axis: AxesSpec,
+    width: float,
+    height: float,
+) -> tuple[float, float]:
+    if spec.rows < 1 or spec.cols < 1 or axis.rowspan < 1 or axis.colspan < 1:
+        return width, height
+    row_span = min(axis.rowspan, spec.rows)
+    col_span = min(axis.colspan, spec.cols)
+    return width * col_span / spec.cols, height * row_span / spec.rows
+
+
 def _validate_png_readiness(
     spec: FigureSpec,
     issues: list[ValidationIssue],
     style_profiles: dict[str, StyleProfile] | None,
 ) -> None:
-    width = float(resolved_figure_value(spec, style_profiles, "width") or spec.width)
-    height = float(resolved_figure_value(spec, style_profiles, "height") or spec.height)
-    dpi = int(resolved_figure_value(spec, style_profiles, "dpi") or spec.dpi)
+    width, height, dpi = _resolved_figure_dimensions(spec, style_profiles)
     pixel_width = int(round(width * dpi))
     pixel_height = int(round(height * dpi))
     if (

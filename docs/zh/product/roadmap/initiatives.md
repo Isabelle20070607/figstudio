@@ -129,8 +129,8 @@
 | Why it matters | 缺少 figure intent、final-size typography 不可读、vector text 不可编辑、panel labels 薄弱、legend 或 label overlap、statistics/source data 不可追踪、spec/code sync 过期和 recipe errors 都是常见最后一公里问题。 |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | 第一个 advisory slice 覆盖没有 data-bearing 图层或 recipe、缺少 primary/secondary axis labels、multi-item axes 缺少 legend labels，以及 PNG export 分辨率偏低。 |
-| Readiness | Export-context advisory warnings 已经验证；后续 final-mile checks 可以复用同一 validation contract。 |
+| Progress | Advisory checks 现在覆盖没有 data-bearing 图层或 recipe、缺少 primary/secondary axis labels、multi-panel titles 薄弱、multi-item axes 缺少 legend labels、受限 panel 中 crowded legend 的 overlap risk，以及 PNG export 分辨率偏低。 |
+| Readiness | Export-context advisory warnings 已经在 content、label、legend 和 PNG export settings 上验证；后续 final-mile checks 可以复用同一 validation contract。 |
 | Gate/Prerequisite | Checks 是 advisory 且 deterministic，并有清楚的 issue definitions，不引入隐藏的 journal-specific 或 AI judgment。 |
 
 | Field | Value |

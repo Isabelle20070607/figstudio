@@ -131,7 +131,7 @@ HTTP errors 使用：
 
 Validation issue codes 包括 `missing_style_profile`、`invalid_grid_size`、`duplicate_axes_id`、`invalid_axes_span`、`axes_out_of_bounds`、`axes_overlap`、`missing_axes`、`missing_variable`、`missing_column`、`unsupported_recipe_source`、`unsupported_filter_source`、`empty_filter_result`、`unsupported_selection_source`、`unsupported_selection_key`、`missing_selection_key`、`selection_index_out_of_range`、`unsupported_selected_channel`、`unplottable_selection_value`、`dimension_mismatch`、`requires_2d_data`、`log_scale_non_positive`、`unsupported_secondary_y_layer` 和 `invalid_reference_line_value`。
 
-Export context validation 还可能返回 advisory readiness warnings：`readiness_empty_figure`、`readiness_missing_axis_label`、`readiness_missing_secondary_y_label`、`readiness_missing_legend_labels` 和 `readiness_low_png_resolution`。这些 warning 不会让 `ValidationResponse.ok` 变成 false；除非同时存在普通 validation errors，否则不会阻止 export。
+Export context validation 还可能返回 advisory readiness warnings：`readiness_empty_figure`、`readiness_missing_axis_label`、`readiness_missing_secondary_y_label`、`readiness_weak_panel_label`、`readiness_missing_legend_labels`、`readiness_legend_overlap_risk` 和 `readiness_low_png_resolution`。这些 warning 不会让 `ValidationResponse.ok` 变成 false；除非同时存在普通 validation errors，否则不会阻止 export。
 
 每个 validation issue 可能包含用于 UI repair guidance 的 `suggestion`。`details` 可以包含有界上下文，例如 `available_variables`、`available_columns`、`available_axes`、`available_profiles` 和 `suggested_value`；不会包含原始 DataFrame contents。
 
