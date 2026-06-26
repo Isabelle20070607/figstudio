@@ -207,3 +207,28 @@ def test_render_svg_from_violin_by_category_recipe():
 
     assert "<svg" in svg
     assert "axes_flat[0].violinplot(_recipe_recipe_1_group_values" in code
+
+
+def test_render_svg_from_ecdf_recipe():
+    df = pd.DataFrame(
+        {
+            "condition": ["control", "control", "drug", "drug", "drug"],
+            "response": [1.0, 0.8, 1.4, 1.1, 1.6],
+        }
+    )
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="ecdf",
+                dataset=RecipeDatasetRef(variable="df", x="response", group="condition"),
+                error="none",
+            )
+        ]
+    )
+
+    svg, code = RenderEngine({"df": df}).render_base64(spec, "svg")
+
+    assert "<svg" in svg
+    assert "dropna().sort_values().reset_index(drop=True)" in code
+    assert "axes_flat[0].step(_recipe_recipe_1_values, _recipe_recipe_1_y, where='post'" in code

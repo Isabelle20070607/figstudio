@@ -555,3 +555,29 @@ def test_generates_paired_before_after_recipe_code():
     assert "groupby('condition', sort=False)['response'].mean().reindex" in code
     assert "axes_flat[0].plot(_recipe_recipe_1_x, _recipe_recipe_1_paired.tolist()" in code
     assert "axes_flat[0].errorbar(_recipe_recipe_1_x, _recipe_recipe_1_summary['mean']" in code
+
+
+def test_generates_ecdf_recipe_code():
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="ecdf",
+                dataset=RecipeDatasetRef(variable="df", x="response", group="condition"),
+                style=LayerStyle(label="Response", color="#2563eb"),
+                error="none",
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "_recipe_recipe_1_groups = list(dict.fromkeys" in code
+    assert (
+        "_recipe_recipe_1_values = "
+        "_recipe_recipe_1_group_df['response'].dropna().sort_values().reset_index(drop=True)"
+        in code
+    )
+    assert "_recipe_recipe_1_y = [(index + 1) / len(_recipe_recipe_1_values)" in code
+    assert "axes_flat[0].step(_recipe_recipe_1_values, _recipe_recipe_1_y, where='post'" in code
+    assert "label=f'Response {_recipe_recipe_1_group}'" in code

@@ -20,7 +20,8 @@ export type RecipeKind =
   | "boxplot_by_category"
   | "violin_by_category"
   | "grouped_points"
-  | "paired_before_after";
+  | "paired_before_after"
+  | "ecdf";
 
 export type FigurePreset = "custom" | "journal_single" | "journal_double" | "poster" | "slide";
 
@@ -29,7 +30,7 @@ export type LayerYAxis = "left" | "right";
 export type ValidationContext = "edit" | "export";
 export type ExportFormat = "png" | "svg" | "pdf";
 export type RecipeDatasetField = "x" | "y" | "group" | "subject";
-export type RecipeDefaultLabel = "count" | "y_or_variable";
+export type RecipeDefaultLabel = "count" | "x_or_variable" | "y_or_variable";
 
 export interface DataFilterSpec {
   column: string;

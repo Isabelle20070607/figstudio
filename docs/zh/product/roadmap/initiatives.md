@@ -69,7 +69,8 @@
 | Why it matters | 这些补齐 exploratory 和 manuscript figures 中高价值的可复现 Matplotlib workflows。 |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
-| Readiness | 现有 recipe dispatch、dataset-role validation 和 generated-code templates 降低了实现风险；下一步风险在 fitted trends、bands、binning 和 matrix controls 的统计语义。 |
+| Progress | `ecdf` 现在作为第一个完成的 distribution-recipe slice，覆盖了带可选分组的 empirical distribution inspection。 |
+| Readiness | 现有 recipe dispatch、dataset-role validation 和 generated-code templates 降低了实现风险；剩余风险在 fitted trends、bands、binning、hexbin summaries 和 matrix controls 的统计语义。 |
 | Gate/Prerequisite | 随着 recipe 复杂度增长，generated-code templates 和 recipe validation 仍然可读。 |
 
 | Field | Value |
@@ -119,7 +120,7 @@
 | Why it matters | 用户需要接近真实生产场景的证据，展示 plot layers、statistics recipes、existing Figure inspection、notebook-style output 和 package install flows 如何从 source data 走到可见 preview 与 export artifacts。 |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | 已提交 gallery workflows 现在覆盖 DataFrame facet recipes、category boxplot 和 violin distributions、stacked categorical composition、secondary-axis overlays、GridSpec spans、reference lines、annotations、reusable specs 和 SVG preview assets。 |
+| Progress | 已提交 gallery workflows 现在覆盖 DataFrame facet recipes、category boxplot 和 violin distributions、ECDF distributions、stacked categorical composition、secondary-axis overlays、GridSpec spans、reference lines、annotations、reusable specs 和 SVG preview assets。 |
 | Gate/Prerequisite | 每个例子展示 input data、user intent 或 figure contract、preview screenshot、generated Matplotlib code、FigureSpec/export artifact，以及它证明的 publication workflow。 |
 
 | Field | Value |
@@ -180,7 +181,7 @@
 | Why it matters | Namespaced recipe IDs、reusable chart-family roles、shared role schemas、validation hooks、generated-code templates、style defaults、gallery fixtures 和 import/export compatibility 应该在外部或领域专用 packs 前存在。 |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Bundled recipes 现在在 line、categorical 和 distribution-summary families 上共享 `RecipeKind`、dataset-role validation、generated-code dispatch、UI selectors、tests、gallery-backed workflows，以及后端拥有的 `GET /api/recipe-catalog` contract，用于描述 groups、field roles、labels、默认 error 行为和默认 styles。 |
+| Progress | Bundled line、categorical、distribution-inspection、distribution-summary 和 paired-observation recipes 现在共享 `RecipeKind`、dataset-role validation、generated-code dispatch、UI selectors、tests、gallery-backed workflows，以及后端拥有的 `GET /api/recipe-catalog` contract，用于描述 groups、field roles、labels、默认 error 行为和默认 styles。 |
 | Readiness | Bundled catalog 建立了内部 substrate，但还不承诺外部 pack files、plugin loading 或 dynamic recipe kinds。 |
 | Gate/Prerequisite | Bundled recipes 和 gallery fixtures 有足够共享结构，避免过早冻结脆弱 extension contract。 |
 

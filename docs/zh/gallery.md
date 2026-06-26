@@ -54,6 +54,17 @@ uv run python examples/gallery/faceted_dose_response.py
 | Data shape | Synthetic response DataFrame，包含 `condition`、`genotype`、`replicate` 和 `response` columns |
 | Figure contract | 一个 recipe 按 condition 和 genotype 对 live `df` values 分组，按 group 偏移 Matplotlib violins，并让 generated code 不依赖 FigStudio |
 
+## ECDF Response Distribution
+
+![ECDF response distribution](../assets/gallery/ecdf-response-distribution.svg)
+
+| 项目 | 说明 |
+| --- | --- |
+| Files | [script](../../examples/gallery/ecdf_response_distribution.py), [spec](../../examples/gallery/ecdf_response_distribution.figstudio.json) |
+| Demonstrates | `ecdf` recipes、grouped empirical cumulative distributions、publish-mode labels、SVG export readiness checks |
+| Data shape | Synthetic response latency DataFrame，包含 `cohort`、`sample_id` 和 `latency_ms` columns |
+| Figure contract | 一个 recipe 在每个 cohort 内排序 live `df` values，绘制 Matplotlib step ECDF curves，并让 generated code 不依赖 FigStudio |
+
 ## Secondary-Axis Timecourse
 
 ![Secondary-axis timecourse](../assets/gallery/secondary-axis-timecourse.svg)

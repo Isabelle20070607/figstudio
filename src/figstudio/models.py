@@ -31,6 +31,7 @@ RecipeKind = Literal[
     "violin_by_category",
     "grouped_points",
     "paired_before_after",
+    "ecdf",
 ]
 
 FigurePreset = Literal["custom", "journal_single", "journal_double", "poster", "slide"]
@@ -40,7 +41,7 @@ LayerYAxis = Literal["left", "right"]
 ValidationContext = Literal["edit", "export"]
 ExportFormat = Literal["png", "svg", "pdf"]
 RecipeDatasetField = Literal["x", "y", "group", "subject"]
-RecipeDefaultLabel = Literal["count", "y_or_variable"]
+RecipeDefaultLabel = Literal["count", "x_or_variable", "y_or_variable"]
 
 
 class DataFilterSpec(BaseModel):

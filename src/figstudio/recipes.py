@@ -28,6 +28,11 @@ _RECIPE_GROUPS = [
         summary="Compare measured values across experimental conditions or cohorts.",
     ),
     RecipeQuestionGroup(
+        id="distribution-inspection",
+        label="Distribution inspection",
+        summary="Review empirical distributions and their group-level differences.",
+    ),
+    RecipeQuestionGroup(
         id="categorical-counts",
         label="Categorical counts/composition",
         summary="Count observations or compare category composition.",
@@ -118,6 +123,18 @@ _RECIPE_DEFINITIONS = [
         role="Connects repeated observations by subject and overlays condition means.",
         required_fields=["x", "y", "subject"],
         default_style=LayerStyle(color="#2563eb", marker="o", linewidth=1.8),
+    ),
+    RecipeDefinition(
+        kind="ecdf",
+        label="ECDF",
+        question_group_id="distribution-inspection",
+        role="Plots the empirical cumulative distribution of a value column with optional groups.",
+        required_fields=["x"],
+        optional_fields=["group"],
+        uses_error=False,
+        default_error="none",
+        default_label="x_or_variable",
+        default_style=LayerStyle(color="#2563eb", linestyle="-", linewidth=1.8),
     ),
 ]
 

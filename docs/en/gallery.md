@@ -54,6 +54,17 @@ The companion specs are portable FigStudio state. They store variable names, col
 | Data shape | Synthetic response DataFrame with `condition`, `genotype`, `replicate`, and `response` columns |
 | Figure contract | One recipe groups live `df` values by condition and genotype, offsets Matplotlib violins by group, and keeps the generated code independent of FigStudio |
 
+## ECDF Response Distribution
+
+![ECDF response distribution](../assets/gallery/ecdf-response-distribution.svg)
+
+| Item | Details |
+| --- | --- |
+| Files | [script](../../examples/gallery/ecdf_response_distribution.py), [spec](../../examples/gallery/ecdf_response_distribution.figstudio.json) |
+| Demonstrates | `ecdf` recipes, grouped empirical cumulative distributions, publish-mode labels, SVG export readiness checks |
+| Data shape | Synthetic response latency DataFrame with `cohort`, `sample_id`, and `latency_ms` columns |
+| Figure contract | One recipe sorts live `df` values by latency within each cohort, draws Matplotlib step ECDF curves, and keeps generated code independent of FigStudio |
+
 ## Secondary-Axis Timecourse
 
 ![Secondary-axis timecourse](../assets/gallery/secondary-axis-timecourse.svg)

@@ -43,6 +43,7 @@ df = pd.DataFrame(rows)
 # - violin_by_category: x=condition, y=endpoint
 # - grouped_points: x=condition, y=endpoint
 # - paired_before_after: x=condition, y=endpoint, subject=subject
+# - ecdf: x=endpoint, group=condition
 figstudio.open(locals(), script_path=__file__, block_id="general_stats")
 
 # figstudio:start general_stats

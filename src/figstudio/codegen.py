@@ -336,6 +336,8 @@ class MatplotlibCodegen:
             return self._grouped_points_code(recipe, style, axis_index)
         if recipe.kind == "paired_before_after":
             return self._paired_before_after_code(recipe, style, axis_index)
+        if recipe.kind == "ecdf":
+            return self._ecdf_code(recipe, style, axis_index)
         raise ValueError(f"Unsupported recipe kind: {recipe.kind}")
 
     def _recipe_has_legend_entries(self, recipe: RecipeLayer, style: LayerStyle) -> bool:
@@ -351,6 +353,7 @@ class MatplotlibCodegen:
                 "stacked_bar",
                 "boxplot_by_category",
                 "violin_by_category",
+                "ecdf",
             }
         )
 
@@ -384,9 +387,15 @@ class MatplotlibCodegen:
         if data.group:
             lines.extend(
                 [
-                    f"{prefix}_groups = list(dict.fromkeys({prefix}_df[{data.group!r}].dropna().tolist()))",
+                    (
+                        f"{prefix}_groups = list(dict.fromkeys("
+                        f"{prefix}_df[{data.group!r}].dropna().tolist()))"
+                    ),
                     f"for {prefix}_group in {prefix}_groups:",
-                    f"    {prefix}_group_df = {prefix}_df[{prefix}_df[{data.group!r}] == {prefix}_group]",
+                    (
+                        f"    {prefix}_group_df = {prefix}_df["
+                        f"{prefix}_df[{data.group!r}] == {prefix}_group]"
+                    ),
                     (
                         f"    {prefix}_summary = {prefix}_group_df.groupby({data.x!r}, sort=False)"
                         f"[{data.y!r}].agg({agg}).reindex({prefix}_x_order)"
@@ -884,6 +893,63 @@ class MatplotlibCodegen:
             f"{ax}.set_xticks({prefix}_x)",
             f"{ax}.set_xticklabels([str(value) for value in {prefix}_order])",
         ]
+        return [line.replace(", )", ")").replace("(, ", "(") for line in lines]
+
+    def _ecdf_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:
+        data = recipe.dataset
+        var = _safe_var(data.variable)
+        prefix = self._recipe_prefix(recipe)
+        ax = f"axes_flat[{axis_index}]"
+        kwargs = self._recipe_line_kwargs(style)
+
+        lines = [
+            f"{prefix}_df = {var}",
+        ]
+        if data.group:
+            lines.extend(
+                [
+                    (
+                        f"{prefix}_groups = list(dict.fromkeys("
+                        f"{prefix}_df[{data.group!r}].dropna().tolist()))"
+                    ),
+                    f"for {prefix}_group in {prefix}_groups:",
+                    (
+                        f"    {prefix}_group_df = {prefix}_df["
+                        f"{prefix}_df[{data.group!r}] == {prefix}_group]"
+                    ),
+                    (
+                        f"    {prefix}_values = {prefix}_group_df[{data.x!r}]"
+                        ".dropna().sort_values().reset_index(drop=True)"
+                    ),
+                    f"    if len({prefix}_values):",
+                    (
+                        f"        {prefix}_y = [(index + 1) / len({prefix}_values) "
+                        f"for index in range(len({prefix}_values))]"
+                    ),
+                    (
+                        f"        {ax}.step({prefix}_values, {prefix}_y, where='post', "
+                        f"label=f'{style.label or data.x} {{{prefix}_group}}', {kwargs})"
+                    ),
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    (
+                        f"{prefix}_values = {prefix}_df[{data.x!r}]"
+                        ".dropna().sort_values().reset_index(drop=True)"
+                    ),
+                    f"if len({prefix}_values):",
+                    (
+                        f"    {prefix}_y = [(index + 1) / len({prefix}_values) "
+                        f"for index in range(len({prefix}_values))]"
+                    ),
+                    (
+                        f"    {ax}.step({prefix}_values, {prefix}_y, where='post', "
+                        f"{_kwargs(label=style.label, **self._line_style(style))})"
+                    ),
+                ]
+            )
         return [line.replace(", )", ")").replace("(, ", "(") for line in lines]
 
     def _recipe_prefix(self, recipe: RecipeLayer) -> str:

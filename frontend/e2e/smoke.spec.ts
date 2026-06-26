@@ -104,6 +104,7 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await expect(recipeSelect.locator('optgroup[label="Group/condition comparison"]')).toContainText("Grouped points");
   await expect(recipeSelect.locator('optgroup[label="Group/condition comparison"]')).toContainText("Category boxplots");
   await expect(recipeSelect.locator('optgroup[label="Group/condition comparison"]')).toContainText("Category violins");
+  await expect(recipeSelect.locator('optgroup[label="Distribution inspection"]')).toContainText("ECDF");
   await expect(recipeSelect.locator('optgroup[label="Categorical counts/composition"]')).toContainText("Stacked count bars");
   await expect(recipeSelect.locator('optgroup[label="Paired observations"]')).toContainText("Paired before/after");
   await expect(page.getByTestId("recipe-question-note")).toContainText("Time-course comparison");
@@ -145,6 +146,15 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await page.getByTestId("add-recipe-button").click();
   await expect(page.locator('[data-testid="layer-row"]').filter({ hasText: "recipe · violin_by_category" })).toBeVisible();
   await expect(page.getByTestId("code-panel")).toContainText(".violinplot(");
+  await page.getByTestId("recipe-kind-select").selectOption("ecdf");
+  await expect(page.getByTestId("recipe-question-note")).toContainText("Distribution inspection");
+  await page.getByTestId("recipe-x-column-select").selectOption("signal");
+  await expect(page.getByTestId("recipe-y-column-select")).toHaveCount(0);
+  await expect(page.getByTestId("recipe-error-select")).toHaveCount(0);
+  await page.getByTestId("recipe-group-column-select").selectOption("condition");
+  await page.getByTestId("add-recipe-button").click();
+  await expect(page.locator('[data-testid="layer-row"]').filter({ hasText: "recipe · ecdf" })).toBeVisible();
+  await expect(page.getByTestId("code-panel")).toContainText(".step(");
   await page.getByTestId("facet-column-select").selectOption("condition");
   await page.getByTestId("facet-share-y-field-input").check();
   await page.getByTestId("create-facet-panels-button").click();
@@ -210,6 +220,12 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   expect(violinRecipe).toBeTruthy();
   expect(violinRecipe.dataset.y).toBeTruthy();
   expect(violinRecipe.error).toBe("none");
+  const ecdfRecipe = exportedSpec.recipes.find((recipe: any) => recipe.kind === "ecdf");
+  expect(ecdfRecipe).toBeTruthy();
+  expect(ecdfRecipe.dataset.x).toBe("signal");
+  expect(ecdfRecipe.dataset.y).toBeNull();
+  expect(ecdfRecipe.dataset.group).toBe("condition");
+  expect(ecdfRecipe.error).toBe("none");
   await page.getByTestId("import-spec-input").setInputFiles(exportedSpecPath);
   await expect(page.getByTestId("style-profile-field-select")).toHaveValue("manuscript");
   await expect(page.getByTestId("layout-preset-field-select")).toHaveValue("large_left");

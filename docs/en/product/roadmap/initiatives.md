@@ -69,7 +69,8 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | These fill high-value reproducible Matplotlib workflows for exploratory and manuscript figures. |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
-| Readiness | Existing recipe dispatch, dataset-role validation, and generated-code templates reduce implementation risk; the next risks are statistical semantics for fitted trends, bands, binning, and matrix controls. |
+| Progress | `ecdf` now covers empirical distribution inspection with optional grouping as the first completed distribution-recipe slice. |
+| Readiness | Existing recipe dispatch, dataset-role validation, and generated-code templates reduce implementation risk; the remaining risks are statistical semantics for fitted trends, bands, binning, hexbin summaries, and matrix controls. |
 | Gate/Prerequisite | Generated-code templates and recipe validation remain understandable as recipe complexity grows. |
 
 | Field | Value |
@@ -119,7 +120,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Users need production-like proof of plot layers, statistics recipes, existing Figure inspection, notebook-style output, and package install flows from source data through visible preview and export artifacts. |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Checked-in gallery workflows now cover DataFrame facet recipes, category boxplot and violin distributions, stacked categorical composition, secondary-axis overlays, GridSpec spans, reference lines, annotations, reusable specs, and SVG preview assets. |
+| Progress | Checked-in gallery workflows now cover DataFrame facet recipes, category boxplot and violin distributions, ECDF distributions, stacked categorical composition, secondary-axis overlays, GridSpec spans, reference lines, annotations, reusable specs, and SVG preview assets. |
 | Gate/Prerequisite | Each example shows input data, user intent or figure contract, preview screenshot, generated Matplotlib code, FigureSpec/export artifact, and the publication workflow it demonstrates. |
 
 | Field | Value |
@@ -180,7 +181,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Namespaced recipe IDs, reusable chart-family roles, shared role schemas, validation hooks, generated-code templates, style defaults, gallery fixtures, and import/export compatibility should exist before external or domain-specific packs. |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Bundled recipes now share `RecipeKind`, dataset-role validation, generated-code dispatch, UI selectors, tests, gallery-backed workflows, and a backend-owned `GET /api/recipe-catalog` contract for groups, field roles, labels, default error behavior, and default styles. |
+| Progress | Bundled line, categorical, distribution-inspection, distribution-summary, and paired-observation recipes now share `RecipeKind`, dataset-role validation, generated-code dispatch, UI selectors, tests, gallery-backed workflows, and a backend-owned `GET /api/recipe-catalog` contract for groups, field roles, labels, default error behavior, and default styles. |
 | Readiness | The bundled catalog establishes the internal substrate without committing to external pack files, plugin loading, or dynamic recipe kinds. |
 | Gate/Prerequisite | Bundled recipes and gallery fixtures share enough structure to avoid freezing a weak extension contract. |
 

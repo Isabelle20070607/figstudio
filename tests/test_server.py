@@ -891,6 +891,40 @@ def test_violin_by_category_recipe_api_smoke_workflow():
     assert "axes_flat[0].violinplot(_recipe_recipe_1_group_values" in rendered.json()["code"]
 
 
+def test_ecdf_recipe_api_smoke_workflow():
+    df = pd.DataFrame(
+        {
+            "condition": ["control", "control", "drug", "drug", "drug"],
+            "response": [1.0, 0.8, 1.4, 1.1, 1.6],
+        }
+    )
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        axes=[AxesSpec(id="ax0", xlabel="Response", ylabel="Cumulative fraction")],
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="ecdf",
+                dataset=RecipeDatasetRef(variable="df", x="response", group="condition"),
+                error="none",
+            )
+        ],
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    rendered = client.post("/api/render", json={"spec": spec.model_dump(), "format": "svg"})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is True
+    assert rendered.status_code == 200
+    assert "<svg" in rendered.json()["image"]
+    assert (
+        "axes_flat[0].step(_recipe_recipe_1_values, _recipe_recipe_1_y, where='post'"
+        in rendered.json()["code"]
+    )
+
+
 def test_recipe_validation_reports_non_dataframe_source():
     session = FigStudioSession(registry=VariableRegistry({"values": [1, 2, 3]}), port=8001)
     client = TestClient(create_app(session))
@@ -1094,3 +1128,65 @@ def test_violin_by_category_validation_requires_y_and_ignores_subject_and_error(
     assert missing_y.status_code == 200
     assert missing_y.json()["ok"] is False
     assert missing_y.json()["issues"][0]["field"] == "dataset.y"
+
+
+def test_ecdf_validation_requires_x_accepts_group_and_ignores_y_subject_and_error():
+    df = pd.DataFrame(
+        {
+            "condition": ["control", "drug"],
+            "response": [1.0, 2.0],
+            "subject": ["s1", "s2"],
+        }
+    )
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8001)
+    client = TestClient(create_app(session))
+
+    valid_spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="ecdf-ok",
+                kind="ecdf",
+                dataset=RecipeDatasetRef(
+                    variable="df",
+                    x="response",
+                    y="missing_y",
+                    group="condition",
+                    subject="missing_subject",
+                ),
+                error="sd",
+            )
+        ]
+    )
+    missing_x_spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="ecdf-missing-x",
+                kind="ecdf",
+                dataset=RecipeDatasetRef(variable="df", group="condition"),
+                error="none",
+            )
+        ]
+    )
+    missing_group_spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="ecdf-missing-group",
+                kind="ecdf",
+                dataset=RecipeDatasetRef(variable="df", x="response", group="missing_group"),
+                error="none",
+            )
+        ]
+    )
+
+    valid = client.post("/api/validate", json={"spec": valid_spec.model_dump()})
+    missing_x = client.post("/api/validate", json={"spec": missing_x_spec.model_dump()})
+    missing_group = client.post("/api/validate", json={"spec": missing_group_spec.model_dump()})
+
+    assert valid.status_code == 200
+    assert valid.json()["ok"] is True
+    assert missing_x.status_code == 200
+    assert missing_x.json()["ok"] is False
+    assert missing_x.json()["issues"][0]["field"] == "dataset.x"
+    assert missing_group.status_code == 200
+    assert missing_group.json()["ok"] is False
+    assert missing_group.json()["issues"][0]["field"] == "dataset.group"

@@ -145,10 +145,17 @@ function recipeDefaultLabel(
   recipeCatalog: RecipeCatalogResponse,
   kind: RecipeKind,
   variable: VariableSummary,
+  xColumn: string,
   yColumn: string
 ) {
   const definition = recipeDefinition(recipeCatalog, kind);
-  return definition?.default_label === "count" ? "Count" : yColumn || variable.name;
+  if (definition?.default_label === "count") {
+    return "Count";
+  }
+  if (definition?.default_label === "x_or_variable") {
+    return xColumn || variable.name;
+  }
+  return yColumn || variable.name;
 }
 
 function recipeDefaultStyle(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind): LayerStyle {
@@ -827,7 +834,7 @@ function createRecipe({
     },
     style: {
       ...defaultStyle,
-      label: recipeDefaultLabel(recipeCatalog, kind, variable, yColumn)
+      label: recipeDefaultLabel(recipeCatalog, kind, variable, xColumn, yColumn)
     },
     error: recipeUsesError(recipeCatalog, kind) ? error : recipeDefaultError(recipeCatalog, kind),
     readonly: false,

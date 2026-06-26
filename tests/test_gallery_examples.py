@@ -15,11 +15,13 @@ GALLERY_ASSET_DIR = Path(__file__).resolve().parents[1] / "docs" / "assets" / "g
 BOXPLOT_WORKFLOW = "category_boxplot_response"
 VIOLIN_WORKFLOW = "category_violin_response"
 STACKED_BAR_WORKFLOW = "stacked_bar_sample_composition"
+ECDF_WORKFLOW = "ecdf_response_distribution"
 PREVIEW_ASSETS = {
     "faceted_dose_response": "faceted-dose-response.svg",
     BOXPLOT_WORKFLOW: "category-boxplot-response.svg",
     VIOLIN_WORKFLOW: "category-violin-response.svg",
     STACKED_BAR_WORKFLOW: "stacked-bar-sample-composition.svg",
+    ECDF_WORKFLOW: "ecdf-response-distribution.svg",
     "secondary_axis_timecourse": "secondary-axis-timecourse.svg",
     "spanned_layout_signal_map": "spanned-layout-signal-map.svg",
 }
@@ -112,3 +114,22 @@ def test_violin_gallery_workflow_is_svg_export_ready():
     code = MatplotlibCodegen().generate(spec)
     assert "axes_flat[0].violinplot(_recipe_condition_response_violin_group_values" in code
     assert "label=f'Response {_recipe_condition_response_violin_group}'" in code
+
+
+def test_ecdf_gallery_workflow_is_svg_export_ready():
+    module = _load_example_module(ECDF_WORKFLOW)
+    spec = figstudio.load_spec(GALLERY_DIR / f"{ECDF_WORKFLOW}.figstudio.json")
+
+    response = validate_figure_spec(_namespace(module), spec, context="export", export_format="svg")
+    assert response.ok, _issue_summary(response)
+    readiness_issues = [issue for issue in response.issues if issue.code.startswith("readiness_")]
+    assert readiness_issues == [], _issue_summary(response)
+
+    code = MatplotlibCodegen().generate(spec)
+    assert (
+        "_recipe_latency_ecdf_values = "
+        "_recipe_latency_ecdf_group_df['latency_ms'].dropna().sort_values().reset_index(drop=True)"
+        in code
+    )
+    assert "axes_flat[0].step(_recipe_latency_ecdf_values, _recipe_latency_ecdf_y, where='post'" in code
+    assert "label=f'Latency {_recipe_latency_ecdf_group}'" in code

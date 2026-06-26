@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "mode": "publish",
+  "width": 5.4,
+  "height": 3.4,
+  "dpi": 300,
+  "rows": 1,
+  "cols": 1,
+  "axes": [
+    {
+      "id": "ax0",
+      "row": 0,
+      "col": 0,
+      "title": "Response latency distributions",
+      "xlabel": "Latency (ms)",
+      "ylabel": "Empirical cumulative fraction",
+      "xlim": [
+        60,
+        165
+      ],
+      "ylim": [
+        0,
+        1.05
+      ],
+      "grid": true,
+      "legend": true
+    }
+  ],
+  "layers": [],
+  "recipes": [
+    {
+      "id": "latency-ecdf",
+      "kind": "ecdf",
+      "axes_id": "ax0",
+      "dataset": {
+        "variable": "df",
+        "x": "latency_ms",
+        "group": "cohort"
+      },
+      "style": {
+        "label": "Latency",
+        "linestyle": "-",
+        "linewidth": 1.8
+      },
+      "error": "none"
+    }
+  ],
+  "reference_lines": [],
+  "annotations": [],
+  "style": {
+    "preset": "journal_double",
+    "title": "",
+    "font_family": "Arial",
+    "font_size": 8,
+    "constrained_layout": true
+  },
+  "show": false
+}

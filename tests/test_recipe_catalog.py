@@ -19,7 +19,7 @@ def test_bundled_recipe_catalog_covers_recipe_kind_contract():
     catalog = recipe_catalog()
 
     assert catalog.version == 1
-    assert len(catalog.groups) == 4
+    assert len(catalog.groups) == 5
     assert {recipe.kind for recipe in catalog.recipes} == set(get_args(RecipeKind))
     assert {recipe.question_group_id for recipe in catalog.recipes} <= {group.id for group in catalog.groups}
 
@@ -33,7 +33,7 @@ def test_recipe_catalog_api_exposes_field_metadata():
     assert response.status_code == 200
     payload = response.json()
     assert payload["version"] == 1
-    assert len(payload["groups"]) == 4
+    assert len(payload["groups"]) == 5
     assert {recipe["kind"] for recipe in payload["recipes"]} == set(get_args(RecipeKind))
 
     stacked = _recipe(payload, "stacked_bar")
@@ -59,3 +59,11 @@ def test_recipe_catalog_api_exposes_field_metadata():
     assert violin["optional_fields"] == ["group"]
     assert violin["uses_error"] is False
     assert violin["default_style"]["linewidth"] == 1.1
+
+    ecdf = _recipe(payload, "ecdf")
+    assert ecdf["question_group_id"] == "distribution-inspection"
+    assert ecdf["required_fields"] == ["x"]
+    assert ecdf["optional_fields"] == ["group"]
+    assert ecdf["uses_error"] is False
+    assert ecdf["default_error"] == "none"
+    assert ecdf["default_label"] == "x_or_variable"
