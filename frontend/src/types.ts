@@ -29,6 +29,7 @@ export type ReferenceLineOrientation = "horizontal" | "vertical";
 export type LayerYAxis = "left" | "right";
 export type ValidationContext = "edit" | "export";
 export type ExportFormat = "png" | "svg" | "pdf";
+export type LayerDatasetField = "x" | "y" | "z" | "yerr";
 export type RecipeDatasetField = "x" | "y" | "group" | "subject";
 export type RecipeDefaultLabel = "count" | "x_or_variable" | "y_or_variable";
 
@@ -99,6 +100,27 @@ export interface RecipeQuestionGroup {
   summary: string;
 }
 
+export interface LayerQuestionGroup {
+  id: string;
+  label: string;
+  summary: string;
+}
+
+export interface LayerDefinition {
+  kind: PlotKind;
+  label: string;
+  group_id: string;
+  role: string;
+  required_fields: LayerDatasetField[];
+  optional_fields: LayerDatasetField[];
+  ignores_x: boolean;
+  expects_2d: boolean;
+  supports_secondary_y: boolean;
+  supports_colorbar: boolean;
+  legend_policy: "style_label" | "none";
+  default_style: LayerStyle;
+}
+
 export interface RecipeDefinition {
   kind: RecipeKind;
   label: string;
@@ -109,7 +131,14 @@ export interface RecipeDefinition {
   uses_error: boolean;
   default_error: "sem" | "sd" | "none";
   default_label: RecipeDefaultLabel;
+  legend_group_field?: RecipeDatasetField | null;
   default_style: LayerStyle;
+}
+
+export interface LayerCatalogResponse {
+  version: number;
+  groups: LayerQuestionGroup[];
+  layers: LayerDefinition[];
 }
 
 export interface RecipeCatalogResponse {

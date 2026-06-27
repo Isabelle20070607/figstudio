@@ -1,3 +1,5 @@
+import pytest
+
 from figstudio.codegen import MatplotlibCodegen
 from figstudio.models import (
     AxesSpec,
@@ -12,6 +14,32 @@ from figstudio.models import (
     ReferenceLineSpec,
     SecondaryYAxisSpec,
 )
+
+
+@pytest.mark.parametrize(
+    ("kind", "dataset", "expected"),
+    [
+        ("line", DatasetRef(variable="values"), ".plot("),
+        ("scatter", DatasetRef(variable="values"), ".scatter("),
+        ("bar", DatasetRef(variable="values"), ".bar("),
+        ("barh", DatasetRef(variable="values"), ".barh("),
+        ("hist", DatasetRef(variable="values"), ".hist("),
+        ("boxplot", DatasetRef(variable="values"), ".boxplot("),
+        ("violin", DatasetRef(variable="values"), ".violinplot("),
+        ("errorbar", DatasetRef(variable="values", yerr_variable="errors"), ".errorbar("),
+        ("heatmap", DatasetRef(variable="matrix"), ".imshow("),
+        ("contour", DatasetRef(variable="matrix"), ".contour("),
+        ("step", DatasetRef(variable="values"), ".step("),
+        ("fill_between", DatasetRef(variable="values"), ".fill_between("),
+    ],
+)
+def test_layer_registry_dispatches_each_plot_kind(kind, dataset, expected):
+    spec = FigureSpec(layers=[PlotLayer(id=f"{kind}-layer", kind=kind, dataset=dataset)])
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert expected in code
+    assert "figstudio" not in code.lower()
 
 
 def test_generates_plain_oo_matplotlib_code_for_dataframe_line():

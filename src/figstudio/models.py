@@ -40,6 +40,7 @@ ReferenceLineOrientation = Literal["horizontal", "vertical"]
 LayerYAxis = Literal["left", "right"]
 ValidationContext = Literal["edit", "export"]
 ExportFormat = Literal["png", "svg", "pdf"]
+LayerDatasetField = Literal["x", "y", "z", "yerr"]
 RecipeDatasetField = Literal["x", "y", "group", "subject"]
 RecipeDefaultLabel = Literal["count", "x_or_variable", "y_or_variable"]
 
@@ -111,6 +112,27 @@ class RecipeQuestionGroup(BaseModel):
     summary: str
 
 
+class LayerQuestionGroup(BaseModel):
+    id: str
+    label: str
+    summary: str
+
+
+class LayerDefinition(BaseModel):
+    kind: PlotKind
+    label: str
+    group_id: str
+    role: str
+    required_fields: list[LayerDatasetField] = Field(default_factory=list)
+    optional_fields: list[LayerDatasetField] = Field(default_factory=list)
+    ignores_x: bool = False
+    expects_2d: bool = False
+    supports_secondary_y: bool = False
+    supports_colorbar: bool = False
+    legend_policy: Literal["style_label", "none"] = "style_label"
+    default_style: LayerStyle = Field(default_factory=LayerStyle)
+
+
 class RecipeDefinition(BaseModel):
     kind: RecipeKind
     label: str
@@ -121,7 +143,14 @@ class RecipeDefinition(BaseModel):
     uses_error: bool = True
     default_error: Literal["sem", "sd", "none"] = "sem"
     default_label: RecipeDefaultLabel = "y_or_variable"
+    legend_group_field: RecipeDatasetField | None = None
     default_style: LayerStyle = Field(default_factory=LayerStyle)
+
+
+class LayerCatalogResponse(BaseModel):
+    version: int = 1
+    groups: list[LayerQuestionGroup] = Field(default_factory=list)
+    layers: list[LayerDefinition] = Field(default_factory=list)
 
 
 class RecipeCatalogResponse(BaseModel):

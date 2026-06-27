@@ -27,6 +27,8 @@ import type {
   ExportFormat,
   FigurePreset,
   FigureSpec,
+  LayerCatalogResponse,
+  LayerDefinition,
   LayerYAxis,
   LayerStyle,
   PlotKind,
@@ -49,21 +51,6 @@ import type {
   VariableSummary
 } from "./types";
 
-const plotKinds: PlotKind[] = [
-  "line",
-  "scatter",
-  "bar",
-  "barh",
-  "hist",
-  "boxplot",
-  "violin",
-  "errorbar",
-  "heatmap",
-  "contour",
-  "step",
-  "fill_between"
-];
-
 const errorModes: RecipeLayer["error"][] = ["sem", "sd", "none"];
 const referenceLineOrientations: ReferenceLineOrientation[] = ["horizontal", "vertical"];
 
@@ -73,18 +60,25 @@ const linestyles = ["-", "--", "-.", ":"];
 const cmaps = ["viridis", "magma", "plasma", "cividis", "coolwarm", "Greys"];
 const scales: AxesSpec["xscale"][] = ["linear", "log", "symlog", "logit"];
 const yAxisTargets: LayerYAxis[] = ["left", "right"];
-const secondaryYAxisLayerKinds = new Set<PlotKind>([
-  "line",
-  "scatter",
-  "bar",
-  "hist",
-  "errorbar",
-  "step",
-  "fill_between"
-]);
 const indexSource = "__index__";
 const noneSource = "__none__";
 const defaultFacetLimit = 12;
+
+function layerDefinition(layerCatalog: LayerCatalogResponse, kind: PlotKind): LayerDefinition | undefined {
+  return layerCatalog.layers.find((layer) => layer.kind === kind);
+}
+
+function layerDefinitionsByGroup(layerCatalog: LayerCatalogResponse, groupId: string): LayerDefinition[] {
+  return layerCatalog.layers.filter((layer) => layer.group_id === groupId);
+}
+
+function layerLabel(layerCatalog: LayerCatalogResponse, kind: PlotKind) {
+  return layerDefinition(layerCatalog, kind)?.label ?? kind;
+}
+
+function layerSupportsSecondaryYAxis(layerCatalog: LayerCatalogResponse, kind: PlotKind): boolean {
+  return layerDefinition(layerCatalog, kind)?.supports_secondary_y ?? false;
+}
 
 function recipeDefinition(recipeCatalog: RecipeCatalogResponse, kind: RecipeKind): RecipeDefinition | undefined {
   return recipeCatalog.recipes.find((recipe) => recipe.kind === kind);
@@ -927,12 +921,16 @@ function repeatedPanelSourceKind(variable?: VariableSummary): RepeatedPanelSourc
   return null;
 }
 
-function candidateIsLayerCompatible(candidate: RepeatedPanelCandidate, kind: PlotKind): boolean {
+function candidateIsLayerCompatible(
+  candidate: RepeatedPanelCandidate,
+  layerCatalog: LayerCatalogResponse,
+  kind: PlotKind
+): boolean {
   const summary = candidate.summary;
   if (!summary) {
     return false;
   }
-  if (kind === "heatmap" || kind === "contour") {
+  if (layerDefinition(layerCatalog, kind)?.expects_2d) {
     return summary.kind === "dataframe" || summary.shape.length >= 2;
   }
   if (summary.kind === "ndarray" && summary.shape.length === 0) {
@@ -1115,6 +1113,7 @@ export function App() {
     session,
     variables,
     styleProfiles,
+    layerCatalog,
     recipeCatalog,
     spec,
     render,
@@ -1124,6 +1123,7 @@ export function App() {
     setSession,
     setVariables,
     setStyleProfiles,
+    setLayerCatalog,
     setRecipeCatalog,
     setSpec,
     setRender,
@@ -1146,10 +1146,11 @@ export function App() {
     let cancelled = false;
     async function load() {
       try {
-        const [sessionInfo, variableList, profiles, catalog, initialSpec] = await Promise.all([
+        const [sessionInfo, variableList, profiles, layerCatalogPayload, catalog, initialSpec] = await Promise.all([
           api.session(),
           api.variables(),
           api.styleProfiles(),
+          api.layerCatalog(),
           api.recipeCatalog(),
           api.spec()
         ]);
@@ -1159,6 +1160,7 @@ export function App() {
         setSession(sessionInfo);
         setVariables(variableList);
         setStyleProfiles(profiles);
+        setLayerCatalog(layerCatalogPayload);
         setRecipeCatalog(catalog);
         setSpec(initialSpec);
         setStatus(nextStepStatus(initialSpec));
@@ -1170,7 +1172,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [setRecipeCatalog, setSession, setSpec, setStatus, setStyleProfiles, setVariables]);
+  }, [setLayerCatalog, setRecipeCatalog, setSession, setSpec, setStatus, setStyleProfiles, setVariables]);
 
   useEffect(() => {
     if (!spec) {
@@ -1572,6 +1574,7 @@ export function App() {
       <section className="workspace">
         <VariablePanel
           variables={variables}
+          layerCatalog={layerCatalog}
           recipeCatalog={recipeCatalog}
           selected={selectedVar?.name}
           figureAspect={effectiveFigureAspect(spec, styleProfiles)}
@@ -1619,6 +1622,7 @@ export function App() {
         <Inspector
           spec={spec}
           styleProfiles={styleProfiles}
+          layerCatalog={layerCatalog}
           recipeCatalog={recipeCatalog}
           selectedLayer={selectedLayer}
           selectedRecipe={selectedRecipe}
@@ -1639,6 +1643,7 @@ export function App() {
 
 interface VariablePanelProps {
   variables: VariableSummary[];
+  layerCatalog: LayerCatalogResponse;
   recipeCatalog: RecipeCatalogResponse;
   selected?: string;
   figureAspect?: number;
@@ -1651,6 +1656,7 @@ interface VariablePanelProps {
 
 function VariablePanel({
   variables,
+  layerCatalog,
   recipeCatalog,
   selected,
   figureAspect,
@@ -1689,7 +1695,7 @@ function VariablePanel({
   const recipeVariable =
     dataframeVariables.find((item) => item.name === recipeVariableName) ??
     (variable?.kind === "dataframe" ? variable : dataframeVariables[0]);
-  const compatibility = compatibilityText(kind, yVar, xVar);
+  const compatibility = compatibilityText(layerCatalog, kind, yVar, xVar);
   const facetSource = builderMode === "layer" ? yVar : recipeVariable;
   const facetSourceKind = repeatedPanelSourceKind(facetSource);
   const isSelectedPanelSource = builderMode === "layer" && (facetSourceKind === "mapping_keys" || facetSourceKind === "sequence_items");
@@ -1813,8 +1819,12 @@ function VariablePanel({
           });
         }
       } else if (builderMode === "layer") {
-        const compatible = response.candidates.filter((candidate) => candidateIsLayerCompatible(candidate, kind));
-        const incompatible = response.candidates.filter((candidate) => !candidateIsLayerCompatible(candidate, kind));
+        const compatible = response.candidates.filter((candidate) =>
+          candidateIsLayerCompatible(candidate, layerCatalog, kind)
+        );
+        const incompatible = response.candidates.filter(
+          (candidate) => !candidateIsLayerCompatible(candidate, layerCatalog, kind)
+        );
         if (!compatible.length) {
           onStatus("No compatible mapping/sequence items for the current layer settings.");
           return;
@@ -1890,20 +1900,15 @@ function VariablePanel({
 
         {builderMode === "layer" ? (
           <>
-            <label>
-              Plot type
-              <select
-                data-testid="plot-kind-select"
-                value={kind}
-                onChange={(event) => setKind(event.target.value as PlotKind)}
-              >
-                {plotKinds.map((plotKind) => (
-                  <option key={plotKind} value={plotKind}>
-                    {plotKind}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <LayerKindSelect
+              layerCatalog={layerCatalog}
+              label="Plot type"
+              value={kind}
+              fieldTestId="plot-kind-field"
+              selectTestId="plot-kind-select"
+              field="kind"
+              onChange={setKind}
+            />
 
             <div className="source-grid">
               <label>
@@ -2237,14 +2242,20 @@ function VariablePanel({
   );
 }
 
-function compatibilityText(kind: PlotKind, yVar?: VariableSummary, xVar?: VariableSummary): string {
+function compatibilityText(
+  layerCatalog: LayerCatalogResponse,
+  kind: PlotKind,
+  yVar?: VariableSummary,
+  xVar?: VariableSummary
+): string {
   if (!yVar) {
     return "";
   }
-  if ((kind === "heatmap" || kind === "contour") && yVar.shape.length < 2 && !yVar.columns.length) {
-    return "Heatmap and contour previews work best with a 2D ndarray or gridded value column.";
+  const definition = layerDefinition(layerCatalog, kind);
+  if (definition?.expects_2d && yVar.shape.length < 2 && !yVar.columns.length) {
+    return `${definition.label} previews work best with a 2D ndarray or gridded value column.`;
   }
-  if ((kind === "hist" || kind === "boxplot" || kind === "violin") && xVar) {
+  if (definition?.ignores_x && xVar) {
     return "This plot type uses the Y / value source; X source is ignored by generated code.";
   }
   if (xVar && yVar.shape.length && xVar.shape.length && xVar.shape[0] !== yVar.shape[0]) {
@@ -2253,8 +2264,8 @@ function compatibilityText(kind: PlotKind, yVar?: VariableSummary, xVar?: Variab
   return "";
 }
 
-function supportsSecondaryYAxis(kind: PlotKind): boolean {
-  return secondaryYAxisLayerKinds.has(kind);
+function supportsSecondaryYAxis(layerCatalog: LayerCatalogResponse, kind: PlotKind): boolean {
+  return layerSupportsSecondaryYAxis(layerCatalog, kind);
 }
 
 function Preview({
@@ -2619,6 +2630,7 @@ function AnnotationControls({
 function Inspector({
   spec,
   styleProfiles,
+  layerCatalog,
   recipeCatalog,
   selectedLayer,
   selectedRecipe,
@@ -2634,6 +2646,7 @@ function Inspector({
 }: {
   spec?: FigureSpec;
   styleProfiles: StyleProfilesResponse;
+  layerCatalog: LayerCatalogResponse;
   recipeCatalog: RecipeCatalogResponse;
   selectedLayer?: PlotLayer;
   selectedRecipe?: RecipeLayer;
@@ -3025,6 +3038,7 @@ function Inspector({
                   </button>
                 </div>
                 <LayerControls
+                  layerCatalog={layerCatalog}
                   layer={selectedLayer}
                   defaults={profileLayerDefaults(spec, styleProfiles, selectedLayer)}
                   axes={spec.axes}
@@ -3271,17 +3285,20 @@ function RecipeControls({
 }
 
 function LayerControls({
+  layerCatalog,
   layer,
   defaults,
   axes,
   onChange
 }: {
+  layerCatalog: LayerCatalogResponse;
   layer: PlotLayer;
   defaults?: LayerStyle;
   axes: AxesSpec[];
   onChange: (layer: PlotLayer) => void;
 }) {
-  const isFieldLayer = layer.kind === "heatmap" || layer.kind === "contour";
+  const layerMetadata = layerDefinition(layerCatalog, layer.kind);
+  const isFieldLayer = Boolean(layerMetadata?.supports_colorbar);
   const label = inheritedStyleValue(layer.style, defaults, "label") ?? "";
   const effectiveColor = inheritedStyleValue(layer.style, defaults, "color") ?? "";
   const marker = inheritedStyleValue(layer.style, defaults, "marker") ?? "";
@@ -3317,19 +3334,20 @@ function LayerControls({
       <SelectField
         label="Plot type"
         value={layer.kind}
-        options={plotKinds}
+        options={layerCatalog.layers.map((definition) => definition.kind)}
         testId="layer-kind-field"
         field="kind"
+        optionLabel={(value) => layerLabel(layerCatalog, value as PlotKind)}
         onChange={(value) => {
           const nextKind = value as PlotKind;
           onChange({
             ...layer,
             kind: nextKind,
-            y_axis: supportsSecondaryYAxis(nextKind) ? (layer.y_axis ?? "left") : "left"
+            y_axis: supportsSecondaryYAxis(layerCatalog, nextKind) ? (layer.y_axis ?? "left") : "left"
           });
         }}
       />
-      {layer.y_axis === "right" && !supportsSecondaryYAxis(layer.kind) ? (
+      {layer.y_axis === "right" && !supportsSecondaryYAxis(layerCatalog, layer.kind) ? (
         <p className="compatibility-note">Right Y axis supports simple overlay layer kinds in this beta slice.</p>
       ) : null}
       <TextField
@@ -3351,7 +3369,7 @@ function LayerControls({
           />
           <ToggleField
             label="Colorbar"
-            value={Boolean(colorbarDefault ?? layer.kind === "heatmap")}
+            value={Boolean(colorbarDefault ?? layerMetadata?.default_style.colorbar ?? false)}
             testId="layer-colorbar-field"
             field="style.colorbar"
             onChange={(value) => onChange({ ...layer, style: { ...layer.style, colorbar: value } })}
@@ -3536,6 +3554,41 @@ function RecipeKindSelect({
             {recipeDefinitionsByGroup(recipeCatalog, group.id).map((recipe) => (
               <option key={recipe.kind} value={recipe.kind}>
                 {recipeLabel(recipeCatalog, recipe.kind)}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function LayerKindSelect({
+  layerCatalog,
+  label,
+  value,
+  fieldTestId,
+  selectTestId,
+  field,
+  onChange
+}: {
+  layerCatalog: LayerCatalogResponse;
+  label: string;
+  value: PlotKind;
+  fieldTestId: string;
+  selectTestId: string;
+  field: string;
+  onChange: (value: PlotKind) => void;
+}) {
+  return (
+    <label data-testid={fieldTestId} data-field={field}>
+      {label}
+      <select data-testid={selectTestId} value={value} onChange={(event) => onChange(event.target.value as PlotKind)}>
+        {layerCatalog.groups.map((group) => (
+          <optgroup key={group.id} label={group.label} data-testid={`layer-group-${group.id}`}>
+            {layerDefinitionsByGroup(layerCatalog, group.id).map((layer) => (
+              <option key={layer.kind} value={layer.kind}>
+                {layerLabel(layerCatalog, layer.kind)}
               </option>
             ))}
           </optgroup>

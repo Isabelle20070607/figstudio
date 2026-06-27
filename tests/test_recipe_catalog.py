@@ -42,17 +42,20 @@ def test_recipe_catalog_api_exposes_field_metadata():
     assert stacked["uses_error"] is False
     assert stacked["default_error"] == "none"
     assert stacked["default_label"] == "count"
+    assert stacked["legend_group_field"] == "group"
     assert stacked["default_style"]["alpha"] == 0.85
 
     count = _recipe(payload, "count_bar")
     assert count["required_fields"] == ["x"]
     assert count["optional_fields"] == ["group"]
     assert count["uses_error"] is False
+    assert count["legend_group_field"] == "group"
 
     paired = _recipe(payload, "paired_before_after")
     assert paired["required_fields"] == ["x", "y", "subject"]
     assert paired["uses_error"] is True
     assert paired["default_error"] == "sem"
+    assert paired["legend_group_field"] is None
 
     violin = _recipe(payload, "violin_by_category")
     assert violin["required_fields"] == ["x", "y"]

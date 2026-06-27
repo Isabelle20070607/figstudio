@@ -31,6 +31,7 @@ flowchart TD
 - `session.py`: creates `FigStudioSession`, resolves the project root, chooses a localhost port, starts Uvicorn, opens the browser, and inspects an optional existing figure.
 - `registry.py`: stores live Python objects and exposes safe `VariableSummary` records to the UI.
 - `models.py`: defines Pydantic request, response, error, session, validation, and FigureSpec models.
+- `layers.py` and `recipes.py`: define bundled layer and recipe registries that feed editor catalogs, validation capability, and codegen dispatch while preserving the public `PlotKind` and `RecipeKind` contracts.
 - `style_profiles.py`: loads `.figstudio/styles.json`, reports non-fatal warnings, and resolves profile defaults without mutating `FigureSpec`.
 - `validation.py`: validates layout geometry, missing variables/columns, non-DataFrame recipe or filter sources, missing axes, facet filters, secondary Y-axis layer compatibility, dimension mismatches, 2D requirements, and primary or secondary log-scale positivity, while adding field-level repair suggestions when context is available.
 - `codegen.py`: converts `FigureSpec` into plain Matplotlib OO code with no FigStudio runtime dependency.
@@ -45,7 +46,7 @@ flowchart TD
 2. `VariableRegistry` filters private names and summarizes supported values.
 3. `FigStudioSession` resolves the project root from `project_path`, `script_path`, or current working directory.
 4. The FastAPI app serves the React editor and `/api/*` endpoints on `127.0.0.1`.
-5. The editor loads project style profiles and builds or imports a `FigureSpec`.
+5. The editor loads project style profiles plus bundled layer/recipe catalogs, then builds or imports a `FigureSpec`.
 6. Backend validation checks the spec against the live namespace and loaded profile ids, then returns structured issues with optional repair suggestions.
 7. Codegen resolves effective profile values and creates Matplotlib OO code.
 8. Render/export executes the generated code with Agg.

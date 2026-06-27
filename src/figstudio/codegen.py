@@ -17,6 +17,8 @@ from figstudio.models import (
     ReferenceLineSpec,
     StyleProfile,
 )
+from figstudio.layers import layer_codegen_method
+from figstudio.recipes import recipe_codegen_method, recipe_legend_group_field
 from figstudio.selection import python_literal_key
 from figstudio.style_profiles import (
     resolved_figure_value,
@@ -247,115 +249,118 @@ class MatplotlibCodegen:
         ]
 
     def _layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
-        data = layer.dataset
-        label = style.label
-        common = {
-            "label": label,
-            "color": style.color,
-            "alpha": style.alpha,
-        }
-        line_common = {
-            **common,
-            "marker": style.marker,
-            "linestyle": style.linestyle,
-            "linewidth": style.linewidth,
-        }
-
-        call = ""
-        if layer.kind == "line":
-            call = f"{ax}.plot({self._xy(data)}, {_kwargs(**line_common)})"
-        elif layer.kind == "scatter":
-            call = f"{ax}.scatter({self._xy(data)}, {_kwargs(**common, marker=style.marker)})"
-        elif layer.kind == "bar":
-            call = f"{ax}.bar({self._xy(data)}, {_kwargs(**common)})"
-        elif layer.kind == "barh":
-            call = f"{ax}.barh({self._xy(data)}, {_kwargs(**common)})"
-        elif layer.kind == "hist":
-            call = (
-                f"{ax}.hist({self._value(data)}, "
-                f"{_kwargs(bins=style.bins or 30, label=label, color=style.color, alpha=style.alpha)})"
-            )
-        elif layer.kind == "boxplot":
-            call = f"{ax}.boxplot({self._value(data)})"
-        elif layer.kind == "violin":
-            call = f"{ax}.violinplot({self._value(data)}, showmeans=True)"
-        elif layer.kind == "errorbar":
-            yerr = self._channel(data, "yerr") if data.yerr or data.yerr_variable else "None"
-            call = f"{ax}.errorbar({self._xy(data)}, yerr={yerr}, {_kwargs(**line_common)})"
-        elif layer.kind == "heatmap":
-            call = f"image_{layer.id.replace('-', '_')} = {ax}.imshow({self._z(data)}, cmap={style.cmap or 'viridis'!r})"
-        elif layer.kind == "contour":
-            if (data.x or data.x_variable) and (data.y or data.y_variable) and (data.z or data.z_variable):
-                call = (
-                    f"contour_{layer.id.replace('-', '_')} = {ax}.contour("
-                    f"{self._channel(data, 'x')}, {self._channel(data, 'y')}, "
-                    f"{self._channel(data, 'z')}, cmap={style.cmap or 'viridis'!r})"
-                )
-            else:
-                call = (
-                    f"contour_{layer.id.replace('-', '_')} = {ax}.contour("
-                    f"{self._z(data)}, "
-                    f"cmap={style.cmap or 'viridis'!r})"
-                )
-        elif layer.kind == "step":
-            call = f"{ax}.step({self._xy(data)}, where='mid', {_kwargs(**line_common)})"
-        elif layer.kind == "fill_between":
-            call = (
-                f"{ax}.fill_between({self._xy(data)}, "
-                f"{_kwargs(label=label, color=style.color, alpha=style.fill_alpha or style.alpha or 0.3)})"
-            )
-        else:
+        method = getattr(self, layer_codegen_method(layer.kind), None)
+        if method is None:
             raise ValueError(f"Unsupported plot kind: {layer.kind}")
+        return method(layer, style, ax, axis)
 
-        lines = [call.replace(", )", ")").replace("(, ", "(")]
-        if layer.kind == "heatmap":
-            if style.colorbar is not False:
-                lines.append(f"fig.colorbar(image_{layer.id.replace('-', '_')}, ax={ax})")
-        if layer.kind == "contour":
-            contour_name = f"contour_{layer.id.replace('-', '_')}"
-            show_colorbar = style.colorbar if style.colorbar is not None else axis.colorbar
-            if show_colorbar:
-                lines.append(f"fig.colorbar({contour_name}, ax={ax})")
-            lines.append(f"{ax}.clabel({contour_name}, inline=True, fontsize=8)")
+    def _line_layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
+        data = layer.dataset
+        return [f"{ax}.plot({self._xy(data)}, {_kwargs(**self._line_common(style))})".replace(", )", ")")]
+
+    def _scatter_layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
+        data = layer.dataset
+        return [
+            f"{ax}.scatter({self._xy(data)}, {_kwargs(**self._common_style(style), marker=style.marker)})".replace(
+                ", )", ")"
+            )
+        ]
+
+    def _bar_layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
+        data = layer.dataset
+        return [f"{ax}.bar({self._xy(data)}, {_kwargs(**self._common_style(style))})".replace(", )", ")")]
+
+    def _barh_layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
+        data = layer.dataset
+        return [f"{ax}.barh({self._xy(data)}, {_kwargs(**self._common_style(style))})".replace(", )", ")")]
+
+    def _hist_layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
+        data = layer.dataset
+        return [
+            (
+                f"{ax}.hist({self._value(data)}, "
+                f"{_kwargs(bins=style.bins or 30, label=style.label, color=style.color, alpha=style.alpha)})"
+            ).replace(", )", ")")
+        ]
+
+    def _boxplot_layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
+        return [f"{ax}.boxplot({self._value(layer.dataset)})"]
+
+    def _violin_layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
+        return [f"{ax}.violinplot({self._value(layer.dataset)}, showmeans=True)"]
+
+    def _errorbar_layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
+        data = layer.dataset
+        yerr = self._channel(data, "yerr") if data.yerr or data.yerr_variable else "None"
+        return [f"{ax}.errorbar({self._xy(data)}, yerr={yerr}, {_kwargs(**self._line_common(style))})".replace(", )", ")")]
+
+    def _heatmap_layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
+        data = layer.dataset
+        image_name = f"image_{layer.id.replace('-', '_')}"
+        lines = [f"{image_name} = {ax}.imshow({self._z(data)}, cmap={style.cmap or 'viridis'!r})"]
+        if style.colorbar is not False:
+            lines.append(f"fig.colorbar({image_name}, ax={ax})")
         return lines
 
+    def _contour_layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
+        data = layer.dataset
+        contour_name = f"contour_{layer.id.replace('-', '_')}"
+        if (data.x or data.x_variable) and (data.y or data.y_variable) and (data.z or data.z_variable):
+            call = (
+                f"{contour_name} = {ax}.contour("
+                f"{self._channel(data, 'x')}, {self._channel(data, 'y')}, "
+                f"{self._channel(data, 'z')}, cmap={style.cmap or 'viridis'!r})"
+            )
+        else:
+            call = f"{contour_name} = {ax}.contour({self._z(data)}, cmap={style.cmap or 'viridis'!r})"
+        lines = [call.replace(", )", ")").replace("(, ", "(")]
+        show_colorbar = style.colorbar if style.colorbar is not None else axis.colorbar
+        if show_colorbar:
+            lines.append(f"fig.colorbar({contour_name}, ax={ax})")
+        lines.append(f"{ax}.clabel({contour_name}, inline=True, fontsize=8)")
+        return lines
+
+    def _step_layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
+        data = layer.dataset
+        return [
+            f"{ax}.step({self._xy(data)}, where='mid', {_kwargs(**self._line_common(style))})".replace(", )", ")")
+        ]
+
+    def _fill_between_layer_code(self, layer: PlotLayer, style: LayerStyle, ax: str, axis: AxesSpec) -> list[str]:
+        data = layer.dataset
+        return [
+            (
+                f"{ax}.fill_between({self._xy(data)}, "
+                f"{_kwargs(label=style.label, color=style.color, alpha=style.fill_alpha or style.alpha or 0.3)})"
+            ).replace(", )", ")")
+        ]
+
     def _recipe_code(self, recipe: RecipeLayer, style: LayerStyle, axis_index: int) -> list[str]:
-        if recipe.kind == "mean_sem_line":
-            return self._mean_sem_line_code(recipe, style, axis_index)
-        if recipe.kind == "mean_sem_bar":
-            return self._mean_sem_bar_code(recipe, style, axis_index)
-        if recipe.kind == "count_bar":
-            return self._count_bar_code(recipe, style, axis_index)
-        if recipe.kind == "stacked_bar":
-            return self._stacked_bar_code(recipe, style, axis_index)
-        if recipe.kind == "boxplot_by_category":
-            return self._boxplot_by_category_code(recipe, style, axis_index)
-        if recipe.kind == "violin_by_category":
-            return self._violin_by_category_code(recipe, style, axis_index)
-        if recipe.kind == "grouped_points":
-            return self._grouped_points_code(recipe, style, axis_index)
-        if recipe.kind == "paired_before_after":
-            return self._paired_before_after_code(recipe, style, axis_index)
-        if recipe.kind == "ecdf":
-            return self._ecdf_code(recipe, style, axis_index)
+        method = getattr(self, recipe_codegen_method(recipe.kind), None)
+        if method is not None:
+            return method(recipe, style, axis_index)
         raise ValueError(f"Unsupported recipe kind: {recipe.kind}")
 
     def _recipe_has_legend_entries(self, recipe: RecipeLayer, style: LayerStyle) -> bool:
         if style.label:
             return True
-        return bool(
-            recipe.dataset.group
-            and recipe.kind
-            in {
-                "mean_sem_line",
-                "mean_sem_bar",
-                "count_bar",
-                "stacked_bar",
-                "boxplot_by_category",
-                "violin_by_category",
-                "ecdf",
-            }
-        )
+        group_field = recipe_legend_group_field(recipe.kind)
+        return bool(group_field and getattr(recipe.dataset, group_field))
+
+    def _common_style(self, style: LayerStyle) -> dict[str, object | None]:
+        return {
+            "label": style.label,
+            "color": style.color,
+            "alpha": style.alpha,
+        }
+
+    def _line_common(self, style: LayerStyle) -> dict[str, object | None]:
+        return {
+            **self._common_style(style),
+            "marker": style.marker,
+            "linestyle": style.linestyle,
+            "linewidth": style.linewidth,
+        }
 
     def _reference_line_code(self, reference_line: ReferenceLineSpec, axis_index: int) -> list[str]:
         ax = f"axes_flat[{axis_index}]"

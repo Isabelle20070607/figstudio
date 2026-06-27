@@ -22,6 +22,7 @@ from figstudio.models import (
     FacetValuesRequest,
     FacetValuesResponse,
     FigureSpec,
+    LayerCatalogResponse,
     RecipeCatalogResponse,
     RenderRequest,
     RenderResponse,
@@ -37,6 +38,7 @@ from figstudio.models import (
     ValidationRequest,
     ValidationResponse,
 )
+from figstudio.layers import layer_catalog
 from figstudio.registry import _jsonable
 from figstudio.registry import VariableRegistry
 from figstudio.recipes import recipe_catalog
@@ -113,6 +115,10 @@ def create_app(session: "FigStudioSession") -> FastAPI:
     @app.get("/api/recipe-catalog")
     def get_recipe_catalog() -> RecipeCatalogResponse:
         return recipe_catalog()
+
+    @app.get("/api/layer-catalog")
+    def get_layer_catalog() -> LayerCatalogResponse:
+        return layer_catalog()
 
     @app.get("/api/spec")
     def get_spec() -> FigureSpec:

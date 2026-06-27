@@ -24,6 +24,7 @@ from figstudio.models import (
     ValidationIssue,
     ValidationResponse,
 )
+from figstudio.layers import layer_expects_2d, layer_length_checks, layer_supports_secondary_y, secondary_y_supported_kinds
 from figstudio.recipes import checked_recipe_fields, required_recipe_fields
 from figstudio.selection import (
     is_python_literal_key,
@@ -40,15 +41,7 @@ LEGEND_READINESS_DENSE_ITEM_COUNT = 6
 LEGEND_READINESS_SMALL_PANEL_AREA_IN2 = 18.0
 LEGEND_READINESS_LONG_LABEL_CHARS = 32
 LEGEND_READINESS_NARROW_PANEL_WIDTH_IN = 4.0
-SECONDARY_Y_SUPPORTED_KINDS = {
-    "line",
-    "scatter",
-    "bar",
-    "hist",
-    "errorbar",
-    "step",
-    "fill_between",
-}
+SECONDARY_Y_SUPPORTED_KINDS = secondary_y_supported_kinds()
 
 
 @dataclass
@@ -234,17 +227,21 @@ def validate_figure_spec(
         z_value = _resolve_z(namespace, layer, issues, dataset_source)
         yerr_value = _resolve_channel(namespace, layer, "yerr", issues, dataset_source)
 
-        if layer.kind in {"line", "scatter", "bar", "barh", "step", "fill_between", "errorbar"}:
-            _check_lengths(layer, issues, x=x_value, y=y_value)
-        if layer.kind == "errorbar":
-            _check_lengths(layer, issues, y=y_value, yerr=yerr_value)
-        if layer.kind in {"heatmap", "contour"}:
+        resolved_layer_values = {
+            "x": x_value,
+            "y": y_value,
+            "z": z_value,
+            "yerr": yerr_value,
+        }
+        for fields in layer_length_checks(layer.kind):
+            _check_lengths(layer, issues, **{field: resolved_layer_values[field] for field in fields})
+        if layer_expects_2d(layer.kind):
             _check_two_dimensional(layer, issues, z_value)
 
         if axis.xscale == "log" and x_value is not None:
             _check_positive(layer, issues, x_value, "x")
         yscale = _layer_yscale(layer, axis)
-        if yscale == "log" and y_value is not None and layer.kind not in {"heatmap", "contour"}:
+        if yscale == "log" and y_value is not None and not layer_expects_2d(layer.kind):
             _check_positive(layer, issues, y_value, "y")
 
     for recipe in spec.recipes:
@@ -783,7 +780,7 @@ def _validate_recipe(
 def _validate_layer_y_axis(layer: PlotLayer, axis: AxesSpec, issues: list[ValidationIssue]) -> None:
     if layer.y_axis != "right":
         return
-    if layer.kind in SECONDARY_Y_SUPPORTED_KINDS:
+    if layer_supports_secondary_y(layer.kind):
         return
     issues.append(
         ValidationIssue(

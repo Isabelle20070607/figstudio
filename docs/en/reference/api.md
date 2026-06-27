@@ -77,11 +77,13 @@ Session commands print the session URL and run until interrupted. Headless comma
 
 Supported `PlotLayer.kind` values are `line`, `scatter`, `bar`, `barh`, `hist`, `boxplot`, `violin`, `errorbar`, `heatmap`, `contour`, `step`, and `fill_between`.
 
+`GET /api/layer-catalog` exposes the bundled plot-layer catalog used by the editor. The response includes `version`, `groups`, and `layers`; each layer entry records its `kind`, label, group, role text, required and optional dataset fields, secondary-axis support, 2D/colorbar capability, legend policy, and default style. This catalog is bundled-only in the public beta and is not an external plugin or pack-loading contract.
+
 `PlotLayer.y_axis` is `left` by default. Set it to `right` for simple secondary Y-axis overlays on the same `axes_id`; `AxesSpec.secondary_y` stores the right-side `ylabel`, `yscale`, and `ylim`. Generated code emits Matplotlib `twinx()` for panels that have at least one right-axis layer.
 
 Supported `RecipeLayer.kind` values are `mean_sem_line`, `mean_sem_bar`, `count_bar`, `stacked_bar`, `boxplot_by_category`, `violin_by_category`, `grouped_points`, `paired_before_after`, and `ecdf`.
 
-`GET /api/recipe-catalog` exposes the bundled recipe catalog used by the editor. The response includes `version`, `groups`, and `recipes`; each recipe entry records its `kind`, label, research-question group, role text, required and optional dataset fields, default error behavior, default label behavior, and default style. This catalog is bundled-only in the public beta and is not an external plugin or pack-loading contract.
+`GET /api/recipe-catalog` exposes the bundled recipe catalog used by the editor. The response includes `version`, `groups`, and `recipes`; each recipe entry records its `kind`, label, research-question group, role text, required and optional dataset fields, default error behavior, default label behavior, legend grouping behavior, and default style. This catalog is bundled-only in the public beta and is not an external plugin or pack-loading contract.
 
 `ReferenceLineSpec.orientation` is `horizontal` or `vertical`. The `value` field is numeric and `style` uses the same label, color, line style, linewidth, and alpha fields as plot layers. Generated code emits Matplotlib `axhline` or `axvline`.
 
@@ -98,6 +100,7 @@ The local FastAPI server is created per session and binds to `127.0.0.1` by defa
 | `GET /api/session` | Session metadata, writeback capability, optional inspected figure tree. |
 | `GET /api/variables` | Safe variable summaries. |
 | `GET /api/style-profiles` | Loaded project style profiles, source path, and non-fatal load warnings. |
+| `GET /api/layer-catalog` | Bundled plot-layer groups, field roles, labels, validation capability, and default layer style metadata. |
 | `GET /api/recipe-catalog` | Bundled recipe groups, field requirements, labels, and default recipe style metadata. |
 | `GET /api/spec` | Current `FigureSpec`. |
 | `POST /api/validate` | Validate a `FigureSpec` against the live namespace; accepts optional `context: "edit" \| "export"` and `export_format` for publication-readiness preflight. |

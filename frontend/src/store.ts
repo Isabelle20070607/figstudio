@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type {
   FigureSpec,
+  LayerCatalogResponse,
   PlotLayer,
   RecipeCatalogResponse,
   RenderResponse,
@@ -13,6 +14,7 @@ interface AppState {
   session?: SessionInfo;
   variables: VariableSummary[];
   styleProfiles: StyleProfilesResponse;
+  layerCatalog: LayerCatalogResponse;
   recipeCatalog: RecipeCatalogResponse;
   spec?: FigureSpec;
   render?: RenderResponse;
@@ -22,6 +24,7 @@ interface AppState {
   setSession: (session: SessionInfo) => void;
   setVariables: (variables: VariableSummary[]) => void;
   setStyleProfiles: (styleProfiles: StyleProfilesResponse) => void;
+  setLayerCatalog: (layerCatalog: LayerCatalogResponse) => void;
   setRecipeCatalog: (recipeCatalog: RecipeCatalogResponse) => void;
   setSpec: (spec: FigureSpec) => void;
   setRender: (render?: RenderResponse) => void;
@@ -35,6 +38,7 @@ interface AppState {
 export const useAppStore = create<AppState>((set, get) => ({
   variables: [],
   styleProfiles: { profiles: [], source_path: null, warnings: [] },
+  layerCatalog: { version: 1, groups: [], layers: [] },
   recipeCatalog: { version: 1, groups: [], recipes: [] },
   status: "Loading session",
   setSession: (session) => set({ session }),
@@ -44,6 +48,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       selectedVariable: state.selectedVariable ?? variables[0]?.name
     })),
   setStyleProfiles: (styleProfiles) => set({ styleProfiles }),
+  setLayerCatalog: (layerCatalog) => set({ layerCatalog }),
   setRecipeCatalog: (recipeCatalog) => set({ recipeCatalog }),
   setSpec: (spec) =>
     set((state) => ({

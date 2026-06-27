@@ -77,11 +77,13 @@ Session commands 会打印 session URL，并持续运行直到被中断。Headle
 
 支持的 `PlotLayer.kind` 值为 `line`、`scatter`、`bar`、`barh`、`hist`、`boxplot`、`violin`、`errorbar`、`heatmap`、`contour`、`step` 和 `fill_between`。
 
+`GET /api/layer-catalog` 会暴露 editor 使用的 bundled plot-layer catalog。Response 包含 `version`、`groups` 和 `layers`；每个 layer entry 记录 `kind`、label、group、role 文案、必需和可选 dataset fields、secondary-axis 支持、2D/colorbar 能力、legend policy，以及默认 style。Public beta 中这个 catalog 只描述内置 layers，不是外部 plugin 或 pack-loading contract。
+
 `PlotLayer.y_axis` 默认是 `left`。把它设为 `right` 可在同一个 `axes_id` 上创建简单 secondary Y-axis overlay；`AxesSpec.secondary_y` 保存右侧 `ylabel`、`yscale` 和 `ylim`。当某个 panel 至少有一个 right-axis layer 时，生成代码会输出 Matplotlib `twinx()`。
 
 支持的 `RecipeLayer.kind` 值为 `mean_sem_line`、`mean_sem_bar`、`count_bar`、`stacked_bar`、`boxplot_by_category`、`violin_by_category`、`grouped_points`、`paired_before_after` 和 `ecdf`。
 
-`GET /api/recipe-catalog` 会暴露 editor 使用的 bundled recipe catalog。Response 包含 `version`、`groups` 和 `recipes`；每个 recipe entry 记录 `kind`、label、research-question group、role 文案、必需和可选 dataset fields、默认 error 行为、默认 label 行为，以及默认 style。Public beta 中这个 catalog 只描述内置 recipes，不是外部 plugin 或 pack-loading contract。
+`GET /api/recipe-catalog` 会暴露 editor 使用的 bundled recipe catalog。Response 包含 `version`、`groups` 和 `recipes`；每个 recipe entry 记录 `kind`、label、research-question group、role 文案、必需和可选 dataset fields、默认 error 行为、默认 label 行为、legend grouping 行为，以及默认 style。Public beta 中这个 catalog 只描述内置 recipes，不是外部 plugin 或 pack-loading contract。
 
 `ReferenceLineSpec.orientation` 为 `horizontal` 或 `vertical`。`value` 是 numeric value，`style` 复用 plot layer 的 label、color、line style、linewidth 和 alpha 字段。生成代码会输出 Matplotlib `axhline` 或 `axvline`。
 
@@ -98,6 +100,7 @@ Session commands 会打印 session URL，并持续运行直到被中断。Headle
 | `GET /api/session` | Session metadata、写回能力、可选 inspected figure tree。 |
 | `GET /api/variables` | 安全变量摘要。 |
 | `GET /api/style-profiles` | 已加载 project style profiles、source path 和非致命 load warnings。 |
+| `GET /api/layer-catalog` | Bundled plot-layer groups、field roles、labels、validation capability 和默认 layer style metadata。 |
 | `GET /api/recipe-catalog` | Bundled recipe groups、字段需求、labels 和默认 recipe style metadata。 |
 | `GET /api/spec` | 当前 `FigureSpec`。 |
 | `POST /api/validate` | 基于 live namespace 校验 `FigureSpec`；可接受 `context: "edit" \| "export"` 和 `export_format`，用于发表准备度预检。 |

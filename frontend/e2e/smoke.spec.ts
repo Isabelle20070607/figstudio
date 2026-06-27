@@ -53,6 +53,10 @@ test("notebook save populates replacement cell code and copy action", async ({ p
     .poll(() => page.evaluate(() => window.localStorage.getItem("figstudioCopiedCode") ?? ""))
     .toContain("plt.subplots");
 
+  const plotSelect = page.getByTestId("plot-kind-select");
+  await expect(plotSelect.locator('optgroup[label="Cartesian layers"]')).toContainText("Line");
+  await expect(plotSelect.locator('optgroup[label="Distribution/value layers"]')).toContainText("Histogram");
+  await expect(plotSelect.locator('optgroup[label="2D field layers"]')).toContainText("Heatmap");
   await page.getByTestId("plot-kind-select").selectOption("line");
   await page.getByTestId("add-layer-button").click();
 
