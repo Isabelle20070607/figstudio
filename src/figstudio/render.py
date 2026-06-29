@@ -55,13 +55,14 @@ class RenderEngine:
 
     def _execute(self, spec: FigureSpec):
         code = self.codegen.generate(spec)
-        exec_globals = {
+        # Use one namespace so generated comprehensions can see variables
+        # assigned earlier in the script on Python 3.11.
+        exec_namespace = {
             "__builtins__": __builtins__,
             **self.namespace,
         }
-        exec_locals: dict[str, Any] = {}
-        exec(code, exec_globals, exec_locals)
-        fig = exec_locals.get("fig")
+        exec(code, exec_namespace)
+        fig = exec_namespace.get("fig")
         if fig is None:
             raise RuntimeError("Generated Matplotlib code did not create a fig object.")
         return fig
