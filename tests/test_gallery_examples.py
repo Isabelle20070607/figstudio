@@ -16,12 +16,14 @@ BOXPLOT_WORKFLOW = "category_boxplot_response"
 VIOLIN_WORKFLOW = "category_violin_response"
 STACKED_BAR_WORKFLOW = "stacked_bar_sample_composition"
 ECDF_WORKFLOW = "ecdf_response_distribution"
+NEURO_EPHYS_WORKFLOW = "neuro_ephys_event_rate"
 PREVIEW_ASSETS = {
     "faceted_dose_response": "faceted-dose-response.svg",
     BOXPLOT_WORKFLOW: "category-boxplot-response.svg",
     VIOLIN_WORKFLOW: "category-violin-response.svg",
     STACKED_BAR_WORKFLOW: "stacked-bar-sample-composition.svg",
     ECDF_WORKFLOW: "ecdf-response-distribution.svg",
+    NEURO_EPHYS_WORKFLOW: "neuro-ephys-event-rate.svg",
     "secondary_axis_timecourse": "secondary-axis-timecourse.svg",
     "spanned_layout_signal_map": "spanned-layout-signal-map.svg",
 }
@@ -133,3 +135,23 @@ def test_ecdf_gallery_workflow_is_svg_export_ready():
     )
     assert "axes_flat[0].step(_recipe_latency_ecdf_values, _recipe_latency_ecdf_y, where='post'" in code
     assert "label=f'Latency {_recipe_latency_ecdf_group}'" in code
+
+
+def test_neuro_ephys_gallery_workflow_is_svg_export_ready():
+    module = _load_example_module(NEURO_EPHYS_WORKFLOW)
+    spec = figstudio.load_spec(GALLERY_DIR / f"{NEURO_EPHYS_WORKFLOW}.figstudio.json")
+
+    response = validate_figure_spec(_namespace(module), spec, context="export", export_format="svg")
+    assert response.ok, _issue_summary(response)
+    readiness_issues = [issue for issue in response.issues if issue.code.startswith("readiness_")]
+    assert readiness_issues == [], _issue_summary(response)
+
+    code = MatplotlibCodegen().generate(spec)
+    assert (
+        "_recipe_ephys_event_rate_summary = "
+        "_recipe_ephys_event_rate_group_df.groupby('time_s', sort=False)['event_rate_hz']"
+        ".agg(['mean', 'sem']).reindex(_recipe_ephys_event_rate_x_order)"
+        in code
+    )
+    assert "axes_flat[0].errorbar(_recipe_ephys_event_rate_x_order" in code
+    assert "label=f'Event rate {_recipe_ephys_event_rate_group}'" in code

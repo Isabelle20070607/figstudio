@@ -181,7 +181,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Namespaced recipe IDs, reusable chart-family roles, shared role schemas, validation hooks, generated-code templates, style defaults, gallery fixtures, and import/export compatibility should exist before external or domain-specific packs. |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Bundled plot layers and line, categorical, distribution-inspection, distribution-summary, and paired-observation recipes now share internal registries. Those registries feed validation capability, generated-code dispatch, UI selectors, tests, gallery-backed workflows, `GET /api/layer-catalog`, and `GET /api/recipe-catalog` metadata for groups, field roles, labels, legend behavior, and default styles. |
+| Progress | Bundled plot layers and line, categorical, distribution-inspection, distribution-summary, paired-observation, and the first namespaced `neuro.ephys` recipe now share internal registries. Those registries feed validation capability, generated-code dispatch, UI selectors, tests, gallery-backed workflows, `GET /api/layer-catalog`, and `GET /api/recipe-catalog` metadata for groups, field roles, labels, legend behavior, and default styles. |
 | Readiness | The bundled registries establish the internal pack substrate without committing to external pack files, plugin loading, or dynamic recipe/layer kinds. |
 | Gate/Prerequisite | Bundled recipes and gallery fixtures share enough structure to avoid freezing a weak extension contract. |
 
@@ -192,7 +192,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Domain packs should reuse stable primitives instead of becoming separate products. |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
-| Readiness | Reference lines, repeated panels, secondary axes, and scientific-summary recipes are now available beta primitives; remaining prerequisites are pack substrate, domain fixtures, and loading rules. |
+| Readiness | Reference lines, repeated panels, secondary axes, scientific-summary recipes, and one bundled `neuro.ephys` gallery fixture are now available beta primitives; broader domain packs still need more fixtures and loading rules. |
 | Gate/Prerequisite | Reference-line, repeated-panel, secondary-axis, and scientific-summary primitives can carry the common structure. |
 
 | Field | Value |
@@ -200,9 +200,10 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Theme | Ecosystem and templates |
 | Initiative | Start domain work with a bundled experimental neuroscience pack before considering an optional `figstudio-neuro` distribution. |
 | Why it matters | The neuroscience surface should prove recipe contracts, gallery examples, and package loading before splitting distribution. |
-| Maturity | `foundation-needed` |
+| Maturity | `exploratory` |
 | Horizon | `later` |
-| Readiness | The cross-domain primitives needed by `neuro.core` and ephys-style overlays are now present; keep this bundled and experimental until pack loading and gallery evidence exist. |
+| Progress | `neuro.ephys.event_rate_timecourse` is the first bundled experimental neuroscience recipe and has gallery proof through a script, portable spec, and SVG export asset. |
+| Readiness | The cross-domain primitives needed by `neuro.core` and ephys-style overlays are now present; keep this bundled and experimental until broader pack loading and more gallery evidence exist. |
 | Gate/Prerequisite | Keep neuroscience organized as subdomains: `neuro.core`, `neuro.ephys`, and `neuro.neuroimaging`. |
 
 ## Product Ergonomics And Operations

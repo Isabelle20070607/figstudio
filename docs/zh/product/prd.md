@@ -21,7 +21,7 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - 可通过 Python package 安装，运行时不需要 Node/npm。
 - 通过 `figstudio.open(locals(), ...)` 或 `figstudio demo` 启动。
 - 检查 DataFrame、Series、ndarray、mapping、list、tuple 和已有 Matplotlib Figure 的安全 summaries。
-- 创建和编辑 public beta plot kinds 和内置 statistics recipes：mean/SEM lines、mean/SEM bars、count bars、stacked count bars、grouped points、category boxplots、category violins、paired before/after panels 和 ECDF distributions。
+- 创建和编辑 public beta plot kinds 和内置 statistics recipes：mean/SEM lines、mean/SEM bars、count bars、stacked count bars、grouped points、category boxplots、category violins、paired before/after panels、ECDF distributions，以及一个 bundled experimental neuro ephys event-rate timecourse。
 - 基于 DataFrame 列首次出现的取值创建 faceted panels，并为普通 plot layers 支持 mapping-key 和 sequence-index repeated panels，同时给出紧凑的初始 layout suggestion。
 - 配置 manuscript presets、project style profiles、panel layouts、axes settings、secondary Y-axis overlays、layer styles、reference lines 和 text/arrow annotations。
 - 加载 `.figstudio/styles.json` project style profiles，并在 `FigureSpec` 中保存 profile references 和 explicit override fields。
@@ -68,7 +68,7 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - 自动重写任意用户 Matplotlib source code。
 - 直接修改 Notebook 文件。
 - 完整支持所有 Matplotlib artist、3D、polar plots、animation 或 interactive web publishing。
-- 内置 general statistics recipes 之外的 domain-specific recipe packs。
+- Bundled experimental neuro ephys proof 之外的外部或可安装 domain-specific recipe packs。
 - Public beta 阶段的 desktop installers。
 
 ## 产品质量门槛

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "mode": "publish",
+  "width": 5.4,
+  "height": 3.2,
+  "dpi": 300,
+  "rows": 1,
+  "cols": 1,
+  "axes": [
+    {
+      "id": "ax0",
+      "row": 0,
+      "col": 0,
+      "title": "Bundled neuro ephys event-rate recipe",
+      "xlabel": "Time (s)",
+      "ylabel": "Event rate (Hz)",
+      "xlim": [
+        0,
+        60
+      ],
+      "ylim": [
+        0,
+        10
+      ],
+      "grid": true,
+      "legend": true
+    }
+  ],
+  "layers": [],
+  "recipes": [
+    {
+      "id": "ephys-event-rate",
+      "kind": "neuro.ephys.event_rate_timecourse",
+      "axes_id": "ax0",
+      "dataset": {
+        "variable": "df",
+        "x": "time_s",
+        "y": "event_rate_hz",
+        "group": "condition"
+      },
+      "style": {
+        "label": "Event rate",
+        "color": "#dc2626",
+        "marker": "o",
+        "linestyle": "-",
+        "linewidth": 1.7
+      },
+      "error": "sem"
+    }
+  ],
+  "reference_lines": [],
+  "annotations": [],
+  "style": {
+    "preset": "journal_double",
+    "title": "",
+    "font_family": "Arial",
+    "font_size": 8,
+    "constrained_layout": true
+  },
+  "show": false
+}

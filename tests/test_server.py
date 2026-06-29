@@ -925,6 +925,37 @@ def test_ecdf_recipe_api_smoke_workflow():
     )
 
 
+def test_neuro_ephys_event_rate_timecourse_api_smoke_workflow():
+    df = pd.DataFrame(
+        {
+            "condition": ["baseline", "baseline", "stim", "stim", "stim"],
+            "time_s": [0, 1, 0, 1, 2],
+            "event_rate_hz": [4.1, 4.4, 7.2, 8.1, 8.5],
+        }
+    )
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        axes=[AxesSpec(id="ax0", xlabel="Time (s)", ylabel="Event rate (Hz)")],
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="neuro.ephys.event_rate_timecourse",
+                dataset=RecipeDatasetRef(variable="df", x="time_s", y="event_rate_hz", group="condition"),
+            )
+        ],
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    rendered = client.post("/api/render", json={"spec": spec.model_dump(), "format": "svg"})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is True
+    assert rendered.status_code == 200
+    assert "<svg" in rendered.json()["image"]
+    assert "axes_flat[0].errorbar(_recipe_recipe_1_x_order" in rendered.json()["code"]
+
+
 def test_recipe_validation_reports_non_dataframe_source():
     session = FigStudioSession(registry=VariableRegistry({"values": [1, 2, 3]}), port=8001)
     client = TestClient(create_app(session))

@@ -50,6 +50,11 @@ _RECIPE_GROUPS = [
         label="Paired observations",
         summary="Track repeated measurements for the same subject across conditions.",
     ),
+    RecipeQuestionGroup(
+        id="neuro.ephys",
+        label="Neuro ephys (experimental)",
+        summary="Build bundled electrophysiology summaries from time-aligned DataFrame columns.",
+    ),
 ]
 
 _RECIPE_REGISTRY = [
@@ -177,6 +182,19 @@ _RECIPE_REGISTRY = [
             default_style=LayerStyle(color="#2563eb", linestyle="-", linewidth=1.8),
         ),
         "_ecdf_code",
+    ),
+    RegisteredRecipe(
+        RecipeDefinition(
+            kind="neuro.ephys.event_rate_timecourse",
+            label="Ephys event-rate timecourse",
+            question_group_id="neuro.ephys",
+            role="Summarizes event or firing rate over time with optional condition groups.",
+            required_fields=["x", "y"],
+            optional_fields=["group"],
+            legend_group_field="group",
+            default_style=LayerStyle(color="#dc2626", marker="o", linestyle="-", linewidth=1.8),
+        ),
+        "_mean_sem_line_code",
     ),
 ]
 

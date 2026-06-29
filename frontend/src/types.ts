@@ -21,7 +21,8 @@ export type RecipeKind =
   | "violin_by_category"
   | "grouped_points"
   | "paired_before_after"
-  | "ecdf";
+  | "ecdf"
+  | "neuro.ephys.event_rate_timecourse";
 
 export type FigurePreset = "custom" | "journal_single" | "journal_double" | "poster" | "slide";
 

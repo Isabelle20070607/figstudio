@@ -19,9 +19,10 @@ def test_bundled_recipe_catalog_covers_recipe_kind_contract():
     catalog = recipe_catalog()
 
     assert catalog.version == 1
-    assert len(catalog.groups) == 5
+    assert len(catalog.groups) == 6
     assert {recipe.kind for recipe in catalog.recipes} == set(get_args(RecipeKind))
     assert {recipe.question_group_id for recipe in catalog.recipes} <= {group.id for group in catalog.groups}
+    assert any(group.id == "neuro.ephys" for group in catalog.groups)
 
 
 def test_recipe_catalog_api_exposes_field_metadata():
@@ -33,7 +34,8 @@ def test_recipe_catalog_api_exposes_field_metadata():
     assert response.status_code == 200
     payload = response.json()
     assert payload["version"] == 1
-    assert len(payload["groups"]) == 5
+    assert len(payload["groups"]) == 6
+    assert any(group["id"] == "neuro.ephys" for group in payload["groups"])
     assert {recipe["kind"] for recipe in payload["recipes"]} == set(get_args(RecipeKind))
 
     stacked = _recipe(payload, "stacked_bar")
@@ -70,3 +72,13 @@ def test_recipe_catalog_api_exposes_field_metadata():
     assert ecdf["uses_error"] is False
     assert ecdf["default_error"] == "none"
     assert ecdf["default_label"] == "x_or_variable"
+
+    neuro = _recipe(payload, "neuro.ephys.event_rate_timecourse")
+    assert neuro["question_group_id"] == "neuro.ephys"
+    assert neuro["required_fields"] == ["x", "y"]
+    assert neuro["optional_fields"] == ["group"]
+    assert neuro["uses_error"] is True
+    assert neuro["default_error"] == "sem"
+    assert neuro["default_label"] == "y_or_variable"
+    assert neuro["legend_group_field"] == "group"
+    assert neuro["default_style"]["color"] == "#dc2626"

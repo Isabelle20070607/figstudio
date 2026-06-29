@@ -609,3 +609,25 @@ def test_generates_ecdf_recipe_code():
     assert "_recipe_recipe_1_y = [(index + 1) / len(_recipe_recipe_1_values)" in code
     assert "axes_flat[0].step(_recipe_recipe_1_values, _recipe_recipe_1_y, where='post'" in code
     assert "label=f'Response {_recipe_recipe_1_group}'" in code
+
+
+def test_generates_neuro_ephys_event_rate_timecourse_code():
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="event-rate",
+                kind="neuro.ephys.event_rate_timecourse",
+                dataset=RecipeDatasetRef(variable="df", x="time_s", y="event_rate_hz", group="condition"),
+                style=LayerStyle(label="Event rate", color="#dc2626", marker="o"),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "import matplotlib.pyplot as plt" in code
+    assert "figstudio" not in code.lower()
+    assert "_recipe_event_rate_groups = list(dict.fromkeys" in code
+    assert "groupby('time_s', sort=False)['event_rate_hz'].agg(['mean', 'sem']).reindex" in code
+    assert "axes_flat[0].errorbar(_recipe_event_rate_x_order" in code
+    assert "label=f'Event rate {_recipe_event_rate_group}'" in code

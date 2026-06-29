@@ -181,7 +181,7 @@
 | Why it matters | Namespaced recipe IDs、reusable chart-family roles、shared role schemas、validation hooks、generated-code templates、style defaults、gallery fixtures 和 import/export compatibility 应该在外部或领域专用 packs 前存在。 |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Bundled plot layers 以及 line、categorical、distribution-inspection、distribution-summary 和 paired-observation recipes 现在共享 internal registries。这些 registries 驱动 validation capability、generated-code dispatch、UI selectors、tests、gallery-backed workflows、`GET /api/layer-catalog` 和 `GET /api/recipe-catalog` metadata，用于描述 groups、field roles、labels、legend behavior 和默认 styles。 |
+| Progress | Bundled plot layers 以及 line、categorical、distribution-inspection、distribution-summary、paired-observation 和第一个 namespaced `neuro.ephys` recipe 现在共享 internal registries。这些 registries 驱动 validation capability、generated-code dispatch、UI selectors、tests、gallery-backed workflows、`GET /api/layer-catalog` 和 `GET /api/recipe-catalog` metadata，用于描述 groups、field roles、labels、legend behavior 和默认 styles。 |
 | Readiness | Bundled registries 建立了内部 pack substrate，但还不承诺外部 pack files、plugin loading 或 dynamic recipe/layer kinds。 |
 | Gate/Prerequisite | Bundled recipes 和 gallery fixtures 有足够共享结构，避免过早冻结脆弱 extension contract。 |
 
@@ -192,7 +192,7 @@
 | Why it matters | Domain packs 应该复用稳定 primitives，而不是变成多个独立产品。 |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
-| Readiness | Reference lines、repeated panels、secondary axes 和 scientific-summary recipes 已是 beta primitives；剩余前置条件是 pack substrate、domain fixtures 和 loading rules。 |
+| Readiness | Reference lines、repeated panels、secondary axes、scientific-summary recipes 和一个 bundled `neuro.ephys` gallery fixture 已是 beta primitives；更广的 domain packs 仍需要更多 fixtures 和 loading rules。 |
 | Gate/Prerequisite | Reference-line、repeated-panel、secondary-axis 和 scientific-summary primitives 能承载通用结构。 |
 
 | Field | Value |
@@ -200,9 +200,10 @@
 | Theme | Ecosystem and templates |
 | Initiative | 先从 bundled experimental neuroscience pack 开始，再考虑可选 `figstudio-neuro` distribution。 |
 | Why it matters | Neuroscience surface 应先验证 recipe contracts、gallery examples 和 package loading，再拆分 distribution。 |
-| Maturity | `foundation-needed` |
+| Maturity | `exploratory` |
 | Horizon | `later` |
-| Readiness | `neuro.core` 和 ephys-style overlays 需要的 cross-domain primitives 已经具备；在 pack loading 和 gallery evidence 出现前保持 bundled experimental。 |
+| Progress | `neuro.ephys.event_rate_timecourse` 是第一个 bundled experimental neuroscience recipe，并已有 script、portable spec 和 SVG export asset 组成的 gallery proof。 |
+| Readiness | `neuro.core` 和 ephys-style overlays 需要的 cross-domain primitives 已经具备；在 broader pack loading 和更多 gallery evidence 出现前保持 bundled experimental。 |
 | Gate/Prerequisite | Neuroscience 保持子领域组织：`neuro.core`、`neuro.ephys` 和 `neuro.neuroimaging`。 |
 
 ## Product Ergonomics And Operations

@@ -65,6 +65,17 @@ uv run python examples/gallery/faceted_dose_response.py
 | Data shape | Synthetic response latency DataFrame，包含 `cohort`、`sample_id` 和 `latency_ms` columns |
 | Figure contract | 一个 recipe 在每个 cohort 内排序 live `df` values，绘制 Matplotlib step ECDF curves，并让 generated code 不依赖 FigStudio |
 
+## Neuro Ephys Event Rate
+
+![Neuro ephys event rate](../assets/gallery/neuro-ephys-event-rate.svg)
+
+| 项目 | 说明 |
+| --- | --- |
+| Files | [script](../../examples/gallery/neuro_ephys_event_rate.py), [spec](../../examples/gallery/neuro_ephys_event_rate.figstudio.json) |
+| Demonstrates | `neuro.ephys.event_rate_timecourse` 作为 bundled experimental recipe、grouped event-rate summaries、publish-mode labels、SVG export readiness checks |
+| Data shape | Synthetic electrophysiology DataFrame，包含 `condition`、`unit_id`、`time_s` 和 `event_rate_hz` columns |
+| Figure contract | 一个 namespaced recipe 按 time 和 condition 汇总 live `df` event-rate values，绘制 Matplotlib mean/SEM timecourses，并在不引入 external pack loading 的情况下证明 bundled neuroscience-pack 方向 |
+
 ## Secondary-Axis Timecourse
 
 ![Secondary-axis timecourse](../assets/gallery/secondary-axis-timecourse.svg)

@@ -21,7 +21,7 @@ Future product direction and candidate work live in the [roadmap](roadmap.md).
 - Install from a Python package and run without Node/npm at runtime.
 - Launch from Python with `figstudio.open(locals(), ...)` or from `figstudio demo`.
 - Inspect safe summaries of DataFrame, Series, ndarray, mapping, list, tuple, and existing Matplotlib Figure objects.
-- Create and edit the public beta plot kinds and bundled statistics recipes: mean/SEM lines, mean/SEM bars, count bars, stacked count bars, grouped points, category boxplots, category violins, paired before/after panels, and ECDF distributions.
+- Create and edit the public beta plot kinds and bundled statistics recipes: mean/SEM lines, mean/SEM bars, count bars, stacked count bars, grouped points, category boxplots, category violins, paired before/after panels, ECDF distributions, and one bundled experimental neuro ephys event-rate timecourse.
 - Create DataFrame-backed faceted panels from first-seen column values, plus mapping-key and sequence-index repeated panels for normal plot layers, with compact initial layout suggestions.
 - Configure manuscript presets, project style profiles, panel layouts, axes settings, secondary Y-axis overlays, layer styles, reference lines, and text/arrow annotations.
 - Load `.figstudio/styles.json` project style profiles and store profile references plus explicit override fields in `FigureSpec`.
@@ -68,7 +68,7 @@ Future product direction and candidate work live in the [roadmap](roadmap.md).
 - Automatic rewriting of arbitrary user Matplotlib source code.
 - Direct notebook file mutation.
 - Full support for every Matplotlib artist, 3D, polar plots, animation, or interactive web publishing.
-- Domain-specific recipe packs beyond the bundled general statistics recipes.
+- External or installable domain-specific recipe packs beyond the bundled experimental neuro ephys proof.
 - Desktop installers for the public beta.
 
 ## Product Quality Bar

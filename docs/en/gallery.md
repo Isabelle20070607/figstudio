@@ -65,6 +65,17 @@ The companion specs are portable FigStudio state. They store variable names, col
 | Data shape | Synthetic response latency DataFrame with `cohort`, `sample_id`, and `latency_ms` columns |
 | Figure contract | One recipe sorts live `df` values by latency within each cohort, draws Matplotlib step ECDF curves, and keeps generated code independent of FigStudio |
 
+## Neuro Ephys Event Rate
+
+![Neuro ephys event rate](../assets/gallery/neuro-ephys-event-rate.svg)
+
+| Item | Details |
+| --- | --- |
+| Files | [script](../../examples/gallery/neuro_ephys_event_rate.py), [spec](../../examples/gallery/neuro_ephys_event_rate.figstudio.json) |
+| Demonstrates | `neuro.ephys.event_rate_timecourse` as a bundled experimental recipe, grouped event-rate summaries, publish-mode labels, SVG export readiness checks |
+| Data shape | Synthetic electrophysiology DataFrame with `condition`, `unit_id`, `time_s`, and `event_rate_hz` columns |
+| Figure contract | One namespaced recipe groups live `df` event-rate values by time and condition, draws Matplotlib mean/SEM timecourses, and proves the bundled neuroscience-pack direction without external pack loading |
+
 ## Secondary-Axis Timecourse
 
 ![Secondary-axis timecourse](../assets/gallery/secondary-axis-timecourse.svg)

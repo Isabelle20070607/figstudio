@@ -32,6 +32,7 @@ RecipeKind = Literal[
     "grouped_points",
     "paired_before_after",
     "ecdf",
+    "neuro.ephys.event_rate_timecourse",
 ]
 
 FigurePreset = Literal["custom", "journal_single", "journal_double", "poster", "slide"]
