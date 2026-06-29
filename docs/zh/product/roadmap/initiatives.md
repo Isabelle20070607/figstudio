@@ -7,32 +7,11 @@
 | Field | Value |
 | --- | --- |
 | Theme | Scientific authoring primitives |
-| Initiative | 把 small-multiple 或 faceted panel authoring 扩展到 mapping keys 或 sequence items。 |
-| Status | 已在 beta 中完成。 |
-| Completion note | 普通 plot layers 可以按 DataFrame values、literal-safe mapping keys 或 sequence indices 拆分 repeated panels；statistics recipes 仍保持 DataFrame-only。 |
-
-| Field | Value |
-| --- | --- |
-| Theme | Scientific authoring primitives |
-| Initiative | 增加 secondary y-axis 支持，用于 raw events 加 summary rates 这类 overlay。 |
-| Status | 已在 beta 中完成。 |
-| Completion note | Plot layers 可以在同一 panel 上选择 left 或 right Y axis；右侧 axis 支持 label、scale、limits、validation、Matplotlib `twinx()` codegen 和 JSON round-trip。Recipes 和 reference lines 仍保持 primary-axis scope。 |
-
-| Field | Value |
-| --- | --- |
-| Theme | Scientific authoring primitives |
-| Initiative | 增加 automatic repeated-panel layout optimization，作为初始 layout suggestion。 |
-| Status | 已在 beta 中完成。 |
-| Completion note | Facet 和 repeated-panel builders 现在会根据 panel 数量与当前 figure aspect 选择紧凑、无重叠的初始 rows/columns，同时仍只输出已有 `FigureSpec.rows`、`FigureSpec.cols` 和单 cell `AxesSpec` geometry。 |
-
-| Field | Value |
-| --- | --- |
-| Theme | Scientific authoring primitives |
 | Initiative | 探索完整 `subplot_mosaic` authoring。 |
 | Why it matters | Mosaic layouts 可以表达超过 named presets 的发表图版结构。 |
 | Maturity | `exploratory` |
 | Horizon | `later` |
-| Readiness | GridSpec、span validation 和 gallery proof 已经让可行性更清楚，但 mosaic syntax 仍会引入新的 public layout authoring surface。 |
+| Readiness | Mosaic syntax 会引入新的 public layout authoring surface，需要先确定足够简洁的用户模型。 |
 | Gate/Prerequisite | Preset-backed GridSpec panel layouts 在真实 workflow 中证明稳定。 |
 
 | Field | Value |
@@ -49,28 +28,11 @@
 | Field | Value |
 | --- | --- |
 | Theme | Recipe and statistical coverage |
-| Initiative | 围绕科研问题组织 analysis recipes，例如 group comparison、paired conditions、time course comparison、distribution inspection、relationships，以及 matrix 或 heatmap review。 |
-| Why it matters | 用户探索科研数据时首先是在问问题，而不是先选择 chart primitives。 |
-| Status | 已在 beta 中完成。 |
-| Completion note | Recipe builder 现在围绕 time-course comparison、group/condition comparison、categorical counts/composition 和 paired observations 组织已上线 recipes，同时保持现有 `RecipeLayer.kind`、dataset-role validation 和 pure Matplotlib codegen contracts。 |
-
-| Field | Value |
-| --- | --- |
-| Theme | Recipe and statistical coverage |
-| Initiative | 增加 categorical summary recipes，例如 grouped bars、stacked bars、count bars、bar-with-error panels，以及 point/box/violin overlays。 |
-| Why it matters | 这些覆盖常见科研论文图形，同时避免扩张成泛 business dashboard。 |
-| Status | 已在 beta 中完成。 |
-| Completion note | Beta slices 已增加 `mean_sem_bar` 用于 mean-plus-error 分类柱状图，增加 `count_bar` 用于 ungrouped 或 grouped 频数柱状图，增加 `stacked_bar` 用于 grouped stacked 频数柱状图，增加 `boxplot_by_category` 用于 grouped value distributions，并增加 `violin_by_category` 用于 grouped violin distributions。 |
-
-| Field | Value |
-| --- | --- |
-| Theme | Recipe and statistical coverage |
-| Initiative | 增加 distribution 和 relationship recipes：带 fitted trend 的 regression scatter、confidence 或 percentile bands、ECDF、two-dimensional histograms、hexbin summaries，以及更强的 heatmap 或 matrix controls。 |
+| Initiative | 增加剩余 distribution 和 relationship recipes，例如带 fitted trend 的 regression scatter、confidence 或 percentile bands、two-dimensional histograms、hexbin summaries，以及更强的 heatmap 或 matrix controls。 |
 | Why it matters | 这些补齐 exploratory 和 manuscript figures 中高价值的可复现 Matplotlib workflows。 |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
-| Progress | `ecdf` 现在作为第一个完成的 distribution-recipe slice，覆盖了带可选分组的 empirical distribution inspection。 |
-| Readiness | 现有 recipe dispatch、dataset-role validation 和 generated-code templates 降低了实现风险；剩余风险在 fitted trends、bands、binning、hexbin summaries 和 matrix controls 的统计语义。 |
+| Readiness | 主要风险在 fitted trends、bands、binning、hexbin summaries 和 matrix controls 的统计语义。 |
 | Gate/Prerequisite | 随着 recipe 复杂度增长，generated-code templates 和 recipe validation 仍然可读。 |
 
 | Field | Value |
@@ -116,31 +78,20 @@
 | Field | Value |
 | --- | --- |
 | Theme | Publication workflow |
-| Initiative | 建立真实 example gallery、README screenshots 和短 workflow GIFs。 |
-| Why it matters | 用户需要接近真实生产场景的证据，展示 plot layers、statistics recipes、existing Figure inspection、notebook-style output 和 package install flows 如何从 source data 走到可见 preview 与 export artifacts。 |
+| Initiative | 用 README screenshots 和短 workflow GIFs 扩展 gallery discoverability。 |
+| Why it matters | 用户需要在打开完整文档前，快速看到 source data 如何走到可见 preview、generated code 和 export artifacts。 |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | 已提交 gallery workflows 现在覆盖 DataFrame facet recipes、category boxplot 和 violin distributions、ECDF distributions、stacked categorical composition、secondary-axis overlays、GridSpec spans、reference lines、annotations、reusable specs 和 SVG preview assets。 |
-| Gate/Prerequisite | 每个例子展示 input data、user intent 或 figure contract、preview screenshot、generated Matplotlib code、FigureSpec/export artifact，以及它证明的 publication workflow。 |
+| Gate/Prerequisite | Gallery assets 继续可以由 source scripts 和 portable specs 复现。 |
 
 | Field | Value |
 | --- | --- |
 | Theme | Publication workflow |
-| Initiative | 增加 publication-readiness export checks。 |
+| Initiative | 扩展 publication-readiness export checks。 |
 | Why it matters | 缺少 figure intent、final-size typography 不可读、vector text 不可编辑、panel labels 薄弱、legend 或 label overlap、statistics/source data 不可追踪、spec/code sync 过期和 recipe errors 都是常见最后一公里问题。 |
 | Maturity | `ready` |
 | Horizon | `near` |
-| Progress | Advisory checks 现在覆盖没有 data-bearing 图层或 recipe、缺少 primary/secondary axis labels、multi-panel titles 薄弱、multi-item axes 缺少 legend labels、受限 panel 中 crowded legend 的 overlap risk，以及 PNG export 分辨率偏低。 |
-| Readiness | Export-context advisory warnings 已经在 content、label、legend 和 PNG export settings 上验证；后续 final-mile checks 可以复用同一 validation contract。 |
 | Gate/Prerequisite | Checks 是 advisory 且 deterministic，并有清楚的 issue definitions，不引入隐藏的 journal-specific 或 AI judgment。 |
-
-| Field | Value |
-| --- | --- |
-| Theme | Publication workflow |
-| Initiative | 加强 notebook copy 和 cell-output ergonomics。 |
-| Why it matters | Notebook 用户需要更顺滑的 handoff，同时保留对 file mutation 的控制。 |
-| Status | 已在 beta 中完成。 |
-| Completion note | No-script 和 notebook-style sessions 现在提供 mode-aware **Prepare cell** action；save 后 code panel 会切换为 **Notebook replacement cell**，提供 replacement cell 的 copy action，并在后续 spec edits 后回到 generated-code preview，同时仍不修改 notebook 文件。 |
 
 ## AI-Compatible Handoff And Provenance
 
@@ -151,7 +102,7 @@
 | Why it matters | 外部 agent 可以基于 figure-contract-style reasoning 提出 `FigureSpec` 或 patch changes，但 FigStudio 仍然是确定性的 validator、previewer、differ 和 applier。 |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
-| Readiness | Headless validate、render、export 和 codegen commands 现在提供了面向外部 agents 的确定性 automation endpoints；spec diff/apply UX 和 patch acceptance 仍是前置条件。 |
+| Readiness | Spec diff/apply UX 和 patch acceptance 规则仍是前置条件。 |
 | Gate/Prerequisite | 导入 `FigureSpec` 或 patch，显示 spec diff，validate，preview，并让用户 apply 或 reject 修改。 |
 
 | Field | Value |
@@ -161,29 +112,10 @@
 | Why it matters | 当 manifests 记录 figure intent、FigStudio version、source script、data summaries、recipe semantics、export formats、generated-code hash 和 readiness-check results 时，可复现性更强。 |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
-| Readiness | Readiness warning codes 和导出的 `FigureSpec` artifacts 现在提供可写入 manifest 的事实；generated-code hashing 与 source/session provenance 仍是下一步前置条件。 |
+| Readiness | Generated-code hashing 与 source/session provenance 仍是下一步前置条件。 |
 | Gate/Prerequisite | `FigureSpec` versioning、generated-code hashing 和 advisory readiness-check definitions 稳定。 |
 
-| Field | Value |
-| --- | --- |
-| Theme | AI-compatible handoff and provenance |
-| Initiative | 增加面向 agent 的 headless `validate`、`render`、`export`、`codegen` commands。 |
-| Why it matters | Interactive contract 稳定后，automation 需要确定性的 command surfaces。 |
-| Status | 已在 beta 中完成。 |
-| Completion note | CLI 现在支持对 `.figstudio.json` specs 执行一次性的 `codegen`、`validate`、`render` 和 `export` commands。依赖数据的 commands 会执行显式可信 `--data-script` namespace，可在可能时从 output suffix 推断格式，并返回确定性的 exit codes。Patch diff/apply 仍属于 deterministic AI handoff，而不是本 command-wrapper slice。 |
-
 ## Ecosystem And Templates
-
-| Field | Value |
-| --- | --- |
-| Theme | Ecosystem and templates |
-| Initiative | 准备 recipe/template pack substrate。 |
-| Why it matters | Namespaced recipe IDs、reusable chart-family roles、shared role schemas、validation hooks、generated-code templates、style defaults、gallery fixtures 和 import/export compatibility 应该在外部或领域专用 packs 前存在。 |
-| Maturity | `ready` |
-| Horizon | `near` |
-| Progress | Bundled plot layers 以及 line、categorical、distribution-inspection、distribution-summary、paired-observation 和第一个 namespaced `neuro.ephys` recipe 现在共享 internal registries。这些 registries 驱动 validation capability、generated-code dispatch、UI selectors、tests、gallery-backed workflows、`GET /api/layer-catalog` 和 `GET /api/recipe-catalog` metadata，用于描述 groups、field roles、labels、legend behavior 和默认 styles。 |
-| Readiness | Bundled registries 建立了内部 pack substrate，但还不承诺外部 pack files、plugin loading 或 dynamic recipe/layer kinds。 |
-| Gate/Prerequisite | Bundled recipes 和 gallery fixtures 有足够共享结构，避免过早冻结脆弱 extension contract。 |
 
 | Field | Value |
 | --- | --- |
@@ -192,18 +124,17 @@
 | Why it matters | Domain packs 应该复用稳定 primitives，而不是变成多个独立产品。 |
 | Maturity | `foundation-needed` |
 | Horizon | `later` |
-| Readiness | Reference lines、repeated panels、secondary axes、scientific-summary recipes 和一个 bundled `neuro.ephys` gallery fixture 已是 beta primitives；更广的 domain packs 仍需要更多 fixtures 和 loading rules。 |
-| Gate/Prerequisite | Reference-line、repeated-panel、secondary-axis 和 scientific-summary primitives 能承载通用结构。 |
+| Readiness | 更广的 domain packs 仍需要更多 fixtures、loading rules 和 compatibility expectations。 |
+| Gate/Prerequisite | Domain packs 复用稳定的跨领域 primitives，且不变成多个独立产品。 |
 
 | Field | Value |
 | --- | --- |
 | Theme | Ecosystem and templates |
-| Initiative | 先从 bundled experimental neuroscience pack 开始，再考虑可选 `figstudio-neuro` distribution。 |
+| Initiative | 扩展 bundled experimental neuroscience 覆盖范围，再考虑可选 `figstudio-neuro` distribution。 |
 | Why it matters | Neuroscience surface 应先验证 recipe contracts、gallery examples 和 package loading，再拆分 distribution。 |
 | Maturity | `exploratory` |
 | Horizon | `later` |
-| Progress | `neuro.ephys.event_rate_timecourse` 是第一个 bundled experimental neuroscience recipe，并已有 script、portable spec 和 SVG export asset 组成的 gallery proof。 |
-| Readiness | `neuro.core` 和 ephys-style overlays 需要的 cross-domain primitives 已经具备；在 broader pack loading 和更多 gallery evidence 出现前保持 bundled experimental。 |
+| Readiness | 在 broader pack loading 和更多 gallery evidence 出现前保持 bundled experimental。 |
 | Gate/Prerequisite | Neuroscience 保持子领域组织：`neuro.core`、`neuro.ephys` 和 `neuro.neuroimaging`。 |
 
 ## Product Ergonomics And Operations

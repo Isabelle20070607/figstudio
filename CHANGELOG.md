@@ -4,6 +4,58 @@ This file is the canonical chronological release record for FigStudio. User-faci
 release summaries live in [English release notes](docs/en/product/release-notes.md)
 and [Chinese release notes](docs/zh/product/release-notes.md).
 
+## [0.4.0] - 2026-06-29
+
+Release theme: broader scientific figure authoring, recipe catalogs, gallery
+proof, and headless automation.
+
+Release evidence:
+
+- Tag: `v0.4.0`
+- PyPI: `figstudio==0.4.0`
+
+### Added
+
+- Repeated-panel authoring now supports DataFrame facets, literal-safe mapping
+  keys, and sequence-backed panels while preserving generated Matplotlib code.
+- Plot layers can target a secondary right Y axis with validation, rendering,
+  JSON round-trip, and `twinx()` code generation.
+- Bundled recipes now cover more scientific-paper patterns: categorical
+  mean/error bars, count bars, stacked bars, grouped boxplots, grouped violins,
+  ECDF distribution inspection, and the first experimental
+  `neuro.ephys.event_rate_timecourse` recipe.
+- Internal layer and recipe registries now drive capability metadata,
+  generated-code dispatch, validation, UI selectors, tests, and
+  `GET /api/layer-catalog` / `GET /api/recipe-catalog`.
+- Headless CLI commands now support deterministic `validate`, `render`,
+  `export`, and `codegen` workflows for `.figstudio.json` specs.
+- A checked-in gallery now pairs source scripts, portable specs, and SVG
+  outputs for repeated panels, secondary axes, category distributions, ECDF,
+  stacked composition, GridSpec spans, and neuro ephys event rates.
+- Publication-readiness advisories now flag final-mile issues such as missing
+  data-bearing content, weak labels or titles, legend overlap risk, and
+  low-resolution PNG export settings.
+
+### Changed
+
+- The recipe builder is organized around research questions and chart families
+  instead of a flat primitive list.
+- Notebook-style sessions now provide a mode-aware prepare-cell handoff, keep
+  replacement-cell output easy to copy, and return to generated-code preview
+  after later spec edits without mutating notebook files.
+- Repeated-panel builders now choose compact initial rows and columns from the
+  panel count and figure aspect while staying within the existing
+  `FigureSpec.rows`, `FigureSpec.cols`, and one-cell `AxesSpec` contract.
+- Active roadmap pages now remove completed release content before publishing;
+  shipped history lives in this changelog and the paired release notes.
+
+### Fixed
+
+- Repeated-panel smoke coverage avoids Matplotlib layout warnings for
+  aspect-sensitive panels.
+- Notebook and no-script handoff flows no longer leave stale code-panel state
+  after save or later spec edits.
+
 ## [0.3.1] - 2026-06-18
 
 Release theme: clearer validation repair guidance and desktop workspace fit.

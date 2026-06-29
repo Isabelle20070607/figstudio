@@ -325,7 +325,7 @@ def _version() -> str:
     try:
         return version("figstudio")
     except PackageNotFoundError:
-        return "0.3.1"
+        return "0.4.0"
 
 
 def _wait_until_interrupted(session: FigStudioSession) -> None:

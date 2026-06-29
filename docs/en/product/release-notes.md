@@ -4,6 +4,40 @@ This page is the user-facing release summary for published FigStudio versions.
 For the full chronological record and release evidence, see
 [CHANGELOG.md](../../../CHANGELOG.md).
 
+## 0.4.0 - 2026-06-29
+
+Focus: richer scientific authoring, more bundled recipes, gallery proof, and
+headless automation.
+
+What's new:
+
+- Repeated panels can now be built from DataFrame facets, mapping keys, or
+  sequence items while generated code remains plain Matplotlib.
+- Plot layers can target a secondary right Y axis for overlays such as raw
+  traces plus summary rates.
+- New bundled recipes cover categorical bars, count bars, stacked bars,
+  grouped boxplots, grouped violins, ECDF distribution inspection, and the
+  first experimental `neuro.ephys.event_rate_timecourse` workflow.
+- Recipe and layer catalogs now expose structured metadata for the editor,
+  validation, generated code, and API clients.
+- The CLI now supports deterministic `validate`, `render`, `export`, and
+  `codegen` commands for `.figstudio.json` specs.
+- The gallery now includes source scripts, portable specs, and SVG proof for
+  repeated panels, secondary axes, category distributions, ECDF, stacked
+  composition, GridSpec spans, and neuro ephys event rates.
+- Publication-readiness advisories now catch more final-mile issues before
+  export, including missing data-bearing content, weak labels, legend crowding,
+  and low-resolution PNG settings.
+- Notebook-style sessions have a smoother prepare-cell handoff without
+  silently editing notebook files.
+
+Upgrade notes:
+
+- Existing `.figstudio.json` specs remain compatible.
+- Active roadmap docs now list future work only; shipped 0.4.0 details are
+  recorded here and in `CHANGELOG.md`.
+- Use `pip install --upgrade figstudio` to install the latest published wheel.
+
 ## 0.3.1 - 2026-06-18
 
 Focus: validation repair suggestions and desktop workspace fit.

@@ -3,6 +3,40 @@
 本页面向用户总结已经发布的 FigStudio 版本。完整时间线和发布证据见
 [CHANGELOG.md](../../../CHANGELOG.md)。
 
+## 0.4.0 - 2026-06-29
+
+重点：更完整的科研图 authoring、更多内置 recipes、gallery 证据和 headless
+automation。
+
+新增内容：
+
+- Repeated panels 现在可以来自 DataFrame facets、mapping keys 或 sequence
+  items，同时 generated code 仍保持纯 Matplotlib。
+- Plot layers 可以使用右侧 secondary Y axis，用于 raw traces 加 summary
+  rates 这类 overlay。
+- 新增内置 recipes 覆盖 categorical bars、count bars、stacked bars、grouped
+  boxplots、grouped violins、ECDF distribution inspection，以及第一个实验性
+  `neuro.ephys.event_rate_timecourse` workflow。
+- Recipe 和 layer catalogs 现在为 editor、validation、generated code 和 API
+  clients 暴露结构化 metadata。
+- CLI 现在支持对 `.figstudio.json` specs 执行确定性的 `validate`、`render`、
+  `export` 和 `codegen` commands。
+- Gallery 现在包含 repeated panels、secondary axes、category distributions、
+  ECDF、stacked composition、GridSpec spans 和 neuro ephys event rates 的
+  source scripts、portable specs 与 SVG 证据。
+- Publication-readiness advisories 会在 export 前捕捉更多最后一公里问题，
+  包括缺少 data-bearing content、labels 薄弱、legend 拥挤和低分辨率 PNG
+  settings。
+- Notebook-style sessions 的 prepare-cell handoff 更顺滑，同时仍不会静默修改
+  notebook 文件。
+
+升级说明：
+
+- 现有 `.figstudio.json` specs 继续兼容。
+- Active roadmap docs 现在只保留未来工作；已发布的 0.4.0 内容记录在本页和
+  `CHANGELOG.md`。
+- 使用 `pip install --upgrade figstudio` 安装最新已发布 wheel。
+
 ## 0.3.1 - 2026-06-18
 
 重点：validation repair suggestions 和桌面 workspace 适配。
