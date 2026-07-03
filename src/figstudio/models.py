@@ -32,6 +32,7 @@ RecipeKind = Literal[
     "grouped_points",
     "paired_before_after",
     "ecdf",
+    "neuro.core.trial_response_timecourse",
     "neuro.ephys.event_rate_timecourse",
 ]
 

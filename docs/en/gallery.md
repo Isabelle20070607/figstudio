@@ -85,6 +85,17 @@ No separate binary GIF files are required for the repository proof set. When a s
 | Data shape | Synthetic response latency DataFrame with `cohort`, `sample_id`, and `latency_ms` columns |
 | Figure contract | One recipe sorts live `df` values by latency within each cohort, draws Matplotlib step ECDF curves, and keeps generated code independent of FigStudio |
 
+## Neuro Core Trial Response
+
+![Neuro core trial response](../assets/gallery/neuro-core-trial-response.svg)
+
+| Item | Details |
+| --- | --- |
+| Files | [script](../../examples/gallery/neuro_core_trial_response.py), [spec](../../examples/gallery/neuro_core_trial_response.figstudio.json) |
+| Demonstrates | `neuro.core.trial_response_timecourse` as a bundled experimental recipe, grouped trial-aligned responses, stimulus-onset reference lines, SVG export readiness checks |
+| Data shape | Synthetic trial-aligned neuroscience DataFrame with `condition`, `trial_id`, `time_ms`, and `response_z` columns |
+| Figure contract | One namespaced core recipe groups live `df` response values by time and condition, draws Matplotlib mean/SEM timecourses, and keeps the neuroscience surface bundled without external pack loading |
+
 ## Neuro Ephys Event Rate
 
 ![Neuro ephys event rate](../assets/gallery/neuro-ephys-event-rate.svg)

@@ -18,6 +18,7 @@ BOXPLOT_WORKFLOW = "category_boxplot_response"
 VIOLIN_WORKFLOW = "category_violin_response"
 STACKED_BAR_WORKFLOW = "stacked_bar_sample_composition"
 ECDF_WORKFLOW = "ecdf_response_distribution"
+NEURO_CORE_WORKFLOW = "neuro_core_trial_response"
 NEURO_EPHYS_WORKFLOW = "neuro_ephys_event_rate"
 README_SHOWCASE_WORKFLOWS = {
     "faceted_dose_response": "docs/assets/gallery/faceted-dose-response.svg",
@@ -30,6 +31,7 @@ PREVIEW_ASSETS = {
     VIOLIN_WORKFLOW: "category-violin-response.svg",
     STACKED_BAR_WORKFLOW: "stacked-bar-sample-composition.svg",
     ECDF_WORKFLOW: "ecdf-response-distribution.svg",
+    NEURO_CORE_WORKFLOW: "neuro-core-trial-response.svg",
     NEURO_EPHYS_WORKFLOW: "neuro-ephys-event-rate.svg",
     "secondary_axis_timecourse": "secondary-axis-timecourse.svg",
     "spanned_layout_signal_map": "spanned-layout-signal-map.svg",
@@ -160,6 +162,26 @@ def test_ecdf_gallery_workflow_is_svg_export_ready():
     )
     assert "axes_flat[0].step(_recipe_latency_ecdf_values, _recipe_latency_ecdf_y, where='post'" in code
     assert "label=f'Latency {_recipe_latency_ecdf_group}'" in code
+
+
+def test_neuro_core_gallery_workflow_is_svg_export_ready():
+    module = _load_example_module(NEURO_CORE_WORKFLOW)
+    spec = figstudio.load_spec(GALLERY_DIR / f"{NEURO_CORE_WORKFLOW}.figstudio.json")
+
+    response = validate_figure_spec(_namespace(module), spec, context="export", export_format="svg")
+    assert response.ok, _issue_summary(response)
+    readiness_issues = [issue for issue in response.issues if issue.code.startswith("readiness_")]
+    assert readiness_issues == [], _issue_summary(response)
+
+    code = MatplotlibCodegen().generate(spec)
+    assert (
+        "_recipe_core_trial_response_summary = "
+        "_recipe_core_trial_response_group_df.groupby('time_ms', sort=False)['response_z']"
+        ".agg(['mean', 'sem']).reindex(_recipe_core_trial_response_x_order)"
+        in code
+    )
+    assert "axes_flat[0].errorbar(_recipe_core_trial_response_x_order" in code
+    assert "label=f'Response {_recipe_core_trial_response_group}'" in code
 
 
 def test_neuro_ephys_gallery_workflow_is_svg_export_ready():

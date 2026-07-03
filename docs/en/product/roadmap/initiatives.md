@@ -135,7 +135,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | The neuroscience surface should prove recipe contracts, gallery examples, and package loading before splitting distribution. |
 | Maturity | `exploratory` |
 | Horizon | `later` |
-| Readiness | Keep this bundled and experimental until broader pack loading and more gallery evidence exist. |
+| Readiness | `neuro.core` and `neuro.ephys` now have bundled catalog recipes with gallery proof, but broader pack loading and more modality evidence are still needed before split distribution. |
 | Gate/Prerequisite | Keep neuroscience organized as subdomains: `neuro.core`, `neuro.ephys`, and `neuro.neuroimaging`. |
 
 ## Product Ergonomics And Operations

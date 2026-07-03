@@ -21,15 +21,16 @@ The builder groups bundled recipes by research question. The group labels, field
 | Research question | Recipes | Use it for |
 | --- | --- | --- |
 | Time-course comparison | `mean_sem_line` | Group by X and optional group column, compute mean plus SEM or SD, then draw a line with error bars. |
+| Experimental neuro core | `neuro.core.trial_response_timecourse` | Summarize trial-aligned responses over time with mean plus SEM/SD and optional condition groups. |
 | Experimental neuro ephys | `neuro.ephys.event_rate_timecourse` | Summarize event or firing rates over time with mean plus SEM/SD and optional condition groups. |
 | Group/condition comparison | `mean_sem_bar`, `grouped_points`, `boxplot_by_category`, `violin_by_category` | Compare category means with error caps, show individual observations plus mean and error summaries, or review grouped value distributions as boxplots or violins. |
 | Distribution inspection | `ecdf` | Plot empirical cumulative distributions from a value column, optionally split by a group column. |
 | Categorical counts/composition | `count_bar`, `stacked_bar` | Count rows by X category, optionally split or stack counts by group. |
 | Paired observations | `paired_before_after` | Group paired observations by subject, draw subject traces, and overlay condition means. |
 
-Recipes store variable names, column names, style choices, and target axes in the `FigureSpec`. They do not store raw DataFrame data. `neuro.ephys.event_rate_timecourse` uses the same X, Y, optional group, and SEM/SD controls as a time-course summary recipe while keeping the recipe bundled and experimental. `boxplot_by_category` and `violin_by_category` use X and Y columns plus an optional group column; error settings are ignored because the distribution is drawn directly. `ecdf` uses the X/value column plus an optional group column, sorts non-null values, and draws empirical cumulative step curves; Y, subject, and error settings are ignored. `count_bar` uses X and optional group columns only; `stacked_bar` uses X plus group columns; value/error columns are ignored for both. Generated code still imports Matplotlib only and computes statistics from your live DataFrame variable.
+Recipes store variable names, column names, style choices, and target axes in the `FigureSpec`. They do not store raw DataFrame data. `neuro.core.trial_response_timecourse` and `neuro.ephys.event_rate_timecourse` use the same X, Y, optional group, and SEM/SD controls as time-course summary recipes while keeping the neuroscience surface bundled and experimental. `boxplot_by_category` and `violin_by_category` use X and Y columns plus an optional group column; error settings are ignored because the distribution is drawn directly. `ecdf` uses the X/value column plus an optional group column, sorts non-null values, and draws empirical cumulative step curves; Y, subject, and error settings are ignored. `count_bar` uses X and optional group columns only; `stacked_bar` uses X plus group columns; value/error columns are ignored for both. Generated code still imports Matplotlib only and computes statistics from your live DataFrame variable.
 
-Try `examples/general_stats_recipe.py` to exercise the bundled general recipes with synthetic repeated-measures data. For the first bundled experimental neuro recipe, see `examples/gallery/neuro_ephys_event_rate.py`.
+Try `examples/general_stats_recipe.py` to exercise the bundled general recipes with synthetic repeated-measures data. For bundled experimental neuro recipes, see `examples/gallery/neuro_core_trial_response.py` and `examples/gallery/neuro_ephys_event_rate.py`.
 
 ## Faceted Panels
 

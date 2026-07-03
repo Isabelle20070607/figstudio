@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "mode": "publish",
+  "width": 5.4,
+  "height": 3.2,
+  "dpi": 300,
+  "rows": 1,
+  "cols": 1,
+  "axes": [
+    {
+      "id": "ax0",
+      "row": 0,
+      "col": 0,
+      "title": "Bundled neuro core trial-response recipe",
+      "xlabel": "Time from stimulus (ms)",
+      "ylabel": "Response (z)",
+      "xlim": [
+        -100,
+        400
+      ],
+      "ylim": [
+        -0.4,
+        2.4
+      ],
+      "grid": true,
+      "legend": true
+    }
+  ],
+  "layers": [],
+  "recipes": [
+    {
+      "id": "core-trial-response",
+      "kind": "neuro.core.trial_response_timecourse",
+      "axes_id": "ax0",
+      "dataset": {
+        "variable": "df",
+        "x": "time_ms",
+        "y": "response_z",
+        "group": "condition"
+      },
+      "style": {
+        "label": "Response",
+        "color": "#0f766e",
+        "marker": "o",
+        "linestyle": "-",
+        "linewidth": 1.7
+      },
+      "error": "sem"
+    }
+  ],
+  "reference_lines": [
+    {
+      "id": "stimulus-onset",
+      "axes_id": "ax0",
+      "orientation": "vertical",
+      "value": 0,
+      "style": {
+        "label": "Stimulus onset",
+        "color": "#111827",
+        "linestyle": ":",
+        "linewidth": 1.2,
+        "alpha": 0.85
+      }
+    }
+  ],
+  "annotations": [],
+  "style": {
+    "preset": "journal_double",
+    "title": "",
+    "font_family": "Arial",
+    "font_size": 8,
+    "constrained_layout": true
+  },
+  "show": false
+}

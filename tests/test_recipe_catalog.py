@@ -19,9 +19,10 @@ def test_bundled_recipe_catalog_covers_recipe_kind_contract():
     catalog = recipe_catalog()
 
     assert catalog.version == 1
-    assert len(catalog.groups) == 6
+    assert len(catalog.groups) == 7
     assert {recipe.kind for recipe in catalog.recipes} == set(get_args(RecipeKind))
     assert {recipe.question_group_id for recipe in catalog.recipes} <= {group.id for group in catalog.groups}
+    assert any(group.id == "neuro.core" for group in catalog.groups)
     assert any(group.id == "neuro.ephys" for group in catalog.groups)
 
 
@@ -34,7 +35,8 @@ def test_recipe_catalog_api_exposes_field_metadata():
     assert response.status_code == 200
     payload = response.json()
     assert payload["version"] == 1
-    assert len(payload["groups"]) == 6
+    assert len(payload["groups"]) == 7
+    assert any(group["id"] == "neuro.core" for group in payload["groups"])
     assert any(group["id"] == "neuro.ephys" for group in payload["groups"])
     assert {recipe["kind"] for recipe in payload["recipes"]} == set(get_args(RecipeKind))
 
@@ -72,6 +74,16 @@ def test_recipe_catalog_api_exposes_field_metadata():
     assert ecdf["uses_error"] is False
     assert ecdf["default_error"] == "none"
     assert ecdf["default_label"] == "x_or_variable"
+
+    neuro_core = _recipe(payload, "neuro.core.trial_response_timecourse")
+    assert neuro_core["question_group_id"] == "neuro.core"
+    assert neuro_core["required_fields"] == ["x", "y"]
+    assert neuro_core["optional_fields"] == ["group"]
+    assert neuro_core["uses_error"] is True
+    assert neuro_core["default_error"] == "sem"
+    assert neuro_core["default_label"] == "y_or_variable"
+    assert neuro_core["legend_group_field"] == "group"
+    assert neuro_core["default_style"]["color"] == "#0f766e"
 
     neuro = _recipe(payload, "neuro.ephys.event_rate_timecourse")
     assert neuro["question_group_id"] == "neuro.ephys"

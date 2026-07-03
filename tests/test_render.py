@@ -234,6 +234,31 @@ def test_render_svg_from_ecdf_recipe():
     assert "axes_flat[0].step(_recipe_recipe_1_values, _recipe_recipe_1_y, where='post'" in code
 
 
+def test_render_svg_from_neuro_core_trial_response_timecourse_recipe():
+    df = pd.DataFrame(
+        {
+            "condition": ["baseline", "baseline", "stim", "stim", "stim"],
+            "time_ms": [-100, 0, -100, 0, 100],
+            "response_z": [0.1, 0.3, 0.2, 0.9, 1.1],
+        }
+    )
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="neuro.core.trial_response_timecourse",
+                dataset=RecipeDatasetRef(variable="df", x="time_ms", y="response_z", group="condition"),
+            )
+        ]
+    )
+
+    svg, code = RenderEngine({"df": df}).render_base64(spec, "svg")
+
+    assert "<svg" in svg
+    assert "groupby('time_ms', sort=False)['response_z'].agg(['mean', 'sem']).reindex" in code
+    assert "axes_flat[0].errorbar(_recipe_recipe_1_x_order" in code
+
+
 def test_render_svg_from_neuro_ephys_event_rate_timecourse_recipe():
     df = pd.DataFrame(
         {

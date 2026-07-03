@@ -22,6 +22,7 @@ export type RecipeKind =
   | "grouped_points"
   | "paired_before_after"
   | "ecdf"
+  | "neuro.core.trial_response_timecourse"
   | "neuro.ephys.event_rate_timecourse";
 
 export type FigurePreset = "custom" | "journal_single" | "journal_double" | "poster" | "slide";

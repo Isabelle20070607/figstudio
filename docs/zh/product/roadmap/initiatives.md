@@ -135,7 +135,7 @@
 | Why it matters | Neuroscience surface 应先验证 recipe contracts、gallery examples 和 package loading，再拆分 distribution。 |
 | Maturity | `exploratory` |
 | Horizon | `later` |
-| Readiness | 在 broader pack loading 和更多 gallery evidence 出现前保持 bundled experimental。 |
+| Readiness | `neuro.core` 和 `neuro.ephys` 已有 bundled catalog recipes 与 gallery proof，但在拆分 distribution 前仍需要 broader pack loading 和更多 modality evidence。 |
 | Gate/Prerequisite | Neuroscience 保持子领域组织：`neuro.core`、`neuro.ephys` 和 `neuro.neuroimaging`。 |
 
 ## Product Ergonomics And Operations

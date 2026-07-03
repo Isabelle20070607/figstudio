@@ -925,6 +925,37 @@ def test_ecdf_recipe_api_smoke_workflow():
     )
 
 
+def test_neuro_core_trial_response_timecourse_api_smoke_workflow():
+    df = pd.DataFrame(
+        {
+            "condition": ["baseline", "baseline", "stim", "stim", "stim"],
+            "time_ms": [-100, 0, -100, 0, 100],
+            "response_z": [0.1, 0.3, 0.2, 0.9, 1.1],
+        }
+    )
+    session = FigStudioSession(registry=VariableRegistry({"df": df}), port=8001)
+    client = TestClient(create_app(session))
+    spec = FigureSpec(
+        axes=[AxesSpec(id="ax0", xlabel="Time from stimulus (ms)", ylabel="Response (z)")],
+        recipes=[
+            RecipeLayer(
+                id="recipe-1",
+                kind="neuro.core.trial_response_timecourse",
+                dataset=RecipeDatasetRef(variable="df", x="time_ms", y="response_z", group="condition"),
+            )
+        ],
+    )
+
+    validation = client.post("/api/validate", json={"spec": spec.model_dump()})
+    rendered = client.post("/api/render", json={"spec": spec.model_dump(), "format": "svg"})
+
+    assert validation.status_code == 200
+    assert validation.json()["ok"] is True
+    assert rendered.status_code == 200
+    assert "<svg" in rendered.json()["image"]
+    assert "axes_flat[0].errorbar(_recipe_recipe_1_x_order" in rendered.json()["code"]
+
+
 def test_neuro_ephys_event_rate_timecourse_api_smoke_workflow():
     df = pd.DataFrame(
         {

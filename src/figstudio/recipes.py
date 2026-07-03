@@ -51,6 +51,11 @@ _RECIPE_GROUPS = [
         summary="Track repeated measurements for the same subject across conditions.",
     ),
     RecipeQuestionGroup(
+        id="neuro.core",
+        label="Neuro core (experimental)",
+        summary="Build bundled neuroscience summaries from trial- or condition-aligned DataFrame columns.",
+    ),
+    RecipeQuestionGroup(
         id="neuro.ephys",
         label="Neuro ephys (experimental)",
         summary="Build bundled electrophysiology summaries from time-aligned DataFrame columns.",
@@ -182,6 +187,19 @@ _RECIPE_REGISTRY = [
             default_style=LayerStyle(color="#2563eb", linestyle="-", linewidth=1.8),
         ),
         "_ecdf_code",
+    ),
+    RegisteredRecipe(
+        RecipeDefinition(
+            kind="neuro.core.trial_response_timecourse",
+            label="Neuro trial-response timecourse",
+            question_group_id="neuro.core",
+            role="Summarizes trial-aligned responses over time with optional condition groups.",
+            required_fields=["x", "y"],
+            optional_fields=["group"],
+            legend_group_field="group",
+            default_style=LayerStyle(color="#0f766e", marker="o", linestyle="-", linewidth=1.8),
+        ),
+        "_mean_sem_line_code",
     ),
     RegisteredRecipe(
         RecipeDefinition(

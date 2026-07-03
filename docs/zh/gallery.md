@@ -85,6 +85,17 @@ README 使用这个已提交 gallery 中最小的三张 preview，让新用户�
 | Data shape | Synthetic response latency DataFrame，包含 `cohort`、`sample_id` 和 `latency_ms` columns |
 | Figure contract | 一个 recipe 在每个 cohort 内排序 live `df` values，绘制 Matplotlib step ECDF curves，并让 generated code 不依赖 FigStudio |
 
+## Neuro Core Trial Response
+
+![Neuro core trial response](../assets/gallery/neuro-core-trial-response.svg)
+
+| 项目 | 说明 |
+| --- | --- |
+| Files | [script](../../examples/gallery/neuro_core_trial_response.py), [spec](../../examples/gallery/neuro_core_trial_response.figstudio.json) |
+| Demonstrates | `neuro.core.trial_response_timecourse` 作为 bundled experimental recipe、grouped trial-aligned responses、stimulus-onset reference lines、SVG export readiness checks |
+| Data shape | Synthetic trial-aligned neuroscience DataFrame，包含 `condition`、`trial_id`、`time_ms` 和 `response_z` columns |
+| Figure contract | 一个 namespaced core recipe 按 time 和 condition 汇总 live `df` response values，绘制 Matplotlib mean/SEM timecourses，并在不引入 external pack loading 的情况下保持 neuroscience surface bundled |
+
 ## Neuro Ephys Event Rate
 
 ![Neuro ephys event rate](../assets/gallery/neuro-ephys-event-rate.svg)

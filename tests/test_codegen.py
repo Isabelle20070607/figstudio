@@ -611,6 +611,28 @@ def test_generates_ecdf_recipe_code():
     assert "label=f'Response {_recipe_recipe_1_group}'" in code
 
 
+def test_generates_neuro_core_trial_response_timecourse_code():
+    spec = FigureSpec(
+        recipes=[
+            RecipeLayer(
+                id="trial-response",
+                kind="neuro.core.trial_response_timecourse",
+                dataset=RecipeDatasetRef(variable="df", x="time_ms", y="response_z", group="condition"),
+                style=LayerStyle(label="Trial response", color="#0f766e", marker="o"),
+            )
+        ]
+    )
+
+    code = MatplotlibCodegen().generate(spec)
+
+    assert "import matplotlib.pyplot as plt" in code
+    assert "figstudio" not in code.lower()
+    assert "_recipe_trial_response_groups = list(dict.fromkeys" in code
+    assert "groupby('time_ms', sort=False)['response_z'].agg(['mean', 'sem']).reindex" in code
+    assert "axes_flat[0].errorbar(_recipe_trial_response_x_order" in code
+    assert "label=f'Trial response {_recipe_trial_response_group}'" in code
+
+
 def test_generates_neuro_ephys_event_rate_timecourse_code():
     spec = FigureSpec(
         recipes=[

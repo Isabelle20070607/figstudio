@@ -111,6 +111,12 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
   await expect(recipeSelect.locator('optgroup[label="Distribution inspection"]')).toContainText("ECDF");
   await expect(recipeSelect.locator('optgroup[label="Categorical counts/composition"]')).toContainText("Stacked count bars");
   await expect(recipeSelect.locator('optgroup[label="Paired observations"]')).toContainText("Paired before/after");
+  await expect(recipeSelect.locator('optgroup[label="Neuro core (experimental)"]')).toContainText(
+    "Neuro trial-response timecourse"
+  );
+  await expect(recipeSelect.locator('optgroup[label="Neuro ephys (experimental)"]')).toContainText(
+    "Ephys event-rate timecourse"
+  );
   await expect(page.getByTestId("recipe-question-note")).toContainText("Time-course comparison");
   await page.getByTestId("recipe-kind-select").selectOption("mean_sem_line");
   await page.getByTestId("add-recipe-button").click();
@@ -120,6 +126,10 @@ test("covers the public beta editor workflow", async ({ page }, testInfo) => {
     "Mean +/- SEM line"
   );
   await expect(page.getByTestId("status-line")).toContainText("Preview synced");
+  await page.getByTestId("recipe-kind-select").selectOption("neuro.core.trial_response_timecourse");
+  await expect(page.getByTestId("recipe-question-note")).toContainText("Neuro core (experimental)");
+  await expect(page.getByTestId("recipe-y-column-select")).toHaveCount(1);
+  await expect(page.getByTestId("recipe-error-select")).toHaveCount(1);
   await page.getByTestId("recipe-kind-select").selectOption("count_bar");
   await expect(page.getByTestId("recipe-question-note")).toContainText("Categorical counts/composition");
   await expect(page.getByTestId("recipe-y-column-select")).toHaveCount(0);
