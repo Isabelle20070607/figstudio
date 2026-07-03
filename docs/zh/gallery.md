@@ -10,6 +10,26 @@ uv run python examples/gallery/faceted_dose_response.py
 
 配套 spec 是可移植的 FigStudio state。它们保存 variable names、columns、panel layout、filters、selections、reference lines、annotations 和 style choices，不保存 raw data。
 
+## README Screenshot Set
+
+README 使用这个已提交 gallery 中最小的三张 preview，让新用户在打开完整文档前就能看到可复现的视觉证据：
+
+| README screenshot | 对应 workflow | 选择原因 |
+| --- | --- | --- |
+| [Faceted dose response](../assets/gallery/faceted-dose-response.svg) | [script](../../examples/gallery/faceted_dose_response.py), [spec](../../examples/gallery/faceted_dose_response.figstudio.json) | 展示 DataFrame facets、recipes、reference lines 和 publication sizing 的 data-to-preview 流程 |
+| [Stacked bar sample composition](../assets/gallery/stacked-bar-sample-composition.svg) | [script](../../examples/gallery/stacked_bar_sample_composition.py), [spec](../../examples/gallery/stacked_bar_sample_composition.figstudio.json) | 展示带 grouped aggregation 和 export-readiness checks 的紧凑 recipe workflow |
+| [Neuro ephys event rate](../assets/gallery/neuro-ephys-event-rate.svg) | [script](../../examples/gallery/neuro_ephys_event_rate.py), [spec](../../examples/gallery/neuro_ephys_event_rate.figstudio.json) | 展示不依赖 external pack loading 的 bundled experimental domain recipe 方向 |
+
+## Short Workflow GIF References
+
+仓库 proof set 不需要提交额外 binary GIF 文件。需要为 project pages 或 release material 录制短 demo GIF 时，从这些已提交 workflows 录制：
+
+| GIF reference | Capture path |
+| --- | --- |
+| Data to faceted preview | 启动 `examples/gallery/faceted_dose_response.py`，选择 repeated-measures DataFrame，渲染 three-panel preview，然后导出 SVG。 |
+| Recipe to export artifact | 启动 `examples/gallery/stacked_bar_sample_composition.py`，检查 stacked recipe mapping，预览 grouped counts，然后导出 SVG。 |
+| Domain recipe proof | 启动 `examples/gallery/neuro_ephys_event_rate.py`，检查 bundled neuro recipe，预览 mean/SEM event rates，然后导出 SVG。 |
+
 ## Faceted Dose Response
 
 ![Faceted dose response](../assets/gallery/faceted-dose-response.svg)

@@ -10,6 +10,26 @@ uv run python examples/gallery/faceted_dose_response.py
 
 The companion specs are portable FigStudio state. They store variable names, columns, panel layout, filters, selections, reference lines, annotations, and style choices, not raw data.
 
+## README Screenshot Set
+
+The README uses a minimal three-preview set from this checked-in gallery so new users see reproducible visual proof before opening the full docs:
+
+| README screenshot | Backing workflow | Why it is included |
+| --- | --- | --- |
+| [Faceted dose response](../assets/gallery/faceted-dose-response.svg) | [script](../../examples/gallery/faceted_dose_response.py), [spec](../../examples/gallery/faceted_dose_response.figstudio.json) | Shows data-to-preview flow for DataFrame facets, recipes, reference lines, and publication sizing |
+| [Stacked bar sample composition](../assets/gallery/stacked-bar-sample-composition.svg) | [script](../../examples/gallery/stacked_bar_sample_composition.py), [spec](../../examples/gallery/stacked_bar_sample_composition.figstudio.json) | Shows a compact recipe workflow with grouped aggregation and export-readiness checks |
+| [Neuro ephys event rate](../assets/gallery/neuro-ephys-event-rate.svg) | [script](../../examples/gallery/neuro_ephys_event_rate.py), [spec](../../examples/gallery/neuro_ephys_event_rate.figstudio.json) | Shows the bundled experimental domain recipe direction without external pack loading |
+
+## Short Workflow GIF References
+
+No separate binary GIF files are required for the repository proof set. When a short demo GIF is needed for project pages or release material, record these paths from the checked-in workflows:
+
+| GIF reference | Capture path |
+| --- | --- |
+| Data to faceted preview | Launch `examples/gallery/faceted_dose_response.py`, select the repeated-measures DataFrame, render the three-panel preview, then export SVG. |
+| Recipe to export artifact | Launch `examples/gallery/stacked_bar_sample_composition.py`, inspect the stacked recipe mapping, preview grouped counts, then export SVG. |
+| Domain recipe proof | Launch `examples/gallery/neuro_ephys_event_rate.py`, inspect the bundled neuro recipe, preview mean/SEM event rates, then export SVG. |
+
 ## Faceted Dose Response
 
 ![Faceted dose response](../assets/gallery/faceted-dose-response.svg)

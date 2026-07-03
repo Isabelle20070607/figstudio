@@ -12,11 +12,18 @@ from figstudio.validation import validate_figure_spec
 
 GALLERY_DIR = Path(__file__).resolve().parents[1] / "examples" / "gallery"
 GALLERY_ASSET_DIR = Path(__file__).resolve().parents[1] / "docs" / "assets" / "gallery"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+README_PATH = REPO_ROOT / "README.md"
 BOXPLOT_WORKFLOW = "category_boxplot_response"
 VIOLIN_WORKFLOW = "category_violin_response"
 STACKED_BAR_WORKFLOW = "stacked_bar_sample_composition"
 ECDF_WORKFLOW = "ecdf_response_distribution"
 NEURO_EPHYS_WORKFLOW = "neuro_ephys_event_rate"
+README_SHOWCASE_WORKFLOWS = {
+    "faceted_dose_response": "docs/assets/gallery/faceted-dose-response.svg",
+    STACKED_BAR_WORKFLOW: "docs/assets/gallery/stacked-bar-sample-composition.svg",
+    NEURO_EPHYS_WORKFLOW: "docs/assets/gallery/neuro-ephys-event-rate.svg",
+}
 PREVIEW_ASSETS = {
     "faceted_dose_response": "faceted-dose-response.svg",
     BOXPLOT_WORKFLOW: "category-boxplot-response.svg",
@@ -74,6 +81,24 @@ def test_gallery_preview_assets_are_committed(stem: str, asset_name: str):
 
     assert asset_path.exists(), f"{stem} is missing preview asset {asset_name}"
     assert "<svg" in asset_path.read_text(encoding="utf-8")[:500]
+
+
+def test_readme_gallery_showcase_references_checked_in_workflows():
+    readme = README_PATH.read_text(encoding="utf-8")
+
+    assert "## Gallery Preview" in readme
+    assert "Short workflow GIF references" in readme
+
+    for stem, asset_ref in README_SHOWCASE_WORKFLOWS.items():
+        script_ref = f"examples/gallery/{stem}.py"
+        spec_ref = f"examples/gallery/{stem}.figstudio.json"
+
+        assert script_ref in readme
+        assert spec_ref in readme
+        assert asset_ref in readme
+        assert (REPO_ROOT / script_ref).exists()
+        assert (REPO_ROOT / spec_ref).exists()
+        assert (REPO_ROOT / asset_ref).exists()
 
 
 def test_stacked_bar_gallery_workflow_is_svg_export_ready():

@@ -82,6 +82,7 @@ This page groups future roadmap work by product theme. It is not a release plan;
 | Why it matters | Users need quick visual proof of source data through visible preview, generated code, and export artifacts before opening the full docs. |
 | Maturity | `ready` |
 | Horizon | `near` |
+| Progress | In-tree proof now exists: README embeds a minimal three-screenshot gallery set and short workflow GIF references backed by checked-in scripts, portable specs, and SVG previews. |
 | Gate/Prerequisite | Gallery assets stay reproducible from source scripts and portable specs. |
 
 | Field | Value |
