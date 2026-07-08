@@ -78,16 +78,6 @@
 | Field | Value |
 | --- | --- |
 | Theme | Publication workflow |
-| Initiative | 用 README screenshots 和短 workflow GIFs 扩展 gallery discoverability。 |
-| Why it matters | 用户需要在打开完整文档前，快速看到 source data 如何走到可见 preview、generated code 和 export artifacts。 |
-| Maturity | `ready` |
-| Horizon | `near` |
-| Progress | 已有仓库内 proof：README 嵌入最小三张 gallery screenshot set，并提供短 workflow GIF references；这些 references 都由已提交 scripts、portable specs 和 SVG previews 支撑。 |
-| Gate/Prerequisite | Gallery assets 继续可以由 source scripts 和 portable specs 复现。 |
-
-| Field | Value |
-| --- | --- |
-| Theme | Publication workflow |
 | Initiative | 扩展 publication-readiness export checks。 |
 | Why it matters | 缺少 figure intent、final-size typography 不可读、vector text 不可编辑、panel labels 薄弱、legend 或 label overlap、statistics/source data 不可追踪、spec/code sync 过期和 recipe errors 都是常见最后一公里问题。 |
 | Maturity | `ready` |

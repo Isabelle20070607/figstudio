@@ -4,6 +4,32 @@ This page is the user-facing release summary for published FigStudio versions.
 For the full chronological record and release evidence, see
 [CHANGELOG.md](../../../CHANGELOG.md).
 
+## 0.4.1 - 2026-07-08
+
+Focus: release-facing gallery proof and bundled neuro core recipe coverage.
+
+What's new:
+
+- The README now shows a minimal reproducible gallery preview set before users
+  open the full documentation.
+- The gallery docs now include short workflow GIF capture references tied to
+  checked-in scripts, portable specs, and SVG previews.
+- A new bundled experimental `neuro.core.trial_response_timecourse` recipe
+  summarizes trial-aligned responses over time with optional condition groups.
+- The gallery now includes a neuro core trial-response workflow with source
+  data generation, a portable spec, stimulus-onset reference lines, and SVG
+  export proof.
+- API models, frontend recipe types, recipe catalog tests, code generation,
+  render, server, gallery-example, and browser smoke coverage now include the
+  new `neuro.core` recipe path.
+
+Upgrade notes:
+
+- Existing `.figstudio.json` specs remain compatible.
+- Active roadmap docs list future work only; the shipped
+  gallery-discoverability item is recorded here and in `CHANGELOG.md`.
+- Use `pip install --upgrade figstudio` after the 0.4.1 wheel is published.
+
 ## 0.4.0 - 2026-06-29
 
 Focus: richer scientific authoring, more bundled recipes, gallery proof, and
