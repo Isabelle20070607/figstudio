@@ -2,9 +2,9 @@
 
 ## 产品定义
 
-FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会话中已有的数据转换成可复现、适合发表的 Matplotlib 图版。
+FigStudio 是一个 public beta 的本地制图工具，用来把当前 Python 环境中已有的数据转换成可复现、适合发表的 Matplotlib 图版。
 
-用户安装 Python package 后，可从脚本或 Notebook 打开本地浏览器编辑器，应用可选 project style profiles，映射变量、创建 plot layers 或受支持的 statistics recipes、预览真实 Matplotlib 输出、导出文件、保存生成的 OO code，并可把 GUI 会话保存成可移植的 `FigureSpec` JSON 文件。
+用户安装 Python package 后，可从脚本或 Notebook 打开本地浏览器编辑器，应用可选 project style profiles，映射变量、创建 plot layers 或受支持的 statistics recipes、预览真实 Matplotlib 输出、导出文件、保存生成的 OO code，并可把当前 GUI 编辑状态保存成可移植的 `FigureSpec` JSON 文件。
 
 未来产品方向和候选工作放在 [路线图](roadmap.md)。
 
@@ -28,9 +28,9 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - 用 Matplotlib Agg 生成 previews 和 exports。
 - 对 `.figstudio.json` specs 运行确定性的 headless `codegen`、`validate`、`render` 和 `export` commands；依赖数据的 commands 使用显式可信 Python data script。
 - 将 generated code 写入唯一受控脚本块，或返回 notebook replacement code。
-- 导入和导出 `.figstudio.json` session specs。
+- 导入和导出 `.figstudio.json` 配置文件。
 - Specs 保存 recipe intent、column mappings、facet equality filters 和 repeated-panel selections，不保存原始数据。
-- 当 live session 提供足够上下文时，validation issue cards 会显示 field-level repair suggestions。
+- 当前 Python 环境提供足够上下文时，validation issue cards 会显示 field-level repair suggestions。
 
 ## 用户故事
 
@@ -44,12 +44,12 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - 作为谨慎的脚本用户，我希望 writeback 只发生在 marker block 里，不影响数据处理代码。
 - 作为 Notebook 用户，我希望得到 replacement cell code，而不是自动修改 Notebook。
 - 作为 Matplotlib 用户，我希望 generated code 不需要 import FigStudio 就能运行。
-- 作为回访用户，我希望通过 FigureSpec JSON import/export，在兼容数据下继续 GUI editing session。
+- 作为回访用户，我希望通过 FigureSpec JSON import/export，在数据兼容时继续上次的 GUI 编辑。
 
 ## 验收标准
 
 - 脚本能启动 FigStudio，创建 DataFrame plot 或 statistics recipe，渲染 preview，并把代码写回 controlled block。
-- 不提供 `script_path` 的 Notebook 风格会话能返回完整 replacement code。
+- 从 Notebook 启动或未提供 `script_path` 时，FigStudio 能返回完整 replacement code。
 - Generated code 只 import Matplotlib，并能在相同用户变量下运行。
 - PNG、SVG、PDF 导出来自 Matplotlib。
 - Reference lines 会生成 Matplotlib `axhline` 或 `axvline` 代码，并能通过 `.figstudio.json` 往返保存。
@@ -71,7 +71,7 @@ FigStudio 是一个 public beta 的本地 figure workflow，用来把 Python 会
 - Bundled experimental neuro workflow proofs 之外的外部或可安装 domain-specific recipe packs。
 - Public beta 阶段的 desktop installers。
 
-## 产品质量门槛
+## 产品质量要求
 
 - Editor 必须保持 local-first，并默认绑定到 `127.0.0.1`。
 - Generated plotting code 必须保持为易读 Matplotlib OO code。

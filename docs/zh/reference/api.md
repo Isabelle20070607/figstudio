@@ -1,6 +1,6 @@
 # API 参考
 
-本文档记录当前 public beta API surface。未来能力放在 [路线图](../product/roadmap.md)。
+本文档记录当前 public beta 提供的 API。未来能力放在 [路线图](../product/roadmap.md)。
 
 ## Python API
 
@@ -24,7 +24,7 @@ figstudio.open(
 | `script_path` | 启用 `.py` 文件受控写回。 |
 | `project_path` | `.figstudio/styles.json` 的项目根目录；默认是 `Path(script_path).parent` 或当前工作目录。 |
 | `block_id` | 选择 `# figstudio:start <block_id>` 和 `# figstudio:end <block_id>`。 |
-| `mode` | 用于 editor mode selection 的 session metadata。 |
+| `mode` | 用于选择 editor 模式的元数据。 |
 | `open_browser` | 为 true 时打开本地 editor URL。 |
 
 ```python
@@ -49,18 +49,18 @@ figstudio render figure.figstudio.json --data-script data.py --output preview.sv
 figstudio export figure.figstudio.json --data-script data.py --output figure.pdf
 ```
 
-Session commands 会打印 session URL，并持续运行直到被中断。Headless commands 会执行一次后退出：
+启动 editor 的命令会打印访问 URL，并持续运行直到被中断。无界面命令执行一次后退出：
 
 - `codegen` 读取 `.figstudio.json` spec，并把生成的 Matplotlib code 写到 stdout 或 `--output`。
 - `validate` 基于可选的可信 `--data-script` namespace 校验 spec，validation errors 返回 exit `1`。
 - `render` 基于 spec 和可信 `--data-script` 写出 SVG 或 PNG preview。
 - `export` 基于 spec 和可信 `--data-script` 用 export-context validation 写出 PNG、SVG 或 PDF。
 
-`--data-script` 会在当前进程执行可信 Python code，并把它的 globals 作为 live namespace。只对自己控制的脚本使用它。`render` 和 `export` 在省略 `--format` 时会从 `--output` 推断格式；不支持或缺失 suffix 会返回 exit `2`。Exit codes：成功或仅有 warnings 为 `0`，validation errors 为 `1`，CLI usage、input 或 runtime failures 为 `2`。
+`--data-script` 会在当前进程执行受信任的 Python 代码，并把它的全局变量作为当前数据环境。只对自己控制的脚本使用它。`render` 和 `export` 在省略 `--format` 时会从 `--output` 推断格式；格式不受支持或文件名缺少扩展名时，退出码为 `2`。退出码：成功或仅有 warnings 为 `0`，validation errors 为 `1`，CLI 使用方式、输入或运行时错误为 `2`。
 
 ## FigureSpec
 
-`FigureSpec` 是可 JSON 序列化的 editor state，也是 codegen 输入。
+`FigureSpec` 是可序列化为 JSON 的 editor state，也是 codegen 输入。
 
 | 字段 | 含义 |
 | --- | --- |
@@ -77,13 +77,13 @@ Session commands 会打印 session URL，并持续运行直到被中断。Headle
 
 支持的 `PlotLayer.kind` 值为 `line`、`scatter`、`bar`、`barh`、`hist`、`boxplot`、`violin`、`errorbar`、`heatmap`、`contour`、`step` 和 `fill_between`。
 
-`GET /api/layer-catalog` 会暴露 editor 使用的 bundled plot-layer catalog。Response 包含 `version`、`groups` 和 `layers`；每个 layer entry 记录 `kind`、label、group、role 文案、必需和可选 dataset fields、secondary-axis 支持、2D/colorbar 能力、legend policy，以及默认 style。Public beta 中这个 catalog 只描述内置 layers，不是外部 plugin 或 pack-loading contract。
+`GET /api/layer-catalog` 会返回 editor 使用的内置 plot-layer catalog。Response 包含 `version`、`groups` 和 `layers`；每个 layer entry 记录 `kind`、label、group、role 文案、必需和可选 dataset fields、secondary-axis 支持、2D/colorbar 能力、legend policy，以及默认 style。Public beta 中这个 catalog 只描述内置 layers，不包含外部 plugin 或 pack 加载接口。
 
 `PlotLayer.y_axis` 默认是 `left`。把它设为 `right` 可在同一个 `axes_id` 上创建简单 secondary Y-axis overlay；`AxesSpec.secondary_y` 保存右侧 `ylabel`、`yscale` 和 `ylim`。当某个 panel 至少有一个 right-axis layer 时，生成代码会输出 Matplotlib `twinx()`。
 
 支持的 `RecipeLayer.kind` 值为 `mean_sem_line`、`mean_sem_bar`、`count_bar`、`stacked_bar`、`boxplot_by_category`、`violin_by_category`、`grouped_points`、`paired_before_after`、`ecdf`、`neuro.core.trial_response_timecourse` 和 `neuro.ephys.event_rate_timecourse`。
 
-`GET /api/recipe-catalog` 会暴露 editor 使用的 bundled recipe catalog。Response 包含 `version`、`groups` 和 `recipes`；每个 recipe entry 记录 `kind`、label、research-question group、role 文案、必需和可选 dataset fields、默认 error 行为、默认 label 行为、legend grouping 行为，以及默认 style。Public beta 中这个 catalog 只描述内置 recipes，不是外部 plugin 或 pack-loading contract。
+`GET /api/recipe-catalog` 会返回 editor 使用的内置 recipe catalog。Response 包含 `version`、`groups` 和 `recipes`；每个 recipe entry 记录 `kind`、label、research-question group、role 文案、必需和可选 dataset fields、默认 error 行为、默认 label 行为、legend grouping 行为，以及默认 style。Public beta 中这个 catalog 只描述内置 recipes，不包含外部 plugin 或 pack 加载接口。
 
 `ReferenceLineSpec.orientation` 为 `horizontal` 或 `vertical`。`value` 是 numeric value，`style` 复用 plot layer 的 label、color、line style、linewidth 和 alpha 字段。生成代码会输出 Matplotlib `axhline` 或 `axvline`。
 
@@ -93,11 +93,11 @@ Session commands 会打印 session URL，并持续运行直到被中断。Headle
 
 ## REST API
 
-本地 FastAPI server 按 session 创建，并默认绑定到 `127.0.0.1`。
+每次启动都会创建一个本地 FastAPI server，并默认绑定到 `127.0.0.1`。
 
 | Endpoint | 用途 |
 | --- | --- |
-| `GET /api/session` | Session metadata、写回能力、可选 inspected figure tree。 |
+| `GET /api/session` | 当前实例的元数据、写回能力、可选 inspected figure tree。 |
 | `GET /api/variables` | 安全变量摘要。 |
 | `GET /api/style-profiles` | 已加载 project style profiles、source path 和非致命 load warnings。 |
 | `GET /api/layer-catalog` | Bundled plot-layer groups、field roles、labels、validation capability 和默认 layer style metadata。 |
@@ -142,8 +142,8 @@ Export context validation 还可能返回 advisory readiness warnings：`readine
 
 - 生成绘图代码必须能在不 import FigStudio 的情况下运行。
 - 生成 recipe code 可以调用现有 pandas DataFrame 变量的方法，但 imports 仍限于 Matplotlib。
-- 保存的 FigureSpec 文件依赖下一次 session 中兼容的变量名、mapping keys、sequence indices、DataFrame 列和数据形状。
+- 保存的 FigureSpec 文件在下次打开时仍需要兼容的变量名、mapping keys、sequence indices、DataFrame 列和数据形状。
 - 保存的 recipe、facet、repeated-panel 和 secondary-axis specs 只存列映射、等值 filters、selections、labels、axis settings 和 recipe intent，不保存原始数据。
 - 保存的 reference line specs 只存 numeric constants 和 style，不保存派生数据。
-- Runtime wheel 安装不应要求 Node/npm。
-- Notebook workflows 返回代码，不直接编辑 Notebook 文件。
+- 安装 wheel 后不应要求 Node/npm。
+- 从 Notebook 启动时返回代码，不直接编辑 Notebook 文件。

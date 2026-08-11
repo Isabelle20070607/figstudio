@@ -104,8 +104,8 @@ automation。
 升级说明：
 
 - 不使用 profiles 的旧 specs 继续可用。
-- 如果 spec 引用了不存在的 profile，FigStudio 会给出 warning，并回退到
-  spec 显式值和默认值。
+- 如果 spec 引用了不存在的 profile，FigStudio 会给出 warning，并改用
+  spec 中的显式值和默认值。
 - 使用 `pip install --upgrade figstudio` 安装最新已发布 wheel。
 
 ## 0.2.0 - 2026-06-17
@@ -144,7 +144,7 @@ automation。
 - Public beta plot layers、Matplotlib preview、generated code panel、PNG/SVG/PDF
   export，以及 FigureSpec JSON import/export。
 - 安全 script writeback，只替换一个受控 marker block。
-- Notebook 风格 session 返回 replacement cell code，不直接修改 notebook 文件。
+- 从 Notebook 启动时返回 replacement cell code，不直接修改 Notebook 文件。
 - CI 和 release workflows 覆盖 PyPI/TestPyPI 发布、bundle check、clean
   install smoke 和 browser smoke。
 

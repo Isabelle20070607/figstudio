@@ -1,6 +1,6 @@
 # 保存、导出与复用
 
-当图形准备离开 editor，成为代码、文件或可复用编辑会话时，阅读本页。
+需要把 editor 中的图形保存为代码、导出为文件，或保留编辑状态以便复用时，阅读本页。
 
 ## 安全保存代码
 
@@ -26,7 +26,7 @@ flowchart TD
 
 FigStudio 会拒绝缺失 block、同一 id 的重复 block、嵌套 markers、不匹配 markers 和 IO failures。它不会编辑受控块之外的代码。脚本写回被阻止时，生成的 replacement 仍会显示在 code panel 中。
 
-Notebook 风格或 no-script 会话返回替换 cell code，不直接修改 Notebook 文件。在这些会话中，toolbar 显示 **Prepare cell**。点击后，code panel 会切换为 **Notebook replacement cell**，并启用 copy button，方便用户主动粘贴到 Notebook。
+从 Notebook 启动或未提供脚本时，FigStudio 会返回替换 cell code，不直接修改 Notebook 文件。此时 toolbar 显示 **Prepare cell**。点击后，code panel 会切换为 **Notebook replacement cell**，并启用 copy button，方便用户主动粘贴到 Notebook。
 
 ## 导出文件
 
@@ -36,9 +36,9 @@ Notebook 风格或 no-script 会话返回替换 cell code，不直接修改 Note
 
 ## 复用 FigureSpec 文件
 
-使用 FigureSpec import/export 按钮保存或恢复 `.figstudio.json` GUI 会话。
+使用 FigureSpec import/export 按钮保存或恢复 `.figstudio.json` GUI 编辑状态。
 
-`FigureSpec` 保存的是 editor state，不保存原始数据。复用 spec 需要新的 Python session 提供兼容的变量名、DataFrame 列、facet filter values 和数据形状。
+`FigureSpec` 保存的是 editor state，不保存原始数据。再次使用时，Python 环境仍需提供兼容的变量名、DataFrame 列、facet filter values 和数据形状。
 
 也可以使用 Python helper：
 
@@ -47,4 +47,4 @@ figstudio.save_spec(session.spec, "figure.figstudio.json")
 spec = figstudio.load_spec("figure.figstudio.json")
 ```
 
-项目 style profile 引用也依赖下一次 session 中兼容的 `.figstudio/styles.json` 内容。缺失 profile id 会 warning，并 fallback 到 spec 显式值和 defaults。
+项目 style profile 引用也依赖下次打开时可用的 `.figstudio/styles.json` 内容。找不到 profile id 时会给出 warning，并改用 spec 中的显式值和默认值。

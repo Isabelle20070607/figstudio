@@ -57,9 +57,9 @@ npm run dev
 # figstudio:end main
 ```
 
-`CodeSyncEngine` 会拒绝缺失 blocks、同一 id 的重复 blocks、嵌套 markers、不匹配 start/end markers 和 IO failures。不要添加会编辑受控块之外代码的 fallback behavior。
+`CodeSyncEngine` 会拒绝缺失 blocks、同一 id 的重复 blocks、嵌套 markers、不匹配 start/end markers 和 IO failures。不要添加会编辑受控块之外代码的备用逻辑。
 
-Notebook 风格会话返回 replacement cell code，不得直接修改 Notebook files。
+从 Notebook 启动时返回 replacement cell code，不得直接修改 Notebook files。
 
 ## Documentation Sync
 

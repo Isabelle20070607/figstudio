@@ -62,7 +62,7 @@ Mapping 和 sequence repeated panels 的 v1 边界是：使用 index X 或独立
 
 - figure size、DPI、标题、字体设置、内置 presets 和项目 style profile；
 - panel layout rows、columns、shared-axis options 和 presets；
-- axes titles、labels、scales、limits、secondary Y-axis settings、grid、legend 和 colorbar fallback；
+- axes titles、labels、scales、limits、secondary Y-axis settings、grid、legend 和 colorbar 默认设置；
 - layer 和 recipe 的 target axes、layer left/right Y-axis target、labels、colors、markers、line styles、linewidths、alpha、colormap、histogram bins 和 fill alpha；
 - 用于 baselines、thresholds、cutoff markers 和 guide labels 的 horizontal/vertical reference lines；
 - 当前 axes 上的 text 和 arrow annotations。

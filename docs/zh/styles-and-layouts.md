@@ -20,7 +20,7 @@ Facet 和 repeated-panel builders 使用同一套 geometry model。它们的初�
 
 ## 项目 Style Profiles
 
-项目可以在 session project root 下的 `.figstudio/styles.json` 中提供共享 figure、layer 和 recipe 默认值：
+可以在项目根目录下的 `.figstudio/styles.json` 中提供共享 figure、layer 和 recipe 默认值：
 
 ```json
 {
@@ -55,7 +55,7 @@ Facet 和 repeated-panel builders 使用同一套 geometry model。它们的初�
 
 ```mermaid
 flowchart TD
-  A["Session project root"] --> B["加载 .figstudio/styles.json"]
+  A["项目根目录"] --> B["加载 .figstudio/styles.json"]
   B --> C{"Selected profile id 存在？"}
   C -->|yes| D["解析 figure defaults"]
   C -->|no| E["警告 missing_style_profile，并使用 spec 显式值/defaults"]

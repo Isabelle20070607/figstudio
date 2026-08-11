@@ -66,7 +66,7 @@ flowchart TD
 
 ## 打包
 
-Python wheel 把构建后的 React app 放在 `figstudio/static` 下。FastAPI server 优先服务包内目录，只在开发环境 fallback 到 source-tree `frontend/dist`。
+Python wheel 把构建后的 React app 放在 `figstudio/static` 下。FastAPI server 优先服务包内目录，只有在开发环境才改用源码树中的 `frontend/dist`。
 
 Hatch custom build hook 会在 clean checkout 中运行 `npm ci`，如果本地已有 `frontend/node_modules` 则复用，随后运行 `npm run build`，并把 `frontend/dist` 复制到 `src/figstudio/static`。`FIGSTUDIO_SKIP_FRONTEND_BUILD=1` 会跳过 npm build step，但仍复制已有 `frontend/dist`。
 

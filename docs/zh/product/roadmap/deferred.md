@@ -1,6 +1,6 @@
 # 暂缓事项
 
-本页记录当前 roadmap 形态中刻意暂缓的工作。有些条目可以在产品 contracts 稳定后重新评估。
+本页记录当前 roadmap 中刻意暂缓的工作。有些条目可以在产品接口和行为约定稳定后重新评估。
 
 | 暂缓领域 | 暂缓原因 | 重新评估条件 |
 | --- | --- | --- |
@@ -14,4 +14,4 @@
 | 自动把任意 seaborn、statannotations 或 custom statistical artists 恢复为 editable recipes | 只有能保留 raw 或 reproducible data 时，恢复才有价值。 | Source artist 暴露足够 data 和 semantics，可生成可复现 code。 |
 | Desktop installers | Public beta 以 Python package 为第一安装路径。 | Python package workflow 稳定，且 installer demand 足以证明 distribution 工作值得做。 |
 | 更丰富的 style systems | 当前 generated-code 和 style-profile contracts 应先证明稳定。 | Style profiles 被广泛使用，且用户需要更强表达力的 governance model。 |
-| Plugin 或 template distribution | 外部分发会过早冻结 extension contracts。 | Bundled recipe 和 gallery patterns 清楚到可以提供 compatibility promises。 |
+| Plugin 或 template distribution | 现在开放外部分发，会过早承诺扩展接口的兼容性。 | 内置 recipe 和 gallery 模式已经足够清楚，可以开始提供兼容性承诺。 |

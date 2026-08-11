@@ -24,14 +24,14 @@ figstudio demo
 flowchart TD
   A["数据已在 Python 中准备好"] --> B{"你在哪里工作？"}
   B --> C["脚本"]
-  B --> D["Notebook 或交互式会话"]
+  B --> D["Notebook 或交互式环境"]
   C --> E["调用 figstudio.open(locals(), script_path=__file__, block_id='main')"]
   D --> F["调用 figstudio.open(locals())"]
   E --> G["Save code 可替换一个受控 marker block"]
   F --> H["Prepare cell 返回替换 cell code"]
 ```
 
-## 第一个脚本会话
+## 从脚本启动
 
 在数据准备完成后调用 FigStudio，并为生成绘图代码预留一个 marker block：
 
@@ -49,9 +49,9 @@ session = figstudio.open(locals(), script_path=__file__, block_id="main")
 
 如果同一个脚本里有多张生成图，为每张图使用不同的 `block_id`。
 
-## 第一个 Notebook 会话
+## 从 Notebook 启动
 
-Notebook 或交互式会话应省略 `script_path`：
+从 Notebook 或交互式环境启动时，应省略 `script_path`：
 
 ```python
 import figstudio

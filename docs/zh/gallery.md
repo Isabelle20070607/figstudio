@@ -1,34 +1,34 @@
 # Gallery
 
-这个 gallery 是当前 beta 功能的一组小型、已提交 proof set。每个 workflow 都包含可运行的 Python script、配套 `.figstudio.json` figure contract，以及由该 contract 生成的 SVG preview。
+这个 Gallery 汇集了当前 beta 中一组小而完整、已纳入仓库的示例。每个示例都包含可运行的 Python 脚本、配套的 `.figstudio.json` FigureSpec，以及按该配置生成的 SVG 预览图。
 
-在仓库根目录运行一个 workflow script 即可打开 live editor：
+在仓库根目录运行任一示例脚本，即可打开编辑器：
 
 ```powershell
 uv run python examples/gallery/faceted_dose_response.py
 ```
 
-配套 spec 是可移植的 FigStudio state。它们保存 variable names、columns、panel layout、filters、selections、reference lines、annotations 和 style choices，不保存 raw data。
+配套的 FigureSpec 文件可以带到别处继续使用。它们保存变量名、列名、面板布局、筛选条件、选中项、参考线、注释和样式选择，但不保存原始数据。
 
-## README Screenshot Set
+## README 预览图
 
-README 使用这个已提交 gallery 中最小的三张 preview，让新用户在打开完整文档前就能看到可复现的视觉证据：
+README 从这些仓库示例中选了三张预览图，让新用户在打开完整文档前就能看到可复现的实际效果：
 
-| README screenshot | 对应 workflow | 选择原因 |
+| README 预览图 | 对应示例 | 选择原因 |
 | --- | --- | --- |
-| [Faceted dose response](../assets/gallery/faceted-dose-response.svg) | [script](../../examples/gallery/faceted_dose_response.py), [spec](../../examples/gallery/faceted_dose_response.figstudio.json) | 展示 DataFrame facets、recipes、reference lines 和 publication sizing 的 data-to-preview 流程 |
-| [Stacked bar sample composition](../assets/gallery/stacked-bar-sample-composition.svg) | [script](../../examples/gallery/stacked_bar_sample_composition.py), [spec](../../examples/gallery/stacked_bar_sample_composition.figstudio.json) | 展示带 grouped aggregation 和 export-readiness checks 的紧凑 recipe workflow |
-| [Neuro ephys event rate](../assets/gallery/neuro-ephys-event-rate.svg) | [script](../../examples/gallery/neuro_ephys_event_rate.py), [spec](../../examples/gallery/neuro_ephys_event_rate.figstudio.json) | 展示不依赖 external pack loading 的 bundled experimental domain recipe 方向 |
+| [Faceted dose response](../assets/gallery/faceted-dose-response.svg) | [脚本](../../examples/gallery/faceted_dose_response.py)、[spec](../../examples/gallery/faceted_dose_response.figstudio.json) | 展示从 DataFrame 分面、统计 recipe、参考线和论文版式到预览图的完整流程 |
+| [Stacked bar sample composition](../assets/gallery/stacked-bar-sample-composition.svg) | [脚本](../../examples/gallery/stacked_bar_sample_composition.py)、[spec](../../examples/gallery/stacked_bar_sample_composition.figstudio.json) | 展示分组计数、导出前检查和紧凑的 `stacked_bar` recipe 工作流 |
+| [Neuro ephys event rate](../assets/gallery/neuro-ephys-event-rate.svg) | [脚本](../../examples/gallery/neuro_ephys_event_rate.py)、[spec](../../examples/gallery/neuro_ephys_event_rate.figstudio.json) | 展示无需加载外部扩展包即可使用的内置实验性领域 recipe |
 
-## Short Workflow GIF References
+## 短 GIF 录制参考
 
-仓库 proof set 不需要提交额外 binary GIF 文件。需要为 project pages 或 release material 录制短 demo GIF 时，从这些已提交 workflows 录制：
+这些示例不需要额外提交 GIF 文件。如果要为项目页面或发布材料录制短演示 GIF，可以从以下仓库示例开始：
 
-| GIF reference | Capture path |
+| 演示内容 | 录制步骤 |
 | --- | --- |
-| Data to faceted preview | 启动 `examples/gallery/faceted_dose_response.py`，选择 repeated-measures DataFrame，渲染 three-panel preview，然后导出 SVG。 |
-| Recipe to export artifact | 启动 `examples/gallery/stacked_bar_sample_composition.py`，检查 stacked recipe mapping，预览 grouped counts，然后导出 SVG。 |
-| Domain recipe proof | 启动 `examples/gallery/neuro_ephys_event_rate.py`，检查 bundled neuro recipe，预览 mean/SEM event rates，然后导出 SVG。 |
+| 从数据到分面预览 | 启动 `examples/gallery/faceted_dose_response.py`，选择重复测量 DataFrame，渲染三面板预览，然后导出 SVG。 |
+| 从 recipe 到导出文件 | 启动 `examples/gallery/stacked_bar_sample_composition.py`，检查 `stacked_bar` recipe 的字段映射，预览分组计数，然后导出 SVG。 |
+| 领域 recipe 示例 | 启动 `examples/gallery/neuro_ephys_event_rate.py`，检查内置 neuro recipe，预览 mean/SEM event rate，然后导出 SVG。 |
 
 ## Faceted Dose Response
 
@@ -36,10 +36,10 @@ README 使用这个已提交 gallery 中最小的三张 preview，让新用户�
 
 | 项目 | 说明 |
 | --- | --- |
-| Files | [script](../../examples/gallery/faceted_dose_response.py), [spec](../../examples/gallery/faceted_dose_response.figstudio.json) |
-| Demonstrates | DataFrame-backed facet filters、`mean_sem_line` recipes、shared axes、reference lines、journal double-column sizing |
-| Data shape | Synthetic repeated-measures DataFrame，包含 `condition`、`replicate`、`time` 和 `response` columns |
-| Figure contract | 三个 panels 按 condition 过滤同一个 `df`，并从 live DataFrame columns 生成 plain Matplotlib recipe code |
+| 文件 | [脚本](../../examples/gallery/faceted_dose_response.py)、[spec](../../examples/gallery/faceted_dose_response.figstudio.json) |
+| 展示内容 | DataFrame 分面筛选、`mean_sem_line` recipes、共享坐标轴、参考线、期刊双栏尺寸 |
+| 数据结构 | 模拟重复测量 DataFrame，包含 `condition`、`replicate`、`time` 和 `response` 列 |
+| 图形配置 | 三个面板按 `condition` 过滤同一个 `df`，并根据当前 DataFrame 的列生成纯 Matplotlib recipe 代码 |
 
 ## Stacked Bar Sample Composition
 
@@ -47,10 +47,10 @@ README 使用这个已提交 gallery 中最小的三张 preview，让新用户�
 
 | 项目 | 说明 |
 | --- | --- |
-| Files | [script](../../examples/gallery/stacked_bar_sample_composition.py), [spec](../../examples/gallery/stacked_bar_sample_composition.figstudio.json) |
-| Demonstrates | `stacked_bar` recipes、grouped count aggregation、publish-mode labels、SVG export readiness checks |
-| Data shape | Synthetic sample QC DataFrame，包含 `sample_id`、`stage` 和 `qc_status` columns |
-| Figure contract | 一个 recipe 按 workflow stage 和 QC status 对 live `df` 分组，把 counts 堆叠成 plain Matplotlib bars，并在 SVG export-context validation 下保持 clean |
+| 文件 | [脚本](../../examples/gallery/stacked_bar_sample_composition.py)、[spec](../../examples/gallery/stacked_bar_sample_composition.figstudio.json) |
+| 展示内容 | `stacked_bar` recipes、分组计数汇总、发布模式标签、SVG 导出前检查 |
+| 数据结构 | 模拟样本 QC DataFrame，包含 `sample_id`、`stage` 和 `qc_status` 列 |
+| 图形配置 | 一个 recipe 按 `stage` 和 `qc_status` 对当前 `df` 分组，将计数堆叠为 Matplotlib 柱状图，并能通过 SVG 导出校验 |
 
 ## Category Boxplot Response
 
@@ -58,10 +58,10 @@ README 使用这个已提交 gallery 中最小的三张 preview，让新用户�
 
 | 项目 | 说明 |
 | --- | --- |
-| Files | [script](../../examples/gallery/category_boxplot_response.py), [spec](../../examples/gallery/category_boxplot_response.figstudio.json) |
-| Demonstrates | `boxplot_by_category` recipes、grouped distribution summaries、publish-mode labels、SVG export readiness checks |
-| Data shape | Synthetic response DataFrame，包含 `condition`、`genotype`、`replicate` 和 `response` columns |
-| Figure contract | 一个 recipe 按 condition 和 genotype 对 live `df` values 分组，按 group 偏移 Matplotlib boxplots，并让 generated code 不依赖 FigStudio |
+| 文件 | [脚本](../../examples/gallery/category_boxplot_response.py)、[spec](../../examples/gallery/category_boxplot_response.figstudio.json) |
+| 展示内容 | `boxplot_by_category` recipes、按组汇总分布、发布模式标签、SVG 导出前检查 |
+| 数据结构 | 模拟响应 DataFrame，包含 `condition`、`genotype`、`replicate` 和 `response` 列 |
+| 图形配置 | 一个 recipe 按 `condition` 和 `genotype` 对当前 `df` 的数值分组，按组错开 Matplotlib 箱线图，并让生成代码不依赖 FigStudio |
 
 ## Category Violin Response
 
@@ -69,10 +69,10 @@ README 使用这个已提交 gallery 中最小的三张 preview，让新用户�
 
 | 项目 | 说明 |
 | --- | --- |
-| Files | [script](../../examples/gallery/category_violin_response.py), [spec](../../examples/gallery/category_violin_response.figstudio.json) |
-| Demonstrates | `violin_by_category` recipes、grouped distribution summaries、publish-mode labels、SVG export readiness checks |
-| Data shape | Synthetic response DataFrame，包含 `condition`、`genotype`、`replicate` 和 `response` columns |
-| Figure contract | 一个 recipe 按 condition 和 genotype 对 live `df` values 分组，按 group 偏移 Matplotlib violins，并让 generated code 不依赖 FigStudio |
+| 文件 | [脚本](../../examples/gallery/category_violin_response.py)、[spec](../../examples/gallery/category_violin_response.figstudio.json) |
+| 展示内容 | `violin_by_category` recipes、按组汇总分布、发布模式标签、SVG 导出前检查 |
+| 数据结构 | 模拟响应 DataFrame，包含 `condition`、`genotype`、`replicate` 和 `response` 列 |
+| 图形配置 | 一个 recipe 按 `condition` 和 `genotype` 对当前 `df` 的数值分组，按组错开 Matplotlib 小提琴图，并让生成代码不依赖 FigStudio |
 
 ## ECDF Response Distribution
 
@@ -80,10 +80,10 @@ README 使用这个已提交 gallery 中最小的三张 preview，让新用户�
 
 | 项目 | 说明 |
 | --- | --- |
-| Files | [script](../../examples/gallery/ecdf_response_distribution.py), [spec](../../examples/gallery/ecdf_response_distribution.figstudio.json) |
-| Demonstrates | `ecdf` recipes、grouped empirical cumulative distributions、publish-mode labels、SVG export readiness checks |
-| Data shape | Synthetic response latency DataFrame，包含 `cohort`、`sample_id` 和 `latency_ms` columns |
-| Figure contract | 一个 recipe 在每个 cohort 内排序 live `df` values，绘制 Matplotlib step ECDF curves，并让 generated code 不依赖 FigStudio |
+| 文件 | [脚本](../../examples/gallery/ecdf_response_distribution.py)、[spec](../../examples/gallery/ecdf_response_distribution.figstudio.json) |
+| 展示内容 | `ecdf` recipes、分组经验累积分布、发布模式标签、SVG 导出前检查 |
+| 数据结构 | 模拟响应延迟 DataFrame，包含 `cohort`、`sample_id` 和 `latency_ms` 列 |
+| 图形配置 | 一个 recipe 在每个 `cohort` 内排序当前 `df` 的数值，绘制 Matplotlib 阶梯 ECDF 曲线，并让生成代码不依赖 FigStudio |
 
 ## Neuro Core Trial Response
 
@@ -91,10 +91,10 @@ README 使用这个已提交 gallery 中最小的三张 preview，让新用户�
 
 | 项目 | 说明 |
 | --- | --- |
-| Files | [script](../../examples/gallery/neuro_core_trial_response.py), [spec](../../examples/gallery/neuro_core_trial_response.figstudio.json) |
-| Demonstrates | `neuro.core.trial_response_timecourse` 作为 bundled experimental recipe、grouped trial-aligned responses、stimulus-onset reference lines、SVG export readiness checks |
-| Data shape | Synthetic trial-aligned neuroscience DataFrame，包含 `condition`、`trial_id`、`time_ms` 和 `response_z` columns |
-| Figure contract | 一个 namespaced core recipe 按 time 和 condition 汇总 live `df` response values，绘制 Matplotlib mean/SEM timecourses，并在不引入 external pack loading 的情况下保持 neuroscience surface bundled |
+| 文件 | [脚本](../../examples/gallery/neuro_core_trial_response.py)、[spec](../../examples/gallery/neuro_core_trial_response.figstudio.json) |
+| 展示内容 | 内置实验性 `neuro.core.trial_response_timecourse` recipe、分组汇总 trial 对齐响应、刺激开始参考线、SVG 导出前检查 |
+| 数据结构 | 模拟 trial 对齐的神经科学 DataFrame，包含 `condition`、`trial_id`、`time_ms` 和 `response_z` 列 |
+| 图形配置 | `neuro.core` 下的 recipe 按 `time` 和 `condition` 汇总当前 `df` 的 `response_z`，绘制 Matplotlib mean/SEM 时间曲线；无需加载外部扩展包，neuro 功能仍随主包提供 |
 
 ## Neuro Ephys Event Rate
 
@@ -102,10 +102,10 @@ README 使用这个已提交 gallery 中最小的三张 preview，让新用户�
 
 | 项目 | 说明 |
 | --- | --- |
-| Files | [script](../../examples/gallery/neuro_ephys_event_rate.py), [spec](../../examples/gallery/neuro_ephys_event_rate.figstudio.json) |
-| Demonstrates | `neuro.ephys.event_rate_timecourse` 作为 bundled experimental recipe、grouped event-rate summaries、publish-mode labels、SVG export readiness checks |
-| Data shape | Synthetic electrophysiology DataFrame，包含 `condition`、`unit_id`、`time_s` 和 `event_rate_hz` columns |
-| Figure contract | 一个 namespaced recipe 按 time 和 condition 汇总 live `df` event-rate values，绘制 Matplotlib mean/SEM timecourses，并在不引入 external pack loading 的情况下证明 bundled neuroscience-pack 方向 |
+| 文件 | [脚本](../../examples/gallery/neuro_ephys_event_rate.py)、[spec](../../examples/gallery/neuro_ephys_event_rate.figstudio.json) |
+| 展示内容 | 内置实验性 `neuro.ephys.event_rate_timecourse` recipe、分组汇总 event rate、发布模式标签、SVG 导出前检查 |
+| 数据结构 | 模拟电生理 DataFrame，包含 `condition`、`unit_id`、`time_s` 和 `event_rate_hz` 列 |
+| 图形配置 | `neuro.ephys` 下的 recipe 按 `time` 和 `condition` 汇总当前 `df` 的 `event_rate_hz`，绘制 Matplotlib mean/SEM 时间曲线，并说明这类 neuroscience recipe 可以随主包提供 |
 
 ## Secondary-Axis Timecourse
 
@@ -113,10 +113,10 @@ README 使用这个已提交 gallery 中最小的三张 preview，让新用户�
 
 | 项目 | 说明 |
 | --- | --- |
-| Files | [script](../../examples/gallery/secondary_axis_timecourse.py), [spec](../../examples/gallery/secondary_axis_timecourse.figstudio.json) |
-| Demonstrates | Left/right Y-axis overlay、combined legend、vertical reference lines、arrow annotation、export-ready sizing |
-| Data shape | 一个 DataFrame，包含对齐的 `time`、`fluorescence`、`event_rate` 和 `stimulus` columns |
-| Figure contract | Fluorescence line 留在 primary axis，event rate 通过 `AxesSpec.secondary_y` 渲染到右侧 Y 轴 |
+| 文件 | [脚本](../../examples/gallery/secondary_axis_timecourse.py)、[spec](../../examples/gallery/secondary_axis_timecourse.figstudio.json) |
+| 展示内容 | 左右 Y 轴叠加、合并图例、竖直参考线、箭头注释、适合导出的图形尺寸 |
+| 数据结构 | 一个 DataFrame，包含对齐的 `time`、`fluorescence`、`event_rate` 和 `stimulus` 列 |
+| 图形配置 | fluorescence 曲线使用左侧主轴，event rate 通过 `AxesSpec.secondary_y` 渲染到右侧 Y 轴 |
 
 ## Spanned Layout Signal Map
 
@@ -124,11 +124,11 @@ README 使用这个已提交 gallery 中最小的三张 preview，让新用户�
 
 | 项目 | 说明 |
 | --- | --- |
-| Files | [script](../../examples/gallery/spanned_layout_signal_map.py), [spec](../../examples/gallery/spanned_layout_signal_map.figstudio.json) |
-| Demonstrates | GridSpec span output、heatmap colorbar、mapping-key repeated panel selections、annotations、baseline reference lines |
-| Data shape | 共享 `time`、一个 `signal_map` dictionary 和一个 2D `spectral_power` array |
-| Figure contract | 大 heatmap 跨两行，selected mapping entries 作为独立 trace panels 渲染 |
+| 文件 | [脚本](../../examples/gallery/spanned_layout_signal_map.py)、[spec](../../examples/gallery/spanned_layout_signal_map.figstudio.json) |
+| 展示内容 | GridSpec 跨格布局、heatmap colorbar、按 mapping key 选择重复面板、注释、基线参考线 |
+| 数据结构 | 共享 `time`、一个 `signal_map` 字典和一个二维 `spectral_power` 数组 |
+| 图形配置 | 大 heatmap 跨两行，所选 mapping 项分别渲染成独立的曲线面板 |
 
-## Verification
+## 验证
 
-Gallery examples 由 `tests/test_gallery_examples.py` 覆盖。该测试会在不打开 editor 的情况下 import 每个 script、加载配套 spec、用 script namespace 验证它，并运行 Matplotlib code generation。
+Gallery 示例由 `tests/test_gallery_examples.py` 覆盖。该测试会在不打开 editor 的情况下导入每个脚本、加载配套 spec、用脚本中的变量验证配置，并运行 Matplotlib 代码生成。

@@ -6,7 +6,7 @@ FigStudio 面向已经在脚本或 Notebook 中准备好数据、希望更快得
 
 1. [快速开始](getting-started.md)：安装 FigStudio、运行 demo、从脚本或 Notebook 打开，并创建第一张 DataFrame 图。
 2. [科研制图工作流](scientific-workflows.md)：使用 plot layers、统计 recipes、faceted panels、secondary Y-axis overlays、reference lines、已有 Matplotlib Figure、annotations 和发表级精修。
-3. [Gallery](gallery.md)：查看已提交 workflows，覆盖 facets、category boxplots、category violins、ECDF distributions、stacked bars、bundled neuro recipes、secondary axes、GridSpec spans、reference lines 和 reusable specs。
+3. [Gallery](gallery.md)：查看仓库中的完整示例，覆盖分面、分类箱线图与小提琴图、ECDF 分布、堆叠柱状图、内置 neuro recipes、双 Y 轴、GridSpec 跨格布局、参考线和可复用 specs。
 4. [样式与布局](styles-and-layouts.md)：使用 manuscript presets、panel layouts、GridSpec 输出和项目 style profiles。
 5. [保存、导出与复用](save-export-reuse.md)：安全保存代码、导出 PNG/SVG/PDF，并复用 `.figstudio.json` specs。
 6. [排错](troubleshooting.md)：处理 validation、render、export、writeback 和 style profile 问题。
@@ -15,15 +15,15 @@ FigStudio 面向已经在脚本或 Notebook 中准备好数据、希望更快得
 
 | 需求 | 页面 |
 | --- | --- |
-| Python、CLI、REST 和 FigureSpec 契约 | [API 参考](reference/api.md) |
-| 已提交 example workflows | [Gallery](gallery.md) |
-| 架构和实现基准 | [技术设计](architecture/technical-design.md) |
+| Python、CLI、REST 和 FigureSpec 数据格式 | [API 参考](reference/api.md) |
+| 仓库中的完整示例 | [Gallery](gallery.md) |
+| 架构和实现原则 | [技术设计](architecture/technical-design.md) |
 | 继续开发 | [开发者指南](contributing/developer-guide.md) |
 | 当前 beta 范围 | [产品需求](product/prd.md) |
 | 路线图总览 | [路线图](product/roadmap.md) |
 | 路线图策略 | [路线图策略](product/roadmap/strategy.md) |
 | 按主题组织的未来工作 | [路线图 Initiatives](product/roadmap/initiatives.md) |
 | 暂缓路线图事项 | [暂缓事项](product/roadmap/deferred.md) |
-| 发布说明和 what's new | [发布说明](product/release-notes.md) |
+| 发布说明和版本亮点 | [发布说明](product/release-notes.md) |
 
 English documentation is available at [../en/index.md](../en/index.md).

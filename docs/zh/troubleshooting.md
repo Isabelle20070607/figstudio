@@ -18,9 +18,9 @@ FigStudio 会在渲染、保存或导出前校验常见问题。出现 issue car
 | Heatmap 或 contour 缺少二维值 | 使用二维 ndarray 或 gridded value source。 |
 | Log axis 上有非正数据 | 过滤数据、修改 limits，或切回 linear scale。 |
 | 不支持 right Y-axis 的 layer kind | 将 right Y axis 用于简单 overlay layer kind，或把该 layer 切回 left Y axis。 |
-| 缺失 style profile | 选择可用 profile、恢复 `.figstudio/styles.json`，或接受 fallback defaults。 |
+| 缺失 style profile | 选择可用 profile、恢复 `.figstudio/styles.json`，或继续使用 spec 中的显式值和内置默认值。 |
 
-Issue payloads 可能包含 `suggestion`，以及 available variables、DataFrame columns、axes ids、profile ids 或 suggested replacement value 等 details。Editor 会优先显示这条 suggestion，再 fallback 到上表中的通用修复说明。
+Issue payloads 可能包含 `suggestion`，以及 available variables、DataFrame columns、axes ids、profile ids 或 suggested replacement value 等 details。Editor 会优先显示这条 suggestion；没有时才显示上表中的通用修复说明。
 
 ## Error Codes
 
@@ -35,7 +35,7 @@ Issue payloads 可能包含 `suggestion`，以及 available variables、DataFram
 ## Render 或 Export 失败
 
 1. 先修复 validation issues。
-2. 检查选中的变量是否仍存在于 live Python session。
+2. 检查选中的变量是否仍存在于当前 Python 环境。
 3. 对 `heatmap` 和 `contour`，确认 value source 是二维。
 4. 对导出到明确路径的情况，确认目录存在且可写。
 5. 使用 generated code panel 查看实际 Matplotlib code path。
@@ -44,7 +44,7 @@ Issue payloads 可能包含 `suggestion`，以及 available variables、DataFram
 
 确认：
 
-- marker pair 与 session `block_id` 完全匹配；
+- marker pair 与启动时的 `block_id` 完全匹配；
 - 只有一个 block 使用该 id；
 - markers 没有嵌套；
 - start 和 end markers 都存在；

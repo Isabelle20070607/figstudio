@@ -1,6 +1,6 @@
 # 路线图
 
-这个路线图入口用于保持未来规划可读。当前 public beta 承诺放在 [产品需求](prd.md)。用户操作说明放在用户文档，API contracts 放在 API reference。
+这个路线图入口用于保持未来规划可读。当前 public beta 承诺放在 [产品需求](prd.md)。用户操作说明放在用户文档，API 说明放在 API 参考。
 
 ## 阅读路径
 
