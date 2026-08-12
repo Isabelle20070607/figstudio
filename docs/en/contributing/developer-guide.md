@@ -61,13 +61,24 @@ Script writeback may only replace a unique controlled block:
 
 Notebook-style sessions return replacement cell code and must not mutate notebook files directly.
 
+## Documentation Ownership
+
+Keep each topic in one owning surface and cross-link instead of copying:
+
+- `README.md` owns positioning, first-run commands, and the docs index; `CHANGELOG.md` is the canonical chronological release record.
+- User workflows belong in `getting-started.md`, `scientific-workflows.md`, `styles-and-layouts.md`, `save-export-reuse.md`, and `troubleshooting.md`.
+- `reference/api.md` owns public contracts, `architecture/technical-design.md` owns internals, and this guide owns contributor workflow.
+- `product/prd.md` owns current beta scope, `product/roadmap*.md` owns future work, and `product/release-notes.md` gives the localized release summary.
+
+Keep old top-level docs as short compatibility stubs.
+
 ## Documentation Sync
 
-User, API, architecture, contributor, product, and roadmap docs live in paired locale trees under `docs/en` and `docs/zh`. Keep matching relative paths structurally aligned.
-
-Old top-level docs remain compatibility stubs only. Do not put duplicate long-form content in those stubs.
-
-Before finishing docs work, run the stale planning-language scan, onboarding-heading scan, locale parity check, link check, and `git diff --check -- AGENTS.md README.md docs`.
+- Give every long-form `docs/en` page a matching `docs/zh` path and maintain both as peers.
+- When behavior changes, update the owning page and its locale peer. Scope changes update both PRDs and the relevant roadmap pages.
+- Before a release, derive `CHANGELOG.md` and both release notes from the full previous-tag delta.
+- Before finishing docs work, scan for stale planning or phase wording. Check onboarding headings with `Get-ChildItem README.md,docs -Recurse -File -Filter *.md | Select-String -Pattern '^#+ .*?(Quick Start|快速开始)'`; only the README and localized getting-started pages may own them.
+- Verify locale-path parity, links, and `git diff --check -- AGENTS.md README.md docs`.
 
 ## Release Checks
 

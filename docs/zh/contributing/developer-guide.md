@@ -61,13 +61,24 @@ npm run dev
 
 从 Notebook 启动时返回 replacement cell code，不得直接修改 Notebook files。
 
-## Documentation Sync
+## 文档归属
 
-用户、API、架构、贡献者、产品和路线图文档放在 `docs/en` 和 `docs/zh` 下成对维护。保持匹配 relative paths 的结构一致。
+每类内容只放在一个主文档，其他地方用链接引用：
 
-旧 top-level docs 只保留 compatibility stubs。不要在这些 stubs 中放重复长正文。
+- `README.md` 负责项目定位、首次运行命令和文档索引；`CHANGELOG.md` 是按时间记录版本变化的主记录。
+- 用户流程分别放在 `getting-started.md`、`scientific-workflows.md`、`styles-and-layouts.md`、`save-export-reuse.md` 和 `troubleshooting.md`。
+- `reference/api.md` 负责公开接口，`architecture/technical-design.md` 负责内部设计，本指南负责开发流程。
+- `product/prd.md` 负责当前 beta 范围，`product/roadmap*.md` 负责未来工作，`product/release-notes.md` 提供本地化版本摘要。
 
-完成文档工作前，运行 stale planning-language scan、onboarding-heading scan、locale parity check、link check 和 `git diff --check -- AGENTS.md README.md docs`。
+旧的顶层文档只保留简短兼容入口。
+
+## 文档同步
+
+- `docs/en` 下每篇长文都应在 `docs/zh` 下有相同相对路径，两边同等维护。
+- 行为变化时更新主文档及其另一语言版本；范围变化时同步两份 PRD 和相关路线图。
+- 发布前根据上一个公开标签以来的完整差异更新 `CHANGELOG.md` 和两份版本说明。
+- 完成文档工作前，清理过时的规划和阶段措辞。用 `Get-ChildItem README.md,docs -Recurse -File -Filter *.md | Select-String -Pattern '^#+ .*?(Quick Start|快速开始)'` 检查入门标题；这类标题只应出现在 README 和两份入门文档中。
+- 检查双语路径、链接和 `git diff --check -- AGENTS.md README.md docs`。
 
 ## Release Checks
 
