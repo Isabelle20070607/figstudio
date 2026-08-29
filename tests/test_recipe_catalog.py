@@ -18,7 +18,6 @@ def _recipe(payload: dict, kind: str) -> dict:
 def test_bundled_recipe_catalog_covers_recipe_kind_contract():
     catalog = recipe_catalog()
 
-    assert catalog.version == 1
     assert len(catalog.groups) == 7
     assert {recipe.kind for recipe in catalog.recipes} == set(get_args(RecipeKind))
     assert {recipe.question_group_id for recipe in catalog.recipes} <= {group.id for group in catalog.groups}
@@ -34,7 +33,6 @@ def test_recipe_catalog_api_exposes_field_metadata():
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["version"] == 1
     assert len(payload["groups"]) == 7
     assert any(group["id"] == "neuro.core" for group in payload["groups"])
     assert any(group["id"] == "neuro.ephys" for group in payload["groups"])

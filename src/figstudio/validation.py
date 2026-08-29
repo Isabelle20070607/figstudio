@@ -967,7 +967,7 @@ def _apply_data_filters(value: Any, filters: list[DataFilterSpec]) -> Any:
         return value
     filtered = value
     for data_filter in filters:
-        if data_filter.op != "eq" or data_filter.column not in _dataframe_columns(filtered):
+        if data_filter.column not in _dataframe_columns(filtered):
             continue
         try:
             if data_filter.value is None:

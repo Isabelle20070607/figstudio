@@ -2706,11 +2706,6 @@ function Inspector({
                 {activeProfile?.label ?? spec.style.profile_id}: {profileOverrideSummary}
               </p>
             ) : null}
-            {styleProfiles.warnings.length ? (
-              <p className="compatibility-note" data-testid="style-profile-warning">
-                {styleProfiles.warnings.join(" ")}
-              </p>
-            ) : null}
             <SelectField
               label="Panel layout"
               value={layoutPreset}

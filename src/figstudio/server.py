@@ -44,7 +44,7 @@ from figstudio.registry import VariableRegistry
 from figstudio.recipes import recipe_catalog
 from figstudio.render import RenderEngine
 from figstudio.selection import is_python_literal_key
-from figstudio.style_profiles import load_style_profiles, profile_map
+from figstudio.style_profiles import StyleProfileConfigError, load_style_profiles, profile_map
 from figstudio.sync import CodeSyncEngine, CodeSyncError
 from figstudio.validation import validate_figure_spec
 
@@ -249,7 +249,10 @@ def create_app(session: "FigStudioSession") -> FastAPI:
 
 
 def _style_profiles(session: "FigStudioSession") -> StyleProfilesResponse:
-    return load_style_profiles(session.project_path)
+    try:
+        return load_style_profiles(session.project_path)
+    except StyleProfileConfigError as exc:
+        _raise_api_error("invalid_style_profiles", str(exc), status_code=400)
 
 
 def _codegen(session: "FigStudioSession") -> MatplotlibCodegen:

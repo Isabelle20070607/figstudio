@@ -25,18 +25,16 @@ class CustomBuildHook(BuildHookInterface):
         npm = shutil.which("npm")
 
         if npm is None and not skip_frontend_build:
-            if (static / "index.html").exists():
-                return
             raise RuntimeError("npm is required to build FigStudio frontend assets.")
 
         if not skip_frontend_build and not (frontend / "node_modules").exists():
             subprocess.run([npm, "ci"], cwd=frontend, check=True)
         if not skip_frontend_build:
             subprocess.run([npm, "run", "build"], cwd=frontend, check=True)
-        if not (dist / "index.html").exists() and skip_frontend_build and (static / "index.html").exists():
-            return
         if not (dist / "index.html").exists():
-            raise RuntimeError("frontend/dist is required when FIGSTUDIO_SKIP_FRONTEND_BUILD=1.")
+            if skip_frontend_build:
+                raise RuntimeError("frontend/dist is required when FIGSTUDIO_SKIP_FRONTEND_BUILD=1.")
+            raise RuntimeError("npm run build did not create frontend/dist/index.html.")
 
         if static.exists():
             shutil.rmtree(static)

@@ -15,9 +15,6 @@ from figstudio.models import (
 )
 
 
-CATALOG_VERSION = 1
-
-
 @dataclass(frozen=True)
 class RegisteredRecipe:
     definition: RecipeDefinition
@@ -222,7 +219,6 @@ _DEFINITIONS_BY_KIND = {kind: entry.definition for kind, entry in _REGISTRY_BY_K
 
 def recipe_catalog() -> RecipeCatalogResponse:
     return RecipeCatalogResponse(
-        version=CATALOG_VERSION,
         groups=list(_RECIPE_GROUPS),
         recipes=[entry.definition for entry in _RECIPE_REGISTRY],
     )

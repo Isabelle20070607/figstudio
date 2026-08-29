@@ -1051,8 +1051,6 @@ def _filter_dataset(
         current_var = filtered_var
         update["filters"] = []
     for data_filter in data.filters:
-        if data_filter.op != "eq":
-            continue
         column = data_filter.column
         if data_filter.value is None:
             lines.append(f"{current_var} = {current_var}[{current_var}[{column!r}].isna()]")

@@ -138,13 +138,11 @@ export interface RecipeDefinition {
 }
 
 export interface LayerCatalogResponse {
-  version: number;
   groups: LayerQuestionGroup[];
   layers: LayerDefinition[];
 }
 
 export interface RecipeCatalogResponse {
-  version: number;
   groups: RecipeQuestionGroup[];
   recipes: RecipeDefinition[];
 }
@@ -244,7 +242,6 @@ export interface StyleProfile {
 export interface StyleProfilesResponse {
   profiles: StyleProfile[];
   source_path?: string | null;
-  warnings: string[];
 }
 
 export interface FigureSpec {

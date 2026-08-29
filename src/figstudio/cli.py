@@ -19,7 +19,7 @@ from figstudio.registry import VariableRegistry
 from figstudio.render import RenderEngine
 from figstudio.session import FigStudioSession, open
 from figstudio.spec_io import load_spec
-from figstudio.style_profiles import load_style_profiles, profile_map
+from figstudio.style_profiles import StyleProfileConfigError, load_style_profiles, profile_map
 from figstudio.validation import validate_figure_spec
 
 DEFAULT_DEMO_PORT = 8767
@@ -54,9 +54,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _command_export(args)
         return _start_empty_session(args)
     except FigStudioCliError as exc:
-        print(f"figstudio: {exc}", file=sys.stderr)
-        return EXIT_USAGE_OR_RUNTIME_ERROR
-    except Exception as exc:
         print(f"figstudio: {exc}", file=sys.stderr)
         return EXIT_USAGE_OR_RUNTIME_ERROR
 
@@ -250,7 +247,10 @@ def _load_namespace(data_script: str) -> dict[str, Any]:
 
 def _load_profile_map(project_path: str | None) -> dict[str, Any]:
     project = Path(project_path).expanduser().resolve() if project_path else Path.cwd().resolve()
-    return profile_map(load_style_profiles(project))
+    try:
+        return profile_map(load_style_profiles(project))
+    except StyleProfileConfigError as exc:
+        raise FigStudioCliError(str(exc)) from exc
 
 
 def _resolve_format(explicit: str | None, output_path: Path, supported: set[str]) -> str:

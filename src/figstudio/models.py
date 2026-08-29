@@ -150,13 +150,11 @@ class RecipeDefinition(BaseModel):
 
 
 class LayerCatalogResponse(BaseModel):
-    version: int = 1
     groups: list[LayerQuestionGroup] = Field(default_factory=list)
     layers: list[LayerDefinition] = Field(default_factory=list)
 
 
 class RecipeCatalogResponse(BaseModel):
-    version: int = 1
     groups: list[RecipeQuestionGroup] = Field(default_factory=list)
     recipes: list[RecipeDefinition] = Field(default_factory=list)
 
@@ -263,7 +261,6 @@ class StyleProfile(BaseModel):
 class StyleProfilesResponse(BaseModel):
     profiles: list[StyleProfile] = Field(default_factory=list)
     source_path: str | None = None
-    warnings: list[str] = Field(default_factory=list)
 
 
 class FigureSpec(BaseModel):

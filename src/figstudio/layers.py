@@ -15,9 +15,6 @@ from figstudio.models import (
 )
 
 
-CATALOG_VERSION = 1
-
-
 @dataclass(frozen=True)
 class RegisteredLayer:
     definition: LayerDefinition
@@ -216,7 +213,6 @@ _DEFINITIONS_BY_KIND = {kind: entry.definition for kind, entry in _REGISTRY_BY_K
 
 def layer_catalog() -> LayerCatalogResponse:
     return LayerCatalogResponse(
-        version=CATALOG_VERSION,
         groups=list(_LAYER_GROUPS),
         layers=[entry.definition for entry in _LAYER_REGISTRY],
     )

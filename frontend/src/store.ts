@@ -37,9 +37,9 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set, get) => ({
   variables: [],
-  styleProfiles: { profiles: [], source_path: null, warnings: [] },
-  layerCatalog: { version: 1, groups: [], layers: [] },
-  recipeCatalog: { version: 1, groups: [], recipes: [] },
+  styleProfiles: { profiles: [], source_path: null },
+  layerCatalog: { groups: [], layers: [] },
+  recipeCatalog: { groups: [], recipes: [] },
   status: "Loading session",
   setSession: (session) => set({ session }),
   setVariables: (variables) =>

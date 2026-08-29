@@ -1,5 +1,7 @@
+import json
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from figstudio.codegen import MatplotlibCodegen
@@ -18,7 +20,7 @@ from figstudio.render import RenderEngine
 from figstudio.registry import VariableRegistry
 from figstudio.server import create_app
 from figstudio.session import FigStudioSession
-from figstudio.style_profiles import load_style_profiles, profile_map
+from figstudio.style_profiles import StyleProfileConfigError, load_style_profiles, profile_map
 
 
 def _write_profile_config(project_path: Path) -> Path:
@@ -87,9 +89,39 @@ def test_loads_project_style_profiles_from_config(tmp_path):
     response = load_style_profiles(tmp_path)
 
     assert response.source_path == str(config_path)
-    assert response.warnings == []
     assert response.profiles[0].id == "paper"
     assert response.profiles[0].layers["line"].color == "#123456"
+
+
+def test_invalid_style_profile_stops_loading(tmp_path):
+    config_path = _write_profile_config(tmp_path)
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    payload["profiles"][0]["figure"]["dpi"] = "not-a-number"
+    config_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(StyleProfileConfigError, match="Invalid style profile at index 0"):
+        load_style_profiles(tmp_path)
+
+
+def test_duplicate_style_profile_id_stops_loading(tmp_path):
+    config_path = _write_profile_config(tmp_path)
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    payload["profiles"].append(payload["profiles"][0])
+    config_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(StyleProfileConfigError, match="Duplicate style profile id 'paper'"):
+        load_style_profiles(tmp_path)
+
+
+def test_style_profiles_endpoint_reports_invalid_config(tmp_path):
+    config_path = _write_profile_config(tmp_path)
+    config_path.write_text("{", encoding="utf-8")
+    session = FigStudioSession(registry=VariableRegistry({}), project_path=tmp_path)
+
+    response = TestClient(create_app(session)).get("/api/style-profiles")
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["error"]["code"] == "invalid_style_profiles"
 
 
 def test_session_infers_and_overrides_project_path(tmp_path):

@@ -29,6 +29,10 @@ FIGURE_OVERRIDE_FIELDS = {
 }
 
 
+class StyleProfileConfigError(ValueError):
+    """The project style profile file does not match the supported format."""
+
+
 def resolve_project_path(
     *,
     script_path: str | Path | None = None,
@@ -46,31 +50,27 @@ def load_style_profiles(project_path: str | Path) -> StyleProfilesResponse:
     if not config_path.exists():
         return StyleProfilesResponse(source_path=str(config_path))
 
-    warnings: list[str] = []
     try:
-        payload = json.loads(config_path.read_text(encoding="utf-8-sig"))
-    except Exception as exc:
-        return StyleProfilesResponse(
-            source_path=str(config_path),
-            warnings=[f"Could not read style profiles: {exc}"],
-        )
+        source = config_path.read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeError) as exc:
+        raise StyleProfileConfigError(f"Could not read style profile config {config_path}: {exc}") from exc
+    try:
+        payload = json.loads(source)
+    except json.JSONDecodeError as exc:
+        raise StyleProfileConfigError(f"Invalid JSON in style profile config {config_path}: {exc}") from exc
 
     if not isinstance(payload, dict):
-        return StyleProfilesResponse(
-            source_path=str(config_path),
-            warnings=["Style profile config must be a JSON object."],
-        )
+        raise StyleProfileConfigError(f"Style profile config {config_path} must be a JSON object.")
 
     version = payload.get("version")
     if version != 1:
-        warnings.append(f"Unsupported style profile config version {version!r}; expected 1.")
+        raise StyleProfileConfigError(
+            f"Style profile config {config_path} has unsupported version {version!r}; expected 1."
+        )
 
     raw_profiles = payload.get("profiles", [])
     if not isinstance(raw_profiles, list):
-        return StyleProfilesResponse(
-            source_path=str(config_path),
-            warnings=[*warnings, "Style profile config field 'profiles' must be a list."],
-        )
+        raise StyleProfileConfigError(f"Style profile config {config_path} field 'profiles' must be a list.")
 
     profiles: list[StyleProfile] = []
     seen_ids: set[str] = set()
@@ -78,15 +78,15 @@ def load_style_profiles(project_path: str | Path) -> StyleProfilesResponse:
         try:
             profile = StyleProfile.model_validate(raw_profile)
         except ValidationError as exc:
-            warnings.append(f"Skipped invalid style profile at index {index}: {exc.errors()[0]['msg']}")
-            continue
+            raise StyleProfileConfigError(
+                f"Invalid style profile at index {index} in {config_path}: {exc.errors()[0]['msg']}"
+            ) from exc
         if profile.id in seen_ids:
-            warnings.append(f"Skipped duplicate style profile id {profile.id!r}.")
-            continue
+            raise StyleProfileConfigError(f"Duplicate style profile id {profile.id!r} in {config_path}.")
         seen_ids.add(profile.id)
         profiles.append(profile)
 
-    return StyleProfilesResponse(profiles=profiles, source_path=str(config_path), warnings=warnings)
+    return StyleProfilesResponse(profiles=profiles, source_path=str(config_path))
 
 
 def profile_map(

@@ -18,7 +18,6 @@ def _layer(payload: dict, kind: str) -> dict:
 def test_bundled_layer_catalog_covers_plot_kind_contract():
     catalog = layer_catalog()
 
-    assert catalog.version == 1
     assert len(catalog.groups) == 3
     assert {layer.kind for layer in catalog.layers} == set(get_args(PlotKind))
     assert {layer.group_id for layer in catalog.layers} <= {group.id for group in catalog.groups}
@@ -32,7 +31,6 @@ def test_layer_catalog_api_exposes_validation_and_style_metadata():
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["version"] == 1
     assert len(payload["groups"]) == 3
     assert {layer["kind"] for layer in payload["layers"]} == set(get_args(PlotKind))
 
