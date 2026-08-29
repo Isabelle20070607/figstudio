@@ -2,9 +2,8 @@
 
 Project guidance for `figstudio`.
 
-## Runtime and Validation
+## Runtime
 
-- Use the workspace profile `..\.agents\validation\figstudio.psd1`; developer and release commands live in the paired contributor guides.
 - The `dev` extra intentionally uses `httpx2`; do not replace it with `httpx` without revalidating FastAPI/TestClient compatibility and deliberately updating `uv.lock`.
 
 ## Product Invariants
